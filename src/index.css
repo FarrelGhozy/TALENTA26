@@ -48,4 +48,8 @@
   .unida-gradient-accent {
     background: linear-gradient(135deg, #1e3a8a 0%, #059669 100%);
   }
+
+  .font-editorial {
+    font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+  }
 }

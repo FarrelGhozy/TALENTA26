@@ -24,6 +24,7 @@ export interface User {
   email: string;
   prodi: string;
   angkatan: number;
+  avatar?: string;
   role: Role[];
   skill: Skill[];
   minat: string[];

@@ -9,7 +9,14 @@ const PROFILES_KEY = 'talenta-profiles';
 export const CURRENT_USER_KEY = 'talenta-user-id';
 
 function getUsers(): User[] {
-  return getItem<User[]>(USERS_KEY, usersData as User[]);
+  const cached = getItem<User[]>(USERS_KEY, usersData as User[]);
+  return cached.map((u) => {
+    const raw = (usersData as User[]).find((r) => r.id === u.id);
+    return {
+      ...u,
+      avatar: u.avatar || raw?.avatar || '/images/avatar-andi.jpg',
+    };
+  });
 }
 
 function getProfiles(): Profile[] {

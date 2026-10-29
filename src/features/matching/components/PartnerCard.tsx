@@ -39,12 +39,20 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div
-              aria-hidden="true"
-              className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-blue-900 text-white font-black text-sm flex items-center justify-center shadow-xs"
-            >
-              {user.nama.substring(0, 2).toUpperCase()}
-            </div>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.nama}
+                className="w-11 h-11 shrink-0 rounded-2xl object-cover border border-slate-200 shadow-xs"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-blue-900 text-white font-black text-sm flex items-center justify-center shadow-xs"
+              >
+                {user.nama.substring(0, 2).toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0">
               <h4 className="text-sm font-extrabold text-slate-900 truncate group-hover:text-blue-700 transition-colors">
                 {user.nama}

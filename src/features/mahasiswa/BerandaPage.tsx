@@ -95,21 +95,28 @@ export const BerandaPage: React.FC = () => {
         <div className="absolute top-0 right-0 w-80 h-40 bg-gradient-to-l from-blue-50/80 to-transparent pointer-events-none -z-0" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-                {getGreeting()},
-              </span>
-              <span className="text-[11px] bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 rounded-full border border-blue-200/60">
-                Portal Prestasi 2026
-              </span>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <img
+              src={currentUser?.avatar || '/images/avatar-andi.jpg'}
+              alt={currentUser?.nama || 'Foto Profil'}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-600/30 shadow-md shrink-0"
+            />
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                  {getGreeting()},
+                </span>
+                <span className="text-[11px] bg-blue-50 text-blue-800 font-semibold px-2 py-0.5 rounded-full border border-blue-200/60">
+                  Portal Prestasi 2026
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                {currentUser?.nama}
+              </h1>
+              <p className="text-xs text-slate-500">
+                {currentUser?.prodi} • Angkatan {currentUser?.angkatan} • Siap menyongsong ajang Belmawa nasional.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {currentUser?.nama}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {currentUser?.prodi} • Angkatan {currentUser?.angkatan} • Siap menyongsong ajang Belmawa nasional.
-            </p>
           </div>
 
           <div className="flex flex-wrap gap-2.5 shrink-0">

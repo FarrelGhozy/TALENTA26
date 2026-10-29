@@ -4,13 +4,14 @@ import {
   Trophy,
   Users,
   ArrowRight,
-  CheckCircle2,
   Layers,
   Award,
   Zap,
   Target,
-  GraduationCap,
   ShieldCheck,
+  Play,
+  ArrowDown,
+  Sparkles,
 } from 'lucide-react';
 import { Competition } from '../../types';
 import { competitionService } from '../../services/factory';
@@ -19,9 +20,37 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { PageLoading } from '../../components/ui/Skeleton';
 
+const heroSlides = [
+  {
+    kicker: 'PORTAL PRESTASI MAHASISWA',
+    title1: 'Menembus',
+    title2: 'Batas Potensi,',
+    titleHighlight: 'Menginspirasi Dunia',
+    desc: 'Platform akselerasi mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan meraih kejayaan di panggung kompetisi Belmawa nasional.',
+    tags: ['PKM BELMAWA', 'GEMASTIK & KRI', 'RISET & INOVASI', 'PRESTASI GLOBAL'],
+  },
+  {
+    kicker: 'KOLABORASI LINTAS DISIPLIN',
+    title1: 'Satukan Visi,',
+    title2: 'Bentuk Tim Tangguh,',
+    titleHighlight: 'Raih Juara Bersama',
+    desc: 'Algoritma matching cerdas mempertemukan mahasiswa dengan keahlian komplementer: koding, penulisan proposal, analisis data, hingga desain presentasi visual.',
+    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SIMULASI PITCH'],
+  },
+  {
+    kicker: 'REKOGNISI RESMI & SKPI',
+    title1: 'Dari Kampus,',
+    title2: 'Untuk Peradaban,',
+    titleHighlight: 'Menorehkan Sejarah',
+    desc: 'Setiap proses persiapan dan raihan juara diverifikasi resmi oleh BAAK UNIDA Gontor untuk pengakuan angka kredit SKPI dan apresiasi beasiswa institusi.',
+    tags: ['VERIFIKASI BAAK', 'REKOGNISI SKPI', 'DANA HIBAH RISET', 'AWARD REKTORAT'],
+  },
+];
+
 export const LandingPage: React.FC = () => {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,158 +69,210 @@ export const LandingPage: React.FC = () => {
     };
   }, []);
 
+  // Subtle auto-advance for the aesthetic hero slider
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const currentSlide = heroSlides[activeSlide];
+
   return (
-    <div className="space-y-16 py-4">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-4 pb-8" aria-labelledby="hero-title">
-        {/* Subtle background glow with UNIDA blue */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-tr from-blue-400/20 via-sky-300/15 to-emerald-200/15 rounded-full blur-3xl pointer-events-none -z-10" />
+    <div className="w-full">
+      {/* Full-Screen 100dvh Cinematic Hero Section */}
+      <section
+        className="w-full relative h-[100dvh] min-h-[560px] sm:min-h-[640px] pt-16 sm:pt-24 lg:pt-28 pb-3 sm:pb-7 px-4 sm:px-8 lg:px-12 bg-[#060a14] text-white overflow-hidden flex flex-col justify-between border-b border-slate-800/80 group"
+        aria-labelledby="hero-title"
+      >
+        {/* Background Image: Extends 100% across the full viewport height */}
+        <img
+          src="/images/hero-unida.jpg"
+          alt="Mahasiswa Berjas UNIDA Gontor Menatap Gedung Utama Berkubah Emas di Kala Sunrise"
+          className="absolute inset-0 w-full h-full object-cover object-[80%_center] sm:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          {/* Left Column: Headline & CTA */}
-          <div className="lg:col-span-7 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 shadow-2xs">
-              <GraduationCap className="w-4 h-4 text-blue-700" />
-              <span className="text-xs font-bold text-blue-900 tracking-wide">
-                Portal Pembinaan Prestasi Mahasiswa UNIDA Gontor
-              </span>
+        {/* Ambient Dark Gradient Overlays for High Contrast Typography & Seamless Top-Bar Flow */}
+        {/* Mobile: Shadow HANYA di bagian bawah tempat teks dan tombol. Bagian atas (kubah emas, langit fajar, wajah mahasiswa) 100% jernih dan terang tanpa shadow */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] from-10% via-[#060a14]/90 via-35% to-transparent to-55% sm:hidden pointer-events-none" />
+        {/* Desktop Horizontal Gradient: Preserves PC layout 100% */}
+        <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#060a14] via-[#060a14]/65 md:via-[#060a14]/35 to-transparent pointer-events-none" />
+        {/* Vertical atmospheric fade from bottom and top for PC */}
+        <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#060a14] via-[#060a14]/30 to-[#060a14]/70 pointer-events-none" />
+
+        {/* Ethereal Glow Orbs (Desktop only so mobile image remains crisp and pure) */}
+        <div className="hidden sm:block absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="hidden sm:block absolute bottom-1/3 left-1/3 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Middle & Bottom Container */}
+        <div className="max-w-7xl mx-auto w-full relative z-10 flex-1 flex flex-col justify-between h-full">
+          {/* Hero Content: Anchored at bottom on mobile (mt-auto) so scenery above is open; Centered vertically on PC (sm:my-auto) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center py-1 sm:py-4 mt-auto mb-2 sm:my-auto">
+            {/* Left Column: Kicker, Big Headline, Paragraph & Aesthetic Action Buttons */}
+            <div className="lg:col-span-8 space-y-2.5 sm:space-y-6 text-left">
+              {/* Kicker tag with accent divider */}
+              <div className="flex items-center gap-2.5">
+                <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.2em] sm:tracking-[0.25em] text-sky-300 uppercase font-mono">
+                  {currentSlide.kicker}
+                </span>
+                <div className="h-[1px] w-8 sm:w-12 bg-gradient-to-r from-sky-400 to-transparent" />
+              </div>
+
+              {/* Main Editorial Headline: 2 clean lines on mobile, 3 editorial lines on PC */}
+              <h1
+                id="hero-title"
+                className="text-[1.35rem] sm:text-4xl md:text-5xl lg:text-6xl font-extrabold sm:font-black text-white tracking-tight leading-[1.2] sm:leading-[1.08] font-editorial drop-shadow-md"
+              >
+                <span>{currentSlide.title1} </span>
+                <span className="hidden sm:inline"><br /></span>
+                <span>{currentSlide.title2} </span>
+                <span className="hidden sm:inline"><br /></span>
+                <span className="bg-gradient-to-r from-sky-300 via-blue-200 to-amber-200 bg-clip-text text-transparent italic font-editorial drop-shadow-lg block sm:inline mt-0.5 sm:mt-0">
+                  {currentSlide.titleHighlight}
+                </span>
+              </h1>
+
+              {/* Description Text */}
+              <p className="text-[12px] sm:text-sm lg:text-base text-slate-200/90 leading-relaxed max-w-xl font-normal drop-shadow-xs line-clamp-2 sm:line-clamp-none">
+                {currentSlide.desc}
+              </p>
+
+              {/* Action Buttons: Responsive Side-by-Side on Mobile (Not bulky/menumpul), Classic Pill on Desktop */}
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:items-center sm:gap-4 pt-0.5 sm:pt-2">
+                {/* Primary Button */}
+                <Link
+                  to="/kompetisi"
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-7 sm:py-3.5 rounded-xl sm:rounded-full bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold text-xs sm:text-sm tracking-wide shadow-lg shadow-blue-950/70 hover:shadow-blue-900/90 border border-blue-400/30 hover:scale-[1.02] active:scale-[0.98] transition-all group/btn"
+                >
+                  <span className="truncate">Jelajahi Lomba</span>
+                  <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-950/80 border border-blue-400/40 flex items-center justify-center text-white group-hover/btn:translate-x-0.5 transition-transform shrink-0">
+                    <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-200" />
+                  </span>
+                </Link>
+
+                {/* Secondary Button */}
+                <Link
+                  to="/masuk"
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/25 hover:border-white/40 active:scale-[0.98] transition-all group/demo"
+                >
+                  <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border border-white/40 flex items-center justify-center bg-white/10 group-hover/demo:bg-white/25 transition-colors shrink-0">
+                    <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" />
+                  </span>
+                  <span className="truncate">Coba Demo</span>
+                </Link>
+              </div>
             </div>
 
-            <h1
-              id="hero-title"
-              className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]"
-            >
-              Kenali Potensi, Temukan Partner,{' '}
-              <span className="bg-gradient-to-r from-blue-700 via-blue-800 to-blue-950 bg-clip-text text-transparent">
-                Raih Prestasi Gemilang.
-              </span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
-              Platform pembinaan terpadu Universitas Darussalam Gontor untuk membimbing mahasiswa menuju ajang Belmawa nasional: eksplorasi kompetisi resmi, pembentukan tim lintas program studi, roadmap persiapan mandiri, dan pencatatan capaian terverifikasi.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-              <Link to="/kompetisi">
-                <Button size="lg" variant="primary" className="w-full sm:w-auto" rightIcon={<Trophy className="w-4 h-4" />}>
-                  Jelajahi Katalog Lomba
-                </Button>
-              </Link>
-              <Link to="/masuk">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto text-slate-800 border-slate-300" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Coba Demo Instan
-                </Button>
-              </Link>
-            </div>
-
-            {/* Quick Metrics / Trust Indicators */}
-            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-200">
-              <div>
-                <div className="text-2xl font-black text-blue-900">12+</div>
-                <div className="text-[11px] font-bold text-slate-500 mt-0.5">Kompetisi Belmawa</div>
-              </div>
-              <div>
-                <div className="text-2xl font-black text-blue-700">100%</div>
-                <div className="text-[11px] font-bold text-slate-500 mt-0.5">Match Skill Komplementer</div>
-              </div>
-              <div>
-                <div className="text-2xl font-black text-emerald-700">Resmi</div>
-                <div className="text-[11px] font-bold text-slate-500 mt-0.5">Verifikasi Kampus UNIDA</div>
+            {/* Right Column: Stacked Category Labels (Matching Image 1's Top-Right Layout) */}
+            <div className="lg:col-span-4 hidden lg:flex flex-col justify-between items-end self-stretch py-2">
+              <div className="border-l border-white/25 pl-4 space-y-2 text-left self-end">
+                {currentSlide.tags.map((tag, idx) => (
+                  <div
+                    key={idx}
+                    className="text-[10px] font-bold tracking-[0.22em] text-white/70 uppercase hover:text-white transition-colors cursor-default"
+                  >
+                    {tag}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Right Column: UNIDA Campus Showcase Card */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              <div className="rounded-3xl border border-slate-200/90 shadow-xl bg-gradient-to-b from-white to-slate-50/80 p-6 space-y-5">
-                {/* Header of showcase card */}
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="/images/logo-icon.png"
-                      alt="Logo TALENTA UNIDA Gontor"
-                      className="w-12 h-12 rounded-2xl shadow-sm object-cover border border-blue-900/10"
-                    />
-                    <div>
-                      <h4 className="text-sm font-black text-blue-950">TALENTA UNIDA</h4>
-                      <p className="text-[11px] text-slate-500">Universitas Darussalam Gontor</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    Aktif 2026
-                  </span>
-                </div>
-
-                {/* Simulated Student Progress Widget */}
-                <div className="space-y-3">
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium">Target Utama Belmawa:</span>
-                      <span className="font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                        PKM-RE Riset Eksakta
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100 text-xs">
-                      <div className="w-6 h-6 rounded-full bg-blue-700 text-white font-bold text-[10px] flex items-center justify-center">
-                        AP
-                      </div>
-                      <span className="font-bold text-slate-800 text-[11px]">Andi Pratama</span>
-                      <span className="text-slate-400 text-[10px]">• Informatika 2023</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500 font-medium">Status Pembentukan Tim:</span>
-                      <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
-                        ✓ Lengkap (3/3 Anggota)
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-700 rounded-full w-full" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom trust tag */}
-                <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="inline-flex items-center gap-1 font-semibold text-blue-900">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
-                    Terverifikasi BAAK & Kemahasiswaan
-                  </span>
-                  <span className="font-bold text-slate-400">Belmawa Ready</span>
-                </div>
+          {/* Bottom Bar: Slider Pagination (01 02 03), Scroll to Explore & Down Arrow */}
+          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-white/15">
+            {/* Left: 01 02 03 & Scroll to Explore */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                {heroSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveSlide(idx)}
+                    className={`text-xs font-mono font-bold transition-all relative py-1 px-1.5 cursor-pointer outline-none focus:outline-none focus-visible:outline-none select-none ${
+                      activeSlide === idx
+                        ? 'text-white font-black'
+                        : 'text-white/40 hover:text-white/80'
+                    }`}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    aria-label={`Slide ${idx + 1}`}
+                  >
+                    0{idx + 1}
+                    {activeSlide === idx && (
+                      <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)] rounded-full" />
+                    )}
+                  </button>
+                ))}
               </div>
 
-              {/* Floating Pill Badge 1 */}
-              <div className="absolute -bottom-4 -left-3 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-lg flex items-center gap-3 max-w-[210px]">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
-                  <Trophy className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-slate-900 leading-tight">Siap Belmawa 2026</div>
-                  <div className="text-[10px] text-slate-500 leading-tight">PKM, GEMASTIK, KRI</div>
-                </div>
-              </div>
+              <a
+                href="#alur-section"
+                className="hidden sm:flex items-center gap-2 text-[10px] font-bold tracking-[0.22em] text-white/60 hover:text-white uppercase border-l border-white/25 pl-4 transition-colors"
+              >
+                <span>Scroll to explore</span>
+              </a>
+            </div>
 
-              {/* Floating Pill Badge 2 */}
-              <div className="absolute -top-3 -right-3 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-lg flex items-center gap-2.5 max-w-[200px]">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold text-slate-900 leading-tight">Verifikasi Berkas</div>
-                  <div className="text-[10px] text-emerald-700 font-bold">Resmi Kampus UNIDA</div>
-                </div>
-              </div>
+            {/* Right: Down Arrow in Circle Button */}
+            <div className="flex items-center gap-3">
+              <a
+                href="#alur-section"
+                aria-label="Gulir ke alur pembinaan"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-white/30 hover:border-white/70 bg-white/5 hover:bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-all hover:translate-y-0.5 shadow-md"
+              >
+                <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </a>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Main Content Container below Hero */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-16 py-16">
+        {/* Trust & Key Metrics Strip below Hero */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-800 border border-blue-200/80 flex items-center justify-center shrink-0">
+            <Trophy className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xl font-black text-slate-900 leading-tight">12+</div>
+            <div className="text-[11px] font-bold text-slate-500">Kompetisi Belmawa</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xl font-black text-slate-900 leading-tight">100%</div>
+            <div className="text-[11px] font-bold text-slate-500">Skill Matching Cerdas</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xl font-black text-emerald-800 leading-tight">Resmi</div>
+            <div className="text-[11px] font-bold text-slate-500">Verifikasi BAAK UNIDA</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-700 border border-amber-200/80 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xl font-black text-amber-800 leading-tight">SKPI Ready</div>
+            <div className="text-[11px] font-bold text-slate-500">Rekognisi Capaian Juara</div>
+          </div>
+        </div>
+      </section>
+
       {/* 4 Steps Journey Section */}
-      <section className="space-y-6" aria-labelledby="alur-title">
+      <section id="alur-section" className="space-y-6 pt-4" aria-labelledby="alur-title">
         <div className="text-center max-w-xl mx-auto space-y-2">
           <Badge color="blue">Alur Pembinaan UNIDA Gontor</Badge>
           <h2 id="alur-title" className="text-2xl font-black text-slate-900 tracking-tight">
@@ -437,6 +518,7 @@ export const LandingPage: React.FC = () => {
           </Link>
         </div>
       </section>
+      </div>
     </div>
   );
 };

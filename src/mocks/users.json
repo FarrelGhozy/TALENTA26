@@ -1,1 +1,156 @@
-[{"id":"u-01","institutionId":"inst-01","nama":"Andi Pratama","email":"andi@mock.ac.id","prodi":"Informatika","angkatan":2023,"role":["mahasiswa"],"skill":[{"nama":"Python","level":2},{"nama":"Analisis Data","level":2}],"minat":["PKM","Riset"],"ketersediaan":{"hari":["Senin","Rabu","Sabtu"],"jam":10},"peranBisa":["riset","penulis"]},{"id":"u-02","institutionId":"inst-01","nama":"Rina Kartika","email":"rina@mock.ac.id","prodi":"Desain Komunikasi Visual","angkatan":2022,"role":["mahasiswa"],"skill":[{"nama":"Figma","level":3},{"nama":"Presentasi","level":2}],"minat":["UI/UX","GEMASTIK"],"ketersediaan":{"hari":["Senin","Rabu","Kamis"],"jam":8},"peranBisa":["desainer","presenter"]},{"id":"u-03","institutionId":"inst-01","nama":"Bima Saputra","email":"bima@mock.ac.id","prodi":"Informatika","angkatan":2023,"role":["mahasiswa"],"skill":[{"nama":"React","level":3},{"nama":"Node.js","level":2}],"minat":["GEMASTIK","Web"],"ketersediaan":{"hari":["Selasa","Rabu","Jumat"],"jam":12},"peranBisa":["programmer"]},{"id":"u-04","institutionId":"inst-01","nama":"Sari Dewi","email":"sari@mock.ac.id","prodi":"Manajemen","angkatan":2021,"role":["mahasiswa"],"skill":[{"nama":"Bisnis Model","level":3},{"nama":"Pitching","level":3}],"minat":["KMI","Kewirausahaan"],"ketersediaan":{"hari":["Kamis","Jumat"],"jam":6},"peranBisa":["hustler","presenter"]},{"id":"u-05","institutionId":"inst-01","nama":"Dedi Kurnia","email":"dedi@mock.ac.id","prodi":"Matematika","angkatan":2024,"role":["mahasiswa"],"skill":[{"nama":"Kalkulus","level":3},{"nama":"Aljabar","level":2}],"minat":["ON-MIPA","Olimpiade"],"ketersediaan":{"hari":["Senin","Jumat"],"jam":15},"peranBisa":[]},{"id":"u-06","institutionId":"inst-01","nama":"Maya Putri","email":"maya@mock.ac.id","prodi":"Informatika","angkatan":2022,"role":["mahasiswa"],"skill":[{"nama":"Menulis Ilmiah","level":3},{"nama":"Riset","level":2}],"minat":["PKM","Riset"],"ketersediaan":{"hari":["Senin","Selasa","Rabu"],"jam":9},"peranBisa":["ketua","penulis"]},{"id":"u-10","institutionId":"inst-01","nama":"Budi Santoso","email":"admin@mock.ac.id","prodi":"-","angkatan":0,"role":["admin_program"],"skill":[],"minat":[],"ketersediaan":{"hari":[],"jam":0},"peranBisa":[]},{"id":"u-11","institutionId":"inst-01","nama":"Dr. Sari Verifikator","email":"verif@mock.ac.id","prodi":"-","angkatan":0,"role":["verifikator"],"skill":[],"minat":[],"ketersediaan":{"hari":[],"jam":0},"peranBisa":[]}]
+[
+  {
+    "id": "u-01",
+    "institutionId": "inst-01",
+    "nama": "Andi Pratama",
+    "email": "andi@mock.ac.id",
+    "prodi": "Informatika",
+    "angkatan": 2023,
+    "avatar": "/images/avatar-andi.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "Python", "level": 2 },
+      { "nama": "Analisis Data", "level": 2 }
+    ],
+    "minat": ["PKM", "Riset"],
+    "ketersediaan": {
+      "hari": ["Senin", "Rabu", "Sabtu"],
+      "jam": 10
+    },
+    "peranBisa": ["riset", "penulis"]
+  },
+  {
+    "id": "u-02",
+    "institutionId": "inst-01",
+    "nama": "Rina Kartika",
+    "email": "rina@mock.ac.id",
+    "prodi": "Desain Komunikasi Visual",
+    "angkatan": 2022,
+    "avatar": "/images/avatar-rina.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "Figma", "level": 3 },
+      { "nama": "Presentasi", "level": 2 }
+    ],
+    "minat": ["UI/UX", "GEMASTIK"],
+    "ketersediaan": {
+      "hari": ["Senin", "Rabu", "Kamis"],
+      "jam": 8
+    },
+    "peranBisa": ["desainer", "presenter"]
+  },
+  {
+    "id": "u-03",
+    "institutionId": "inst-01",
+    "nama": "Bima Saputra",
+    "email": "bima@mock.ac.id",
+    "prodi": "Informatika",
+    "angkatan": 2023,
+    "avatar": "/images/avatar-andi.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "React", "level": 3 },
+      { "nama": "Node.js", "level": 2 }
+    ],
+    "minat": ["GEMASTIK", "Web"],
+    "ketersediaan": {
+      "hari": ["Selasa", "Rabu", "Jumat"],
+      "jam": 12
+    },
+    "peranBisa": ["programmer"]
+  },
+  {
+    "id": "u-04",
+    "institutionId": "inst-01",
+    "nama": "Sari Dewi",
+    "email": "sari@mock.ac.id",
+    "prodi": "Manajemen",
+    "angkatan": 2021,
+    "avatar": "/images/avatar-rina.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "Bisnis Model", "level": 3 },
+      { "nama": "Pitching", "level": 3 }
+    ],
+    "minat": ["KMI", "Kewirausahaan"],
+    "ketersediaan": {
+      "hari": ["Kamis", "Jumat"],
+      "jam": 6
+    },
+    "peranBisa": ["hustler", "presenter"]
+  },
+  {
+    "id": "u-05",
+    "institutionId": "inst-01",
+    "nama": "Dedi Kurnia",
+    "email": "dedi@mock.ac.id",
+    "prodi": "Matematika",
+    "angkatan": 2024,
+    "avatar": "/images/avatar-andi.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "Kalkulus", "level": 3 },
+      { "nama": "Aljabar", "level": 2 }
+    ],
+    "minat": ["ON-MIPA", "Olimpiade"],
+    "ketersediaan": {
+      "hari": ["Senin", "Jumat"],
+      "jam": 15
+    },
+    "peranBisa": []
+  },
+  {
+    "id": "u-06",
+    "institutionId": "inst-01",
+    "nama": "Maya Putri",
+    "email": "maya@mock.ac.id",
+    "prodi": "Informatika",
+    "angkatan": 2022,
+    "avatar": "/images/avatar-rina.jpg",
+    "role": ["mahasiswa"],
+    "skill": [
+      { "nama": "Menulis Ilmiah", "level": 3 },
+      { "nama": "Riset", "level": 2 }
+    ],
+    "minat": ["PKM", "Riset"],
+    "ketersediaan": {
+      "hari": ["Senin", "Selasa", "Rabu"],
+      "jam": 9
+    },
+    "peranBisa": ["ketua", "penulis"]
+  },
+  {
+    "id": "u-10",
+    "institutionId": "inst-01",
+    "nama": "Budi Santoso",
+    "email": "admin@mock.ac.id",
+    "prodi": "-",
+    "angkatan": 0,
+    "avatar": "/images/avatar-andi.jpg",
+    "role": ["admin_program"],
+    "skill": [],
+    "minat": [],
+    "ketersediaan": {
+      "hari": [],
+      "jam": 0
+    },
+    "peranBisa": []
+  },
+  {
+    "id": "u-11",
+    "institutionId": "inst-01",
+    "nama": "Dr. Sari Verifikator",
+    "email": "verif@mock.ac.id",
+    "prodi": "-",
+    "angkatan": 0,
+    "avatar": "/images/avatar-rina.jpg",
+    "role": ["verifikator"],
+    "skill": [],
+    "minat": [],
+    "ketersediaan": {
+      "hari": [],
+      "jam": 0
+    },
+    "peranBisa": []
+  }
+]

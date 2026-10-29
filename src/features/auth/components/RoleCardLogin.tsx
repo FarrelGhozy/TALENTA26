@@ -17,6 +17,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       name: 'Andi Pratama',
       subtitle: 'Informatika 2023 • Target: PKM-RE',
       badge: 'Mahasiswa',
+      avatar: '/images/avatar-andi.jpg',
       color: 'from-blue-700 to-blue-900',
       bgColor: 'bg-blue-50 border-blue-200/80',
       iconColor: 'text-blue-700',
@@ -29,6 +30,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       name: 'Rina Kartika',
       subtitle: 'DKV 2022 • Target: GEMASTIK',
       badge: 'Mahasiswa',
+      avatar: '/images/avatar-rina.jpg',
       color: 'from-sky-600 to-blue-800',
       bgColor: 'bg-sky-50 border-sky-200/80',
       iconColor: 'text-sky-700',
@@ -93,11 +95,19 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
               className="text-left p-5 rounded-2xl border bg-white border-slate-200/90 hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer disabled:opacity-60 min-h-[96px] focus-visible:ring-2 focus-visible:ring-blue-600 group relative overflow-hidden"
             >
               <div className="flex items-start gap-4">
-                <div
-                  className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${acc.bgColor} shadow-2xs group-hover:scale-105 transition-transform`}
-                >
-                  <Icon className={`w-6 h-6 ${acc.iconColor}`} />
-                </div>
+                {acc.avatar ? (
+                  <img
+                    src={acc.avatar}
+                    alt={acc.name}
+                    className="w-12 h-12 rounded-2xl object-cover border-2 border-blue-600/30 shadow-xs shrink-0 group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div
+                    className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${acc.bgColor} shadow-2xs group-hover:scale-105 transition-transform`}
+                  >
+                    <Icon className={`w-6 h-6 ${acc.iconColor}`} />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-900 truncate">

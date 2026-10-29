@@ -33,12 +33,20 @@ export const MemberList: React.FC<MemberListProps> = ({ members, allUsers, curre
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    aria-hidden="true"
-                    className="w-10 h-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 to-blue-900 text-white font-black text-xs flex items-center justify-center shadow-xs"
-                  >
-                    {user ? user.nama.substring(0, 2).toUpperCase() : '??'}
-                  </div>
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.nama}
+                      className="w-10 h-10 shrink-0 rounded-2xl object-cover border border-slate-200 shadow-xs"
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className="w-10 h-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 to-blue-900 text-white font-black text-xs flex items-center justify-center shadow-xs"
+                    >
+                      {user ? user.nama.substring(0, 2).toUpperCase() : '??'}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-xs font-bold text-slate-900 truncate">
