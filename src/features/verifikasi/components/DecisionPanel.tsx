@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, MessageSquare } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, MessageSquare, Sparkles } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 
 interface DecisionPanelProps {
@@ -7,12 +7,27 @@ interface DecisionPanelProps {
   isLoading: boolean;
 }
 
+const TEMPLATE_REASONS = [
+  'Sertifikat belum mencantumkan cap / tanda tangan resmi penyelenggara.',
+  'Nama mahasiswa pada sertifikat berbeda dengan data induk institusi.',
+  'Resolusi berkas buram dan nomor SK kejuaraan tidak terbaca jelas.',
+  'Mohon lampirkan surat tugas pembimbing atau berita acara lomba.',
+];
+
 export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoading }) => {
   const [catatan, setCatatan] = useState('');
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState<'disetujui' | 'perlu_perbaikan' | 'ditolak' | null>(null);
   const textareaId = 'catatan-verifikator';
   const errorId = 'catatan-error';
+
+  const appendReason = (reason: string) => {
+    setCatatan((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${reason}` : reason;
+    });
+    setError('');
+  };
 
   const requestAction = (status: 'disetujui' | 'perlu_perbaikan' | 'ditolak') => {
     setError('');
@@ -34,16 +49,40 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-      <div className="flex items-center gap-2">
-        <MessageSquare className="w-4 h-4 text-blue-700" />
-        <h2 className="text-sm font-bold text-slate-900">Keputusan & Telaah Verifikasi Berkas</h2>
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-blue-700" />
+          <h2 className="text-sm font-bold text-slate-900">Keputusan & Telaah Verifikasi Berkas</h2>
+        </div>
+        <span className="text-[11px] text-slate-400">Wewenang BAAK / Verifikator</span>
       </div>
 
-      <div>
-        <label htmlFor={textareaId} className="block text-xs font-semibold text-slate-700 mb-1.5">
+      <div className="space-y-2">
+        <label htmlFor={textareaId} className="block text-xs font-semibold text-slate-700">
           Catatan / Alasan Verifikator (Wajib diisi jika perlu perbaikan atau ditolak)
         </label>
+
+        {/* Quick Rationale Template Chips */}
+        <div className="space-y-1.5 pb-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-blue-600" />
+            Template Catatan Cepat (1-Klik):
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {TEMPLATE_REASONS.map((r, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => appendReason(r)}
+                className="text-[10px] font-medium px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 transition-colors text-left cursor-pointer"
+              >
+                + {r}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <textarea
           id={textareaId}
           rows={3}
@@ -55,7 +94,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
           disabled={isLoading}
           className="w-full text-xs p-3.5 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 min-h-[92px] disabled:bg-slate-50 transition-all bg-slate-50/50"
         />
-        {error && <p id={errorId} role="alert" className="text-xs text-rose-600 font-medium mt-1.5">{error}</p>}
+        {error && <p id={errorId} role="alert" className="text-xs text-rose-600 font-medium mt-1">{error}</p>}
       </div>
 
       {confirming === 'ditolak' ? (
@@ -87,7 +126,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
             onClick={() => requestAction('perlu_perbaikan')}
             leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
           >
-            Minta Perbaikan Bukti
+            Minta Revisi Dokumen
           </Button>
           <Button
             variant="ghost"
@@ -106,7 +145,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
             onClick={() => requestAction('disetujui')}
             leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
           >
-            Setujui & Sahkan Prestasi
+            Setujui & Sahkan Prestasi (SKPI)
           </Button>
         </div>
       )}

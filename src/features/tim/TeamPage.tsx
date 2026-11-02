@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, LogOut, ArrowRight, AlertCircle } from 'lucide-react';
+import { Users, LogOut, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck, XCircle } from 'lucide-react';
 import { Competition, Team, User } from '../../types';
 import { competitionService, teamService, userService } from '../../services/factory';
 import { useAuth } from '../auth/AuthContext';
@@ -108,6 +108,36 @@ export const TeamPage: React.FC = () => {
 
   const validation = validateTeamFormation(team, allUsers, competition);
 
+  // Prodis represented in team
+  const acceptedUsers = team.anggota
+    .filter((m) => m.status === 'diterima')
+    .map((m) => allUsers.find((u) => u.id === m.userId))
+    .filter(Boolean) as User[];
+  const uniqueProdis = Array.from(new Set(acceptedUsers.map((u) => u.prodi)));
+
+  const complianceRules = [
+    {
+      label: `Kuantitas Anggota (${validation.acceptedCount}/${validation.minNeeded}–${validation.maxAllowed} org)`,
+      satisfied: validation.acceptedCount >= validation.minNeeded && validation.acceptedCount <= validation.maxAllowed,
+      desc: validation.acceptedCount < validation.minNeeded ? `Kurang ${validation.minNeeded - validation.acceptedCount} anggota lagi` : 'Sesuai batas resmi',
+    },
+    {
+      label: 'Penetapan Ketua Tim',
+      satisfied: team.anggota.length > 0,
+      desc: acceptedUsers[0] ? `Ketua: ${acceptedUsers[0].nama}` : 'Belum ditetapkan',
+    },
+    {
+      label: `Kelengkapan Peran Wajib (${competition.komposisi.peranWajib.join(', ')})`,
+      satisfied: validation.missingRoles.length === 0,
+      desc: validation.missingRoles.length === 0 ? 'Semua peran kunci terisi' : `Kurang: ${validation.missingRoles.join(', ')}`,
+    },
+    {
+      label: 'Keberagaman Lintas Program Studi',
+      satisfied: uniqueProdis.length >= 2,
+      desc: `${uniqueProdis.length} program studi (${uniqueProdis.join(', ') || 'Belum ada'})`,
+    },
+  ];
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -123,7 +153,7 @@ export const TeamPage: React.FC = () => {
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">{team.nama}</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Target Lomba: <strong className="text-slate-800">{competition.namaResmi}</strong>
+            Target Pembinaan: <strong className="text-slate-800">{competition.namaResmi}</strong>
           </p>
         </div>
 
@@ -144,6 +174,42 @@ export const TeamPage: React.FC = () => {
         statusText={validation.statusText}
         competitionSlug={team.competitionSlug}
       />
+
+      {/* Belmawa Rule Compliance Audit Card */}
+      <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-blue-700" />
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Audit Kelayakan Formasi Tim Belmawa
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-400">Pedoman Dikti 2026</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {complianceRules.map((rule, idx) => (
+            <div
+              key={idx}
+              className={`p-3 rounded-xl border flex items-start gap-2.5 text-xs transition-all ${
+                rule.satisfied
+                  ? 'bg-emerald-50/50 border-emerald-200/70 text-emerald-950'
+                  : 'bg-amber-50/50 border-amber-200/70 text-amber-950'
+              }`}
+            >
+              {rule.satisfied ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              )}
+              <div className="min-w-0">
+                <div className="font-extrabold truncate">{rule.label}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">{rule.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Missing Roles Alert */}
       {validation.missingRoles.length > 0 && (

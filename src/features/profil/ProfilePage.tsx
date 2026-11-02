@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Users, ArrowRight, ArrowLeft, AlertCircle, UserCheck, Target, Sparkles } from 'lucide-react';
 import { Competition, User } from '../../types';
 import { competitionService, userService } from '../../services/factory';
 import { useAuth } from '../auth/AuthContext';
@@ -44,7 +44,7 @@ export const ProfilePage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (!cancelled) return;
         setLoading(false);
         setFormError('Gagal memuat profil. Coba muat ulang halaman.');
       });
@@ -67,7 +67,7 @@ export const ProfilePage: React.FC = () => {
       if (!userData.email || !EMAIL_RE.test(userData.email)) return 'Email kampus tidak valid.';
     }
     if (s === 2) {
-      if ((userData.minat || []).length === 0) return 'Pilih minimal 1 minat (maks 5).';
+      if ((userData.minat || []).length === 0) return 'Pilih minimal 1 minat.';
       if ((userData.skill || []).length === 0) return 'Tambahkan minimal 1 keahlian.';
       if ((userData.peranBisa || []).length === 0) return 'Pilih minimal 1 peran tim yang bisa dijalani.';
     }
@@ -103,14 +103,11 @@ export const ProfilePage: React.FC = () => {
     setStep(s);
   };
 
-  const handleSaveAndFinish = async () => {
-    for (const s of [1, 2, 3]) {
-      const err = validateStep(s);
-      if (err) {
-        setFormError(err);
-        setStep(s);
-        return;
-      }
+  const handleSaveAll = async () => {
+    const err = validateStep(step);
+    if (err) {
+      setFormError(err);
+      return;
     }
     if (!currentUser) return;
     setSaving(true);
@@ -119,21 +116,21 @@ export const ProfilePage: React.FC = () => {
       if (targetSlug) {
         await userService.setTargetCompetition(currentUser.id, targetSlug);
       }
-      notify('Profil berhasil disimpan! Mengarahkan ke pencarian partner...');
+      notify('Profil & target kompetisi berhasil diperbarui!');
       navigate('/app/partner');
     } catch {
-      setFormError('Gagal menyimpan profil. Coba lagi.');
+      notify('Gagal menyimpan profil. Coba lagi.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <PageLoading message="Memuat profil mahasiswa..." />;
+  if (loading) return <PageLoading message="Memuat profil dan minat mahasiswa..." />;
 
-  const steps = [
-    { num: 1, title: 'Identitas Diri', desc: 'Data dasar & prodi' },
-    { num: 2, title: 'Minat & Skill', desc: 'Peran & keahlian' },
-    { num: 3, title: 'Waktu & Target', desc: 'Jadwal & kompetisi' },
+  const stepsMeta = [
+    { num: 1, label: 'Identitas & Akademik', icon: UserCheck, desc: 'NIM, prodi & foto resmi' },
+    { num: 2, label: 'Minat, Skill & Peran', icon: Sparkles, desc: 'Keahlian komplementer tim' },
+    { num: 3, label: 'Target Belmawa & Waktu', icon: Target, desc: 'Kompetisi & ketersediaan' },
   ];
 
   return (
@@ -142,76 +139,70 @@ export const ProfilePage: React.FC = () => {
       <div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-            Pengaturan Talenta
+            Pengaturan Akun Binaan
           </span>
           <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
             Langkah {step} dari 3
           </span>
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-          Kelola Profil & Minat
+          Profil, Keahlian & Target Kompetisi
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Data ini menjadi dasar sistem pencocokan partner tim yang saling melengkapi keahlian.
+          Data ini menjadi dasar algoritma matching rekan tim dan rekomendasi kurikulum persiapan Belmawa.
         </p>
       </div>
 
-      {needTarget && (
-        <div role="alert" className="p-4 bg-amber-50 border border-amber-200/90 text-amber-950 rounded-2xl text-xs font-medium flex items-center gap-2.5 shadow-2xs">
-          <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Kamu perlu memilih target kompetisi terlebih dahulu untuk mengaktifkan rekomendasi partner tim.</span>
-        </div>
-      )}
-
-      {/* Stepper Tabs */}
-      <ol aria-label="Langkah pengisian profil" className="grid grid-cols-3 gap-2.5">
-        {steps.map((s) => {
-          const isActive = step === s.num;
+      {/* Stepper Progress Bar */}
+      <div className="grid grid-cols-3 gap-2">
+        {stepsMeta.map((s) => {
           const isDone = s.num < step;
-
+          const isCurrent = s.num === step;
+          const Icon = s.icon;
           return (
-            <li key={s.num}>
-              <button
-                type="button"
-                onClick={() => goToStep(s.num)}
-                aria-current={isActive ? 'step' : undefined}
-                className={`w-full p-3 rounded-2xl border text-left transition-all duration-150 cursor-pointer min-h-[52px] ${
-                  isActive
-                    ? 'bg-blue-50/90 border-blue-600 text-blue-950 shadow-xs'
-                    : isDone
-                    ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
-                    : 'bg-white border-slate-200/80 text-slate-500 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                      isDone
-                        ? 'bg-emerald-600 text-white'
-                        : isActive
-                        ? 'bg-blue-700 text-white'
-                        : 'bg-slate-200 text-slate-600'
-                    }`}
-                  >
-                    {isDone ? '✓' : s.num}
-                  </div>
-                  <span className="text-xs font-bold truncate leading-tight">{s.title}</span>
+            <button
+              key={s.num}
+              type="button"
+              onClick={() => goToStep(s.num)}
+              className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                isCurrent
+                  ? 'bg-blue-50/90 border-blue-600 shadow-xs ring-1 ring-blue-600/20'
+                  : isDone
+                  ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                    isCurrent
+                      ? 'bg-blue-700 text-white'
+                      : isDone
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {isDone ? '✓' : s.num}
                 </div>
-                <span className="text-[10px] text-slate-400 block pl-7 truncate">{s.desc}</span>
-              </button>
-            </li>
+                <Icon className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-blue-700' : isDone ? 'text-emerald-600' : 'text-slate-400'}`} />
+              </div>
+              <div className="mt-2">
+                <div className="text-xs font-extrabold text-slate-900 truncate">{s.label}</div>
+                <div className="text-[10px] text-slate-400 truncate">{s.desc}</div>
+              </div>
+            </button>
           );
         })}
-      </ol>
+      </div>
 
       {formError && (
-        <div role="alert" className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+        <div role="alert" className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2.5">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
           <span>{formError}</span>
         </div>
       )}
 
-      {/* Form Content Card */}
+      {/* Step Content */}
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs">
         {step === 1 && <StepIdentitas user={userData} onChange={handleUserChange} />}
         {step === 2 && <StepMinatSkill user={userData} onChange={handleUserChange} />}
@@ -228,31 +219,43 @@ export const ProfilePage: React.FC = () => {
           />
         )}
 
-        <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-100">
+        {/* Footer Navigation Buttons */}
+        <div className="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between gap-3">
           {step > 1 ? (
             <Button
-              variant="secondary"
+              type="button"
+              variant="outline"
               size="sm"
-              onClick={() => setStep(step - 1)}
+              onClick={() => {
+                setFormError('');
+                setStep((s) => s - 1);
+              }}
               leftIcon={<ArrowLeft className="w-3.5 h-3.5" />}
             >
               Kembali
             </Button>
           ) : (
-            <div />
+            <span />
           )}
 
           <div className="flex gap-2">
             {step < 3 ? (
-              <Button size="sm" onClick={goNext} rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                Lanjut
+              <Button
+                type="button"
+                size="md"
+                onClick={goNext}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                Lanjutkan Langkah
               </Button>
             ) : (
               <Button
-                size="sm"
-                onClick={handleSaveAndFinish}
+                type="button"
+                size="md"
+                variant="primary"
+                onClick={handleSaveAll}
                 isLoading={saving}
-                rightIcon={<Users className="w-3.5 h-3.5" />}
+                rightIcon={<Users className="w-4 h-4" />}
               >
                 Simpan & Cari Partner
               </Button>

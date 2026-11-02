@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Trophy } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Trophy, Download } from 'lucide-react';
 import { AdminStats } from '../../services/types';
 import { statsService, competitionService } from '../../services/factory';
 import { Competition } from '../../types';
@@ -9,12 +9,14 @@ import { StatCards } from './components/StatCards';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { useToast } from '../../components/ui/Toast';
 
 export const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { notify } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +28,7 @@ export const AdminDashboardPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        if (cancelled) return;
+        if (!cancelled) return;
         setError('Gagal memuat statistik admin.');
         setLoading(false);
       });
@@ -34,6 +36,10 @@ export const AdminDashboardPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  const handleExportData = () => {
+    notify('Laporan rekapitulasi pembinaan 2026 berhasil disiapkan (unduhan simulasi).');
+  };
 
   if (loading) return <PageLoading message="Memuat analitik dashboard admin..." />;
   if (error || !stats) {
@@ -75,11 +81,21 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <Link to="/verifikasi">
-          <Button size="md" variant="outline" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            Antrean Verifikasi Prestasi
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            size="md"
+            variant="outline"
+            onClick={handleExportData}
+            leftIcon={<Download className="w-4 h-4" />}
+          >
+            Ekspor Data
           </Button>
-        </Link>
+          <Link to="/verifikasi">
+            <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Antrean Verifikasi
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <ScopeBanner />
@@ -104,10 +120,10 @@ export const AdminDashboardPage: React.FC = () => {
               return (
                 <div
                   key={comp.slug}
-                  className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5"
+                  className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-2 hover:border-slate-300 transition-colors"
                 >
                   <div className="flex justify-between items-center gap-2">
-                    <span className="font-bold text-slate-800 truncate" title={comp.namaResmi}>
+                    <span className="font-extrabold text-slate-900 truncate" title={comp.namaResmi}>
                       {comp.namaResmi}
                     </span>
                     <span
@@ -117,9 +133,9 @@ export const AdminDashboardPage: React.FC = () => {
                       {count} Mahasiswa
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden" aria-hidden="true">
+                  <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden" aria-hidden="true">
                     <div
-                      className="h-full bg-blue-700 rounded-full transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-blue-700 to-indigo-600 rounded-full transition-all duration-300"
                       style={{ width: `${percent}%` }}
                     />
                   </div>
@@ -138,27 +154,27 @@ export const AdminDashboardPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-2.5 text-xs">
-            <div className="flex justify-between items-center p-3 rounded-xl bg-emerald-50/90 text-emerald-950 border border-emerald-200/70">
-              <span className="font-semibold">Prestasi Sah / Disetujui Masuk SK</span>
+            <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-50/90 text-emerald-950 border border-emerald-200/80">
+              <span className="font-bold">Prestasi Sah / Disetujui Masuk SKPI</span>
               <strong className="text-emerald-700 text-sm font-black">{stats.pengajuanPrestasi.disetujui}</strong>
             </div>
 
-            <div className="flex justify-between items-center p-3 rounded-xl bg-amber-50/90 text-amber-950 border border-amber-200/70">
-              <span className="font-semibold">Menunggu Pemeriksaan Berkas</span>
+            <div className="flex justify-between items-center p-3.5 rounded-xl bg-amber-50/90 text-amber-950 border border-amber-200/80">
+              <span className="font-bold">Menunggu Pemeriksaan Berkas</span>
               <strong className="text-amber-700 text-sm font-black">{stats.pengajuanPrestasi.menunggu}</strong>
             </div>
 
-            <div className="flex justify-between items-center p-3 rounded-xl bg-orange-50/90 text-orange-950 border border-orange-200/70">
-              <span className="font-semibold">Perlu Perbaikan oleh Mahasiswa</span>
+            <div className="flex justify-between items-center p-3.5 rounded-xl bg-orange-50/90 text-orange-950 border border-orange-200/80">
+              <span className="font-bold">Perlu Perbaikan oleh Mahasiswa</span>
               <strong className="text-orange-700 text-sm font-black">{stats.pengajuanPrestasi.perluPerbaikan}</strong>
             </div>
 
-            <div className="flex justify-between items-center p-3 rounded-xl bg-rose-50/90 text-rose-950 border border-rose-200/70">
-              <span className="font-semibold">Ditolak / Dokumen Tidak Valid</span>
+            <div className="flex justify-between items-center p-3.5 rounded-xl bg-rose-50/90 text-rose-950 border border-rose-200/80">
+              <span className="font-bold">Ditolak / Dokumen Tidak Valid</span>
               <strong className="text-rose-700 text-sm font-black">{stats.pengajuanPrestasi.ditolak}</strong>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2 leading-relaxed">
               <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> yang sah dihitung dalam pelaporan PDDIKTI dan akreditasi pemeringkatan kemahasiswaan institusi.
             </div>
           </CardContent>
