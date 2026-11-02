@@ -2,6 +2,7 @@ import React from 'react';
 import { Camera, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
 import { User } from '../../../types';
+import { assetUrl } from '../../../lib/asset';
 
 interface StepIdentitasProps {
   user: Partial<User>;
@@ -32,7 +33,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-slate-50 to-blue-50/40 border border-blue-200/80 flex flex-col sm:flex-row items-center sm:items-start gap-5">
         <div className="relative shrink-0 group">
           <img
-            src={currentAvatar}
+            src={assetUrl(currentAvatar)}
             alt={user.nama || 'Foto Mahasiswa'}
             className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-blue-600/40 shadow-md transition-transform group-hover:scale-[1.02]"
           />
@@ -73,7 +74,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
                   }`}
                 >
                   <img
-                    src={opt.url}
+                    src={assetUrl(opt.url)}
                     alt={opt.label}
                     className="w-5 h-5 rounded-full object-cover border border-white/50"
                   />

@@ -23,6 +23,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Ca
 import { Badge } from '../../components/ui/Badge';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { AchievementStatusBadge } from '../prestasi/components/StatusBadge';
+import { assetUrl } from '../../lib/asset';
 
 export const BerandaPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -97,7 +98,7 @@ export const BerandaPage: React.FC = () => {
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
             <img
-              src={currentUser?.avatar || '/images/avatar-andi.jpg'}
+              src={assetUrl(currentUser?.avatar) || assetUrl('images/avatar-andi.jpg')}
               alt={currentUser?.nama || 'Foto Profil'}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-600/30 shadow-md shrink-0"
             />

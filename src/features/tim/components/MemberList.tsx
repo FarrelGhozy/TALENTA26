@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, TeamMember } from '../../../types';
 import { Badge } from '../../../components/ui/Badge';
+import { assetUrl } from '../../../lib/asset';
 
 interface MemberListProps {
   members: TeamMember[];
@@ -35,7 +36,7 @@ export const MemberList: React.FC<MemberListProps> = ({ members, allUsers, curre
                 <div className="flex items-center gap-3 min-w-0">
                   {user?.avatar ? (
                     <img
-                      src={user.avatar}
+                      src={assetUrl(user.avatar)}
                       alt={user.nama}
                       className="w-10 h-10 shrink-0 rounded-2xl object-cover border border-slate-200 shadow-xs"
                     />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, ShieldCheck, Heart, ExternalLink, GraduationCap } from 'lucide-react';
+import { assetUrl } from '../../lib/asset';
 
 export const Footer: React.FC = () => {
   return (
@@ -15,7 +16,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-3">
               <img
-                src={`${import.meta.env.BASE_URL}images/logo-icon.png`}
+                src={assetUrl('images/logo-icon.png')}
                 alt="Logo TALENTA UNIDA Gontor"
                 className="w-9 h-9 rounded-xl shadow-md object-cover border border-white/20"
               />

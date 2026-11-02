@@ -2,6 +2,7 @@ import React from 'react';
 import { GraduationCap, Settings, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 import { Role } from '../../../types';
+import { assetUrl } from '../../../lib/asset';
 
 interface RoleCardLoginProps {
   onSelectRole: (role: Role, userId: string) => void;
@@ -97,7 +98,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
               <div className="flex items-start gap-4">
                 {acc.avatar ? (
                   <img
-                    src={acc.avatar}
+                    src={assetUrl(acc.avatar)}
                     alt={acc.name}
                     className="w-12 h-12 rounded-2xl object-cover border-2 border-blue-600/30 shadow-xs shrink-0 group-hover:scale-105 transition-transform"
                   />

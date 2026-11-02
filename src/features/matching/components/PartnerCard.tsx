@@ -5,6 +5,7 @@ import { Card, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { MatchReasonTooltip } from './MatchReasonTooltip';
+import { assetUrl } from '../../../lib/asset';
 
 interface PartnerCardProps {
   candidate: MatchCandidate;
@@ -41,7 +42,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
           <div className="flex items-center gap-3 min-w-0">
             {user.avatar ? (
               <img
-                src={user.avatar}
+                src={assetUrl(user.avatar)}
                 alt={user.nama}
                 className="w-11 h-11 shrink-0 rounded-2xl object-cover border border-slate-200 shadow-xs"
               />
