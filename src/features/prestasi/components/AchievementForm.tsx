@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UploadCloud, AlertCircle, Send, FileCheck, Sparkles, FileText, X } from 'lucide-react';
+import { UploadCloud, AlertCircle, Send, FileCheck, FileText, X } from 'lucide-react';
 import { AchievementCategory, AchievementLevel, AchievementType, Achievement } from '../../../types';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -191,8 +191,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
 
           {/* Quick Preset Buttons */}
           <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-center gap-1">
-              <Sparkles className="w-3 h-3 text-blue-600" />
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
               Pilih Berkas Contoh Demo:
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">

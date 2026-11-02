@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Plus, X, Check } from 'lucide-react';
+import { Plus, X, Check } from 'lucide-react';
 import { User, Skill } from '../../../types';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -150,8 +150,7 @@ export const StepMinatSkill: React.FC<StepMinatSkillProps> = ({ user, onChange }
 
         {/* Preset Chips */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-600" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Rekomendasi Cepat:
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -250,8 +249,7 @@ export const StepMinatSkill: React.FC<StepMinatSkillProps> = ({ user, onChange }
 
         {/* Preset Skill Chips */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-emerald-600" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Pilihan Keahlian Populer:
           </span>
           <div className="flex flex-wrap gap-1.5">

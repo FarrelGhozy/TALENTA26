@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lightbulb, Sparkles, Bot } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 
@@ -28,18 +28,17 @@ export const AiBoxMock: React.FC = () => {
     <Card className="border-blue-200/90 bg-gradient-to-br from-blue-50/60 via-white to-sky-50/40 shadow-2xs">
       <CardHeader className="py-3 bg-blue-50/80 flex items-center justify-between border-b border-blue-100">
         <CardTitle className="text-xs text-blue-950 flex items-center gap-2">
-          <Bot className="w-4 h-4 text-blue-700" />
-          <span>Asisten Cerdas Belmawa (Simulasi)</span>
+          <Lightbulb className="w-4 h-4 text-blue-700" />
+          <span>Rekomendasi Adaptif Persiapan (Simulasi)</span>
         </CardTitle>
-        <Badge color="amber" size="sm" dot>
-          Simulasi AI Interaktif
+        <Badge color="blue" size="sm" dot>
+          Simulasi Adaptif
         </Badge>
       </CardHeader>
 
       <CardContent className="p-4 text-xs text-slate-600 space-y-3.5">
-        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-          <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-          <span>Klik tombol simulasi di bawah untuk menguji respon asistensi:</span>
+        <div className="text-[11px] text-slate-500">
+          Pilih topik di bawah untuk melihat simulasi rekomendasi:
         </div>
 
         {/* Prompt simulator buttons */}
@@ -53,7 +52,7 @@ export const AiBoxMock: React.FC = () => {
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            🔍 Review Judul Ide
+            Review Judul Ide
           </button>
           <button
             type="button"
@@ -64,7 +63,7 @@ export const AiBoxMock: React.FC = () => {
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            📋 Audit Format Belmawa
+            Audit Format Belmawa
           </button>
           <button
             type="button"
@@ -75,15 +74,14 @@ export const AiBoxMock: React.FC = () => {
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            💬 Tips Bimbingan Dosen
+            Tips Bimbingan Dosen
           </button>
         </div>
 
         {/* Dynamic response card */}
         <div className="bg-white p-3.5 rounded-xl border border-blue-200/80 shadow-2xs space-y-1.5">
-          <div className="font-extrabold text-blue-950 flex items-center gap-1.5 text-xs">
-            <Lightbulb className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>{simulatedResponses[activeSuggestion].title}</span>
+          <div className="font-extrabold text-blue-950 text-xs">
+            {simulatedResponses[activeSuggestion].title}
           </div>
           <p className="text-slate-600 leading-relaxed text-[11px]">
             {simulatedResponses[activeSuggestion].content}

@@ -10,7 +10,6 @@ import {
   Compass,
   CheckCircle2,
   Clock,
-  Sparkles,
   Calendar,
   AlertCircle,
   ChevronRight,
@@ -224,8 +223,7 @@ export const BerandaPage: React.FC = () => {
 
           {nextStep && (
             <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs">
-              <span className="text-blue-900 font-semibold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-700 shrink-0" />
+              <span className="text-blue-900 font-semibold">
                 Langkah berikutnya yang disarankan: <strong>{nextStep.label}</strong>
               </span>
               <Link to={nextStep.to} className="font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0">

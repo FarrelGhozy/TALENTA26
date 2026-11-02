@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Send, X, RotateCcw, Clock, Sparkles } from 'lucide-react';
+import { Target, Send, X, RotateCcw, Clock } from 'lucide-react';
 import { MatchCandidate } from '../../../types';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -83,8 +83,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
         {/* Highlights: Inline reasons */}
         {reasons.length > 0 && (
           <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-blue-600" />
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Alasan Komplementer:
             </div>
             <ul className="text-[11px] text-slate-600 space-y-0.5">

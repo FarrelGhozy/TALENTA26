@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Settings, ShieldCheck, ArrowRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, Settings, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 import { Role } from '../../../types';
 import { assetUrl } from '../../../lib/asset';
@@ -71,7 +71,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
     <div className="space-y-6">
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-800 text-xs font-bold shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-blue-600" />
           <span>Lingkungan Simulasi Interaktif Aktif (1-Klik Masuk)</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -133,9 +133,8 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
                 {acc.highlights.map((hl) => (
                   <span
                     key={hl}
-                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 bg-slate-100/80 px-2 py-0.5 rounded-md"
+                    className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md"
                   >
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     {hl}
                   </span>
                 ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, ArrowRight, ArrowLeft, AlertCircle, UserCheck, Target, Sparkles } from 'lucide-react';
+import { Users, ArrowRight, ArrowLeft, AlertCircle, UserCheck, Target, Layers } from 'lucide-react';
 import { Competition, User } from '../../types';
 import { competitionService, userService } from '../../services/factory';
 import { useAuth } from '../auth/AuthContext';
@@ -129,7 +129,7 @@ export const ProfilePage: React.FC = () => {
 
   const stepsMeta = [
     { num: 1, label: 'Identitas & Akademik', icon: UserCheck, desc: 'NIM, prodi & foto resmi' },
-    { num: 2, label: 'Minat, Skill & Peran', icon: Sparkles, desc: 'Keahlian komplementer tim' },
+    { num: 2, label: 'Minat, Skill & Peran', icon: Layers, desc: 'Keahlian komplementer tim' },
     { num: 3, label: 'Target Belmawa & Waktu', icon: Target, desc: 'Kompetisi & ketersediaan' },
   ];
 

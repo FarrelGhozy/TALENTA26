@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, MessageSquare, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, MessageSquare } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 
 interface DecisionPanelProps {
@@ -65,8 +65,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
 
         {/* Quick Rationale Template Chips */}
         <div className="space-y-1.5 pb-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-blue-600" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
             Template Catatan Cepat (1-Klik):
           </span>
           <div className="flex flex-wrap gap-1.5">
