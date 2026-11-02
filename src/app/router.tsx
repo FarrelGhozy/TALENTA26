@@ -19,7 +19,8 @@ import { AdminDashboardPage } from '../features/dashboard/AdminDashboardPage';
 import { VerificationListPage } from '../features/verifikasi/VerificationListPage';
 import { VerificationDetailPage } from '../features/verifikasi/VerificationDetailPage';
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
   {
     element: <PublicLayout />,
     errorElement: <RouteErrorPage />,
@@ -85,4 +86,8 @@ export const router = createBrowserRouter([
 
   { path: '/404', element: <NotFoundPage /> },
   { path: '*', element: <NotFoundPage /> },
-]);
+  ],
+  {
+    basename: import.meta.env.BASE_URL,
+  }
+);

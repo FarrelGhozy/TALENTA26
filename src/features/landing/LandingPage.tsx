@@ -88,7 +88,7 @@ export const LandingPage: React.FC = () => {
       >
         {/* Background Image: Extends 100% across the full viewport height */}
         <img
-          src="/images/hero-unida.jpg"
+          src={`${import.meta.env.BASE_URL}images/hero-unida.jpg`}
           alt="Mahasiswa Berjas UNIDA Gontor Menatap Gedung Utama Berkubah Emas di Kala Sunrise"
           className="absolute inset-0 w-full h-full object-cover object-[80%_center] sm:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
         />

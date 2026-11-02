@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-3">
               <img
-                src="/images/logo-icon.png"
+                src={`${import.meta.env.BASE_URL}images/logo-icon.png`}
                 alt="Logo TALENTA UNIDA Gontor"
                 className="w-9 h-9 rounded-xl shadow-md object-cover border border-white/20"
               />

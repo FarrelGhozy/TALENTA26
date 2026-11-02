@@ -14,7 +14,11 @@ export const RequireRole: React.FC<{ allowedRoles: Role[] }> = ({ allowedRoles }
   }
 
   if (!currentUser || !allowedRoles.includes(currentRole)) {
-    return <Navigate to={`/masuk?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const rawPath = location.pathname + location.search;
+    const strippedPath =
+      basePath && rawPath.startsWith(basePath) ? rawPath.slice(basePath.length) || '/' : rawPath;
+    return <Navigate to={`/masuk?redirect=${encodeURIComponent(strippedPath)}`} replace />;
   }
 
   return <Outlet />;

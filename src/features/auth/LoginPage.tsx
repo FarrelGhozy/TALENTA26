@@ -17,7 +17,13 @@ export const LoginPage: React.FC = () => {
   );
 
   const getSafeRedirect = (role: Role) => {
-    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) return redirect;
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+      if (basePath && redirect.startsWith(`${basePath}/`)) {
+        return redirect.slice(basePath.length) || '/';
+      }
+      return redirect;
+    }
     if (role === 'admin_program' || role === 'admin_institusi') return '/admin';
     if (role === 'verifikator') return '/verifikasi';
     return '/app/beranda';

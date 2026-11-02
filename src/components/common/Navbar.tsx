@@ -28,7 +28,12 @@ export const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
 
-  const isLanding = location.pathname === '/';
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const strippedPath =
+    basePath && location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length) || '/'
+      : location.pathname;
+  const isLanding = strippedPath === '/';
 
   useEffect(() => {
     if (!isLanding) {
@@ -74,8 +79,8 @@ export const Navbar: React.FC = () => {
   const navLinks = getNavLinks();
 
   const isActive = (to: string) => {
-    if (to === '/') return location.pathname === '/';
-    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+    if (to === '/') return strippedPath === '/';
+    return strippedPath === to || strippedPath.startsWith(`${to}/`);
   };
 
   const handleLogout = () => {
@@ -95,11 +100,12 @@ export const Navbar: React.FC = () => {
 
   const getAvatarSrc = (user?: { nama?: string; avatar?: string } | null) => {
     if (user?.avatar) return user.avatar;
+    const base = import.meta.env.BASE_URL;
     const name = (user?.nama || '').toLowerCase();
     if (name.includes('rina') || name.includes('sari') || name.includes('maya')) {
-      return '/images/avatar-rina.jpg';
+      return `${base}images/avatar-rina.jpg`;
     }
-    return '/images/avatar-andi.jpg';
+    return `${base}images/avatar-andi.jpg`;
   };
 
   return (
@@ -119,7 +125,7 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-3 group">
             <img
-              src="/images/logo-icon.png"
+              src={`${import.meta.env.BASE_URL}images/logo-icon.png`}
               alt="Logo Resmi TALENTA UNIDA Gontor"
               className="w-9 h-9 rounded-xl shadow-xs group-hover:scale-105 transition-transform object-cover border border-white/20"
             />

@@ -6,7 +6,12 @@ import { Footer } from '../../components/common/Footer';
 
 export const PublicLayout: React.FC = () => {
   const location = useLocation();
-  const isLanding = location.pathname === '/';
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const strippedPath =
+    basePath && location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length) || '/'
+      : location.pathname;
+  const isLanding = strippedPath === '/';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
