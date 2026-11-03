@@ -271,19 +271,19 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4 Steps Journey Section */}
+      {/* 5 Steps Journey Section */}
       <section id="alur-section" className="space-y-6 pt-4" aria-labelledby="alur-title">
         <div className="text-center max-w-xl mx-auto space-y-2">
           <Badge color="blue">Alur Pembinaan UNIDA Gontor</Badge>
           <h2 id="alur-title" className="text-2xl font-black text-slate-900 tracking-tight">
-            4 Langkah Mudah Meraih Prestasi Kampus
+            Roadmap Prestasi Mahasiswa
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Dari pemetaan awal hingga penghargaan terverifikasi, TALENTA mendampingi setiap fase perjalananmu.
+            Dari pemetaan awal, kurasi seleksi internal, hingga verifikasi resmi capaian prestasi di TALENTA.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
           {[
             {
               step: '01',
@@ -308,8 +308,15 @@ export const LandingPage: React.FC = () => {
             },
             {
               step: '04',
+              title: 'Seleksi Internal Kampus',
+              desc: 'Tahap penyaringan peserta atau tim terdaftar di ekosistem TALENTA untuk menjaring delegasi yang lolos seleksi internal.',
+              icon: ShieldCheck,
+              color: 'text-amber-700 bg-amber-50 border-amber-200/80',
+            },
+            {
+              step: '05',
               title: 'Verifikasi Prestasi',
-              desc: 'Unggah berkas sertifikat dan SK juara untuk divalidasi resmi oleh verifikator institusi.',
+              desc: 'Data peserta yang lolos seleksi internal diinput dan diproses untuk verifikasi prestasi resmi.',
               icon: Award,
               color: 'text-emerald-700 bg-emerald-50 border-emerald-200/80',
             },
@@ -320,12 +327,12 @@ export const LandingPage: React.FC = () => {
                 key={item.step}
                 className="hover:-translate-y-1 hover:shadow-md transition-all duration-200 border-slate-200 bg-white"
               >
-                <CardContent className="space-y-3 p-5">
+                <CardContent className="space-y-2.5 p-4 sm:p-4.5">
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-black text-slate-300 font-mono">
                       {item.step}
                     </span>
-                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${item.color}`}>
+                    <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${item.color}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                   </div>
