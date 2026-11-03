@@ -91,9 +91,9 @@ export const BerandaPage: React.FC = () => {
     { label: 'Cari Partner', done: !!team, to: '/app/partner' },
     { label: 'Tim Terbentuk', done: isTeamFormed, to: '/app/tim' },
     {
-      label: 'Ruang Persiapan',
+      label: 'Katalog & Pembinaan',
       done: isTeamFormed && !!targetComp,
-      to: targetComp ? `/app/kompetisi/${targetComp.slug}/persiapan` : '/kompetisi',
+      to: targetComp ? `/kompetisi/${targetComp.slug}` : '/kompetisi',
     },
     { label: 'Validasi Prestasi', done: achievements.some((a) => a.status === 'disetujui'), to: '/app/prestasi' },
   ];

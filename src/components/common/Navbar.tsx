@@ -58,10 +58,10 @@ export const Navbar: React.FC = () => {
     if (currentRole === 'mahasiswa') {
       return [
         { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
-        { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
         { to: '/app/profil', label: 'Profil & Target', icon: UserCircle2 },
         { to: '/app/partner', label: 'Cari Partner', icon: Users },
         { to: '/app/tim', label: 'Tim Saya', icon: Users },
+        { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
         { to: '/app/prestasi', label: 'Prestasi', icon: Award },
       ];
     }

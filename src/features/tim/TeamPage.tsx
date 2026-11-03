@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, LogOut, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck, XCircle } from 'lucide-react';
+import { Users, LogOut, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck, XCircle, Trophy } from 'lucide-react';
 import { Competition, Team, User } from '../../types';
 import { competitionService, teamService, userService } from '../../services/factory';
 import { useAuth } from '../auth/AuthContext';
@@ -236,6 +236,46 @@ export const TeamPage: React.FC = () => {
         allUsers={allUsers}
         currentUserId={currentUser?.id || ''}
       />
+
+      {/* Auto ke Katalog Perlombaan (Langkah Selanjutnya) */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-900 via-blue-950 to-slate-900 text-white shadow-lg relative overflow-hidden space-y-4">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 text-[11px] font-bold border border-blue-400/30">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              Langkah Selanjutnya: Menuju Kompetisi
+            </div>
+            <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+              Lanjutkan ke Katalog Perlombaan
+            </h3>
+            <p className="text-xs text-blue-100/85 leading-relaxed">
+              Tim Anda membidik <strong className="text-white font-bold">{competition.namaResmi}</strong>. Kunjungi katalog lomba untuk menyimak 3 tahapan pembinaan (Pembinaan, Seleksi Internal, dan Input Prestasi), jadwal kegiatan, serta pedoman teknis resmi Belmawa.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 relative z-10">
+            <Link to={`/kompetisi/${team.competitionSlug}`}>
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                Buka Katalog Lomba
+              </Button>
+            </Link>
+            <Link to={`/app/kompetisi/${team.competitionSlug}/persiapan`}>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto border-white/20 text-blue-100 hover:bg-white/10 hover:text-white"
+              >
+                Ruang Persiapan
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       <LeaveTeamModal
         isOpen={isLeaveModalOpen}
