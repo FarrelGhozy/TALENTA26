@@ -3,7 +3,7 @@ import { Competition } from '../../types';
 import { getItem, setItem } from '../../lib/storage';
 import { ICompetitionService } from '../types';
 
-const STORAGE_KEY = 'talenta-competitions';
+const STORAGE_KEY = 'talenta-competitions-v3';
 
 function getStoredCompetitions(): Competition[] {
   return getItem<Competition[]>(STORAGE_KEY, competitionsData as Competition[]);

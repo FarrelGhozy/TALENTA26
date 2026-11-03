@@ -168,23 +168,72 @@ export const CompetitionDetailPage: React.FC = () => {
         <div id={`panel-${currentTab}`} role="tabpanel" aria-labelledby={`tab-${currentTab}`}>
           {currentTab === 'ringkasan' && (
             <div className="space-y-4 text-xs text-slate-600">
-              <div className="flex items-center gap-2 mb-2">
-                <ListOrdered className="w-4 h-4 text-blue-700" />
-                <h2 className="font-bold text-slate-800 text-sm">Alur Tahapan Pelaksanaan Lomba</h2>
+              <div className="space-y-1 mb-3">
+                <div className="flex items-center gap-2">
+                  <ListOrdered className="w-4 h-4 text-blue-700" />
+                  <h2 className="font-bold text-slate-900 text-sm">Alur Tahapan Pelaksanaan Lomba</h2>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Siklus persiapan delegasi UNIDA Gontor hingga pengajuan rekognisi prestasi resmi di TALENTA.
+                </p>
               </div>
-              <ol className="space-y-2.5">
-                {competition.tahapan.map((t, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70"
-                  >
-                    <span className="w-6 h-6 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
-                      {idx + 1}
-                    </span>
-                    <span className="font-medium text-slate-700 leading-relaxed pt-0.5">{t}</span>
-                  </li>
-                ))}
-              </ol>
+
+              <div className="space-y-3">
+                {competition.tahapan.map((t, idx) => {
+                  const isObject = typeof t === 'object' && t !== null;
+                  const judul = isObject ? t.judul : t;
+                  const deskripsi = isObject ? t.deskripsi : null;
+                  const kategori = isObject ? t.kategori : null;
+                  const nomor = isObject && t.nomor ? t.nomor : `0${idx + 1}`;
+
+                  const stepStyles = [
+                    {
+                      badge: 'bg-blue-700 text-white shadow-xs',
+                      kategoriBadge: 'bg-blue-50 text-blue-800 border-blue-200/80',
+                      borderHover: 'hover:border-blue-300',
+                    },
+                    {
+                      badge: 'bg-amber-600 text-white shadow-xs',
+                      kategoriBadge: 'bg-amber-50 text-amber-800 border-amber-200/80',
+                      borderHover: 'hover:border-amber-300',
+                    },
+                    {
+                      badge: 'bg-emerald-700 text-white shadow-xs',
+                      kategoriBadge: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
+                      borderHover: 'hover:border-emerald-300',
+                    },
+                  ];
+                  const currentStyle = stepStyles[idx % stepStyles.length];
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`relative flex items-start gap-3.5 p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 transition-all ${currentStyle.borderHover}`}
+                    >
+                      <div
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${currentStyle.badge}`}
+                      >
+                        {nomor}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="font-bold text-slate-900 text-sm">{judul}</h3>
+                          {kategori && (
+                            <span
+                              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${currentStyle.kategoriBadge}`}
+                            >
+                              {kategori}
+                            </span>
+                          )}
+                        </div>
+                        {deskripsi ? (
+                          <p className="text-xs text-slate-600 leading-relaxed">{deskripsi}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

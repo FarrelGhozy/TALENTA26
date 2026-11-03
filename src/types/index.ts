@@ -55,6 +55,13 @@ export interface SeleksiInternalItem {
   tanggal: string;
 }
 
+export interface TahapItem {
+  nomor?: string;
+  judul: string;
+  kategori?: string;
+  deskripsi: string;
+}
+
 export interface Competition {
   slug: string;
   institutionId: string;
@@ -64,7 +71,7 @@ export interface Competition {
   deskripsi: string;
   syarat: string[];
   komposisi: KomposisiTim;
-  tahapan: string[];
+  tahapan: (string | TahapItem)[];
   jadwal: JadwalItem[];
   seleksiInternal: SeleksiInternalItem[];
 }

@@ -1,1 +1,221 @@
-[{"slug":"pkm-re","institutionId":"inst-01","namaResmi":"PKM Riset Eksakta (PKM-RE)","kategori":"PKM","tingkat":"nasional","deskripsi":"Program Kreativitas Mahasiswa bidang riset eksakta Belmawa.","syarat":["Mahasiswa aktif","Maks angkatan 2023 ke atas","Belum pernah juara PIMNAS"],"komposisi":{"min":3,"max":5,"peranWajib":["ketua","penulis","riset"]},"tahapan":["Pengajuan ide","Proposal","Review internal","Submit Belmawa"],"jadwal":[{"label":"Deadline ide internal","tanggal":"2026-11-15"},{"label":"Submit proposal","tanggal":"2026-12-10"}],"seleksiInternal":[{"tahap":"Seleksi berkas","tanggal":"2026-11-20"},{"tahap":"Presentasi","tanggal":"2026-11-27"}]},{"slug":"gemastik","institutionId":"inst-01","namaResmi":"GEMASTIK Divisi Pengembangan Perangkat Lunak","kategori":"GEMASTIK","tingkat":"nasional","deskripsi":"Kompetisi TIK nasional Belmawa.","syarat":["Tim 3 orang","Satu perguruan tinggi"],"komposisi":{"min":3,"max":3,"peranWajib":["programmer","desainer","presenter"]},"tahapan":["Penyisihan","Final"],"jadwal":[{"label":"Pendaftaran","tanggal":"2026-09-01"},{"label":"Penyisihan","tanggal":"2026-10-10"}],"seleksiInternal":[{"tahap":"Seleksi karya","tanggal":"2026-09-15"}]},{"slug":"onmipa-mat","institutionId":"inst-01","namaResmi":"ON-MIPA Matematika","kategori":"ON-MIPA","tingkat":"nasional","deskripsi":"Olimpiade MIPA individu.","syarat":["Individu","Seleksi kampus"],"komposisi":{"min":1,"max":1,"peranWajib":[]},"tahapan":["Seleksi kampus","Wilayah","Nasional"],"jadwal":[{"label":"Seleksi kampus","tanggal":"2026-10-05"}],"seleksiInternal":[{"tahap":"Tes tulis","tanggal":"2026-10-05"}]},{"slug":"kmi-expo","institutionId":"inst-01","namaResmi":"KMI Expo","kategori":"KMI","tingkat":"nasional","deskripsi":"Kewirausahaan Mahasiswa Indonesia.","syarat":["Punya usaha rintisan"],"komposisi":{"min":3,"max":5,"peranWajib":["hustler","presenter"]},"tahapan":["Kurasi","Expo"],"jadwal":[{"label":"Kurasi internal","tanggal":"2026-09-20"}],"seleksiInternal":[{"tahap":"Pitch internal","tanggal":"2026-09-20"}]}]
+[
+  {
+    "slug": "pkm-re",
+    "institutionId": "inst-01",
+    "namaResmi": "PKM Riset Eksakta (PKM-RE)",
+    "kategori": "PKM",
+    "tingkat": "nasional",
+    "deskripsi": "Program Kreativitas Mahasiswa bidang riset eksakta Belmawa.",
+    "syarat": [
+      "Mahasiswa aktif",
+      "Maks angkatan 2023 ke atas",
+      "Belum pernah juara PIMNAS"
+    ],
+    "komposisi": {
+      "min": 3,
+      "max": 5,
+      "peranWajib": [
+        "ketua",
+        "penulis",
+        "riset"
+      ]
+    },
+    "tahapan": [
+      {
+        "nomor": "01",
+        "judul": "Pembinaan & Penyusunan Proposal",
+        "kategori": "Fase Bimbingan & Riset",
+        "deskripsi": "Pematangan ide inovasi riset eksakta dan penulisan proposal terstruktur bersama dosen pendamping sesuai pedoman PKM Belmawa."
+      },
+      {
+        "nomor": "02",
+        "judul": "Seleksi Internal Kampus",
+        "kategori": "Fase Review & Presentasi",
+        "deskripsi": "Review substansi proposal dan simulasi presentasi oleh reviewer internal UNIDA Gontor untuk penetapan kuota submit Belmawa."
+      },
+      {
+        "nomor": "03",
+        "judul": "Pengajuan dan Input Prestasi",
+        "kategori": "Fase Rekognisi & SKPI",
+        "deskripsi": "Submit resmi ke portal Belmawa dan pelaporan prestasi mandiri di TALENTA setelah lolos pendanaan atau penghargaan."
+      }
+    ],
+    "jadwal": [
+      {
+        "label": "Deadline ide internal",
+        "tanggal": "2026-11-15"
+      },
+      {
+        "label": "Submit proposal",
+        "tanggal": "2026-12-10"
+      }
+    ],
+    "seleksiInternal": [
+      {
+        "tahap": "Seleksi berkas",
+        "tanggal": "2026-11-20"
+      },
+      {
+        "tahap": "Presentasi",
+        "tanggal": "2026-11-27"
+      }
+    ]
+  },
+  {
+    "slug": "gemastik",
+    "institutionId": "inst-01",
+    "namaResmi": "GEMASTIK Divisi Pengembangan Perangkat Lunak",
+    "kategori": "GEMASTIK",
+    "tingkat": "nasional",
+    "deskripsi": "Kompetisi TIK nasional Belmawa.",
+    "syarat": [
+      "Tim 3 orang",
+      "Satu perguruan tinggi"
+    ],
+    "komposisi": {
+      "min": 3,
+      "max": 3,
+      "peranWajib": [
+        "programmer",
+        "desainer",
+        "presenter"
+      ]
+    },
+    "tahapan": [
+      {
+        "nomor": "01",
+        "judul": "Pembinaan",
+        "kategori": "Fase Persiapan & Mentoring",
+        "deskripsi": "Tahap persiapan mahasiswa melalui pembelajaran, pendalaman materi, latihan, serta mentoring bersama dosen pembimbing sesuai bidang perlombaan."
+      },
+      {
+        "nomor": "02",
+        "judul": "Seleksi Internal Kampus",
+        "kategori": "Fase Kurasi & Penyaringan",
+        "deskripsi": "Tahap kompetisi dan penyaringan mahasiswa di tingkat internal kampus untuk menentukan peserta terbaik yang akan dipilih menjadi delegasi UNIDA Gontor dalam kompetisi nasional Belmawa setiap tahunnya."
+      },
+      {
+        "nomor": "03",
+        "judul": "Pengajuan dan Input Prestasi",
+        "kategori": "Fase Rekognisi & SKPI",
+        "deskripsi": "Setelah seleksi internal selesai dan pemenang ditentukan (misalnya tiga mahasiswa terbaik), nama-nama tersebut dapat diajukan untuk melakukan pengisian data prestasi secara mandiri melalui website TALENTA."
+      }
+    ],
+    "jadwal": [
+      {
+        "label": "Pendaftaran",
+        "tanggal": "2026-09-01"
+      },
+      {
+        "label": "Penyisihan",
+        "tanggal": "2026-10-10"
+      }
+    ],
+    "seleksiInternal": [
+      {
+        "tahap": "Seleksi karya",
+        "tanggal": "2026-09-15"
+      }
+    ]
+  },
+  {
+    "slug": "onmipa-mat",
+    "institutionId": "inst-01",
+    "namaResmi": "ON-MIPA Matematika",
+    "kategori": "ON-MIPA",
+    "tingkat": "nasional",
+    "deskripsi": "Olimpiade MIPA individu.",
+    "syarat": [
+      "Individu",
+      "Seleksi kampus"
+    ],
+    "komposisi": {
+      "min": 1,
+      "max": 1,
+      "peranWajib": []
+    },
+    "tahapan": [
+      {
+        "nomor": "01",
+        "judul": "Pembinaan & Drilling Soal",
+        "kategori": "Fase Penguatan Materi",
+        "deskripsi": "Pendalaman materi kalkulus, aljabar linear, dan analisis riil serta pembahasan bank soal olimpiade bersama dosen pembina."
+      },
+      {
+        "nomor": "02",
+        "judul": "Seleksi Internal Kampus",
+        "kategori": "Fase Tes Tertulis",
+        "deskripsi": "Ujian penyaringan tertulis tingkat universitas untuk menetapkan mahasiswa terbaik sebagai perwakilan resmi UNIDA Gontor."
+      },
+      {
+        "nomor": "03",
+        "judul": "Pengajuan dan Input Prestasi",
+        "kategori": "Fase Rekognisi & SKPI",
+        "deskripsi": "Pelaporan hasil kompetisi wilayah maupun nasional untuk verifikasi transkrip prestasi dan poin SKPI."
+      }
+    ],
+    "jadwal": [
+      {
+        "label": "Seleksi kampus",
+        "tanggal": "2026-10-05"
+      }
+    ],
+    "seleksiInternal": [
+      {
+        "tahap": "Tes tulis",
+        "tanggal": "2026-10-05"
+      }
+    ]
+  },
+  {
+    "slug": "kmi-expo",
+    "institutionId": "inst-01",
+    "namaResmi": "KMI Expo",
+    "kategori": "KMI",
+    "tingkat": "nasional",
+    "deskripsi": "Kewirausahaan Mahasiswa Indonesia.",
+    "syarat": [
+      "Punya usaha rintisan"
+    ],
+    "komposisi": {
+      "min": 3,
+      "max": 5,
+      "peranWajib": [
+        "hustler",
+        "presenter"
+      ]
+    },
+    "tahapan": [
+      {
+        "nomor": "01",
+        "judul": "Pembinaan Rintisan Bisnis",
+        "kategori": "Fase Inkubasi & Mentoring",
+        "deskripsi": "Mentoring validasi pasar, penyusunan laporan keuangan rintisan, dan pendampingan pembuatan pitch deck kewirausahaan."
+      },
+      {
+        "nomor": "02",
+        "judul": "Seleksi Internal Kampus",
+        "kategori": "Fase Kurasi & Pitching",
+        "deskripsi": "Kurasi bisnis dan simulasi pitching di hadapan tim inkubator kampus untuk menentukan tim delegasi KMI Expo."
+      },
+      {
+        "nomor": "03",
+        "judul": "Pengajuan dan Input Prestasi",
+        "kategori": "Fase Rekognisi & SKPI",
+        "deskripsi": "Pengajuan dan penginputan data prestasi wirausaha berprestasi secara mandiri ke sistem TALENTA."
+      }
+    ],
+    "jadwal": [
+      {
+        "label": "Kurasi internal",
+        "tanggal": "2026-09-20"
+      }
+    ],
+    "seleksiInternal": [
+      {
+        "tahap": "Pitch internal",
+        "tanggal": "2026-09-20"
+      }
+    ]
+  }
+]
