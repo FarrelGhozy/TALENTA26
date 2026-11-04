@@ -89,17 +89,17 @@ export const LandingPage: React.FC = () => {
         {/* Background Image: Extends 100% across the full viewport height */}
         <img
           src={assetUrl('images/hero-unida.jpg')}
-          alt="Mahasiswa Berjas UNIDA Gontor Menatap Gedung Utama Berkubah Emas di Kala Sunrise"
-          className="absolute inset-0 w-full h-full object-cover object-[80%_center] sm:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+          alt="Mahasiswa Berjas UNIDA Gontor di Depan Gedung Utama Terpadu Kampus UNIDA Gontor"
+          className="absolute inset-0 w-full h-full object-cover object-[58%_center] sm:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
         />
 
         {/* Ambient Dark Gradient Overlays for High Contrast Typography & Seamless Top-Bar Flow */}
-        {/* Mobile: Shadow HANYA di bagian bawah tempat teks dan tombol. Bagian atas (kubah emas, langit fajar, wajah mahasiswa) 100% jernih dan terang tanpa shadow */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] from-10% via-[#060a14]/90 via-35% to-transparent to-55% sm:hidden pointer-events-none" />
-        {/* Desktop Horizontal Gradient: Preserves PC layout 100% */}
-        <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#060a14] via-[#060a14]/65 md:via-[#060a14]/35 to-transparent pointer-events-none" />
-        {/* Vertical atmospheric fade from bottom and top for PC */}
-        <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#060a14] via-[#060a14]/30 to-[#060a14]/70 pointer-events-none" />
+        {/* Mobile: Shadow di bagian bawah tempat teks dan tombol; bagian atas (Gedung Gontor, kubah emas, langit fajar, wajah mahasiswa) tetap jernih */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] from-15% via-[#060a14]/90 via-45% to-transparent to-65% sm:hidden pointer-events-none" />
+        {/* Desktop & Tablet Horizontal Gradient: Memastikan keterbacaan teks editorial di sisi kiri */}
+        <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#060a14] from-5% via-[#060a14]/85 md:via-[#060a14]/60 lg:via-[#060a14]/30 to-transparent pointer-events-none" />
+        {/* Vertical atmospheric fade from bottom and top for PC (menjaga navbar transparan & transisi bawah mulus tanpa meredupkan sunrise) */}
+        <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#060a14] via-transparent via-50% to-[#060a14]/50 pointer-events-none" />
 
         {/* Ethereal Glow Orbs (Desktop only so mobile image remains crisp and pure) */}
         <div className="hidden sm:block absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
