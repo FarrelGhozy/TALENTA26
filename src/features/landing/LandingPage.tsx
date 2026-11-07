@@ -86,24 +86,26 @@ export const LandingPage: React.FC = () => {
         className="w-full relative h-[100dvh] min-h-[560px] sm:min-h-[640px] pt-16 sm:pt-24 lg:pt-28 pb-3 sm:pb-7 px-4 sm:px-8 lg:px-12 bg-[#060a14] text-white overflow-hidden flex flex-col justify-between border-b border-slate-800/80 group"
         aria-labelledby="hero-title"
       >
-        {/* Background Image: Extends 100% across the full viewport height */}
+        {/* Background Image: Extends 100% across the full viewport height with responsive framing */}
         <img
           src={assetUrl('images/hero-unida.jpg')}
           alt="Mahasiswa Berjas UNIDA Gontor di Depan Gedung Utama Terpadu Kampus UNIDA Gontor"
-          className="absolute inset-0 w-full h-full object-cover object-[58%_center] sm:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
+          className="absolute inset-0 w-full h-full object-cover object-[57%_center] sm:object-[58%_center] lg:object-center select-none pointer-events-none transition-transform duration-1000 ease-out group-hover:scale-[1.02]"
         />
 
-        {/* Ambient Dark Gradient Overlays for High Contrast Typography & Seamless Top-Bar Flow */}
-        {/* Mobile: Shadow di bagian bawah tempat teks dan tombol; bagian atas (Gedung Gontor, kubah emas, langit fajar, wajah mahasiswa) tetap jernih */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060a14] from-15% via-[#060a14]/90 via-45% to-transparent to-65% sm:hidden pointer-events-none" />
-        {/* Desktop & Tablet Horizontal Gradient: Memastikan keterbacaan teks editorial di sisi kiri */}
-        <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#060a14] from-5% via-[#060a14]/85 md:via-[#060a14]/60 lg:via-[#060a14]/30 to-transparent pointer-events-none" />
-        {/* Vertical atmospheric fade from bottom and top for PC (menjaga navbar transparan & transisi bawah mulus tanpa meredupkan sunrise) */}
-        <div className="hidden sm:block absolute inset-0 bg-gradient-to-t from-[#060a14] via-transparent via-50% to-[#060a14]/50 pointer-events-none" />
+        {/* Ambient Overlays for High Contrast Typography & Vibrant Scenery */}
+        {/* Mobile: Scrim gradient at the bottom protecting text & action buttons while keeping building & student clear */}
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#060a14] via-[#060a14]/80 to-transparent sm:hidden pointer-events-none" />
+        {/* Desktop & Tablet: Left-side horizontal gradient for pristine editorial text contrast */}
+        <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-[#060a14] from-0% via-[#060a14]/85 via-35% lg:via-[#060a14]/40 lg:via-55% to-transparent to-75% pointer-events-none" />
+        {/* Top Navbar gentle protection fade */}
+        <div className="absolute top-0 inset-x-0 h-28 sm:h-36 bg-gradient-to-b from-[#060a14]/80 via-[#060a14]/25 to-transparent pointer-events-none" />
+        {/* Bottom edge gentle transition into page body */}
+        <div className="absolute bottom-0 inset-x-0 h-28 sm:h-36 bg-gradient-to-t from-[#060a14] via-[#060a14]/40 to-transparent pointer-events-none" />
 
         {/* Ethereal Glow Orbs (Desktop only so mobile image remains crisp and pure) */}
-        <div className="hidden sm:block absolute -top-24 -left-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="hidden sm:block absolute bottom-1/3 left-1/3 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="hidden sm:block absolute -top-24 -left-24 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="hidden sm:block absolute bottom-1/4 left-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Middle & Bottom Container */}
         <div className="max-w-7xl mx-auto w-full relative z-10 flex-1 flex flex-col justify-between h-full">
