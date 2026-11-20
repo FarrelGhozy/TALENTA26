@@ -1,34 +1,25 @@
-# 10 — Model Data & Mock JSON
+# 10 — Model data target dan transisi mock
 
-## 1. ERD Konseptual (teks)
-```
-Institution(1) — (N) User — (1) Profile — (1) Competition(target)
-Competition(1) — (N) Roadmap(Fase) — (N) Source
-User(N) — (M) Team via Membership; Team(N) — (1) Competition
-User(1) — (N) Achievement; Achievement(N) — (1) VerificationLog
-Competition(1) — (N) Selection; Consultant(N) — (M) Competition
-```
+Dokumen lama berisi JSON demo; model di bawah adalah rancangan relasional target. Prisma schema sebenarnya dibuat pada Stage 2 setelah versi yang mendukung MySQL secara stabil dipilih. Semua tabel domain memakai ID internal stabil, institutionId, createdAt, updatedAt; data sensitif dibatasi aksesnya.
 
-## 2. Skema Mock (semua punya `institutionId`)
-`src/mocks/`:
-- `institutions.json`: [{id:inst-01, nama: Kampus Mock}]
-- `users.json`: id, nama, prodi, angkatan, peran[], skill[{nama,level}], minat[], ketersediaan{hari[], jam}, peranBisa[]
-- `competitions.json`: slug, namaResmi, kategori, tingkat, deskripsi, syarat[], komposisi{min,max,peranWajib[]}, tahapan[], jadwal[{label,tanggal}], seleksiInternal[{tahap,tanggal}]
-- `teams.json`: id, competitionSlug, anggota[{userId,status}], isFormed (turunan, tapi disimpan mock agar mudah demo)
-- `invites.json`: id, dari, ke, teamId, status[diajukan,diterima,ditolak,kedaluwarsa], createdAt
-- `roadmaps.json`: lihat `07`
-- `achievements.json`: id, userId, nama, penyelenggara, kategori, tanggal, tingkat, jenisCapaian, bukti[{nama,size}], status, catatan, dariSeleksiInternal?
-- `consultants.json`: id, nama, foto(mock initial), bidang[], assignmentApproved, isVerifiedContact, waMock
-- `selections.json`: id, competitionSlug, pesertaTeamId, tahap, hasil[lolos/tidak/menunggu], verifiedPanitia
-- `profiles.json`: userId + targetKompetisiSlug + kelengkapan%
+## Entitas dan relasi
+- Institution 1—N User, AcademicPeriod, CompetitionEdition.
+- User 1—1 StudentProfile (untuk mahasiswa), 1—N AuthSession, Target, TeamMembership, Achievement, AuditEvent.
+- RoleAssignment N—1 User; role mahasiswa/validator/super_admin. Dosen/konsultan memakai ConsultantContact, bukan User role.
+- CompetitionSeries 1—N CompetitionEdition; edition N—1 AcademicPeriod. Edition menyimpan aturan individu/beregu, min/max, tenggat dan status publikasi.
+- CompetitionEdition 1—N ScheduleEvent, TeamRuleVersion, RoadmapVersion, Selection, ConsultantAssignment.
+- StudentTarget N—1 User dan Edition; unique aktif per user/periode memakai constraint atau transaksi teruji.
+- Team 1—N TeamMembership dan Invite; team N—1 Edition. TeamEvent menyimpan histori perubahan.
+- RoadmapVersion 1—N RoadmapPhase 1—N RoadmapTask/Source. TaskProgress N—1 User dan Task.
+- Achievement 1—N AchievementRevision, EvidenceObject, VerificationEvent; Achievement N—1 User/Edition opsional.
+- PointRuleVersion 1—N PointRule; PointLedger N—1 Achievement dan User/Period. Poin tidak disimpan hanya sebagai angka turunan tanpa provenance.
+- AuditEvent menyimpan actor, object, action, before/after redacted, timestamp dan requestId.
 
-Contoh user (ringkas):
-```json
-{"id":"u-03","institutionId":"inst-01","nama":"Rina","prodi":"Informatika","angkatan":2023,"skill":[{"nama":"Figma","level":3}],"minat":["UI/UX","PKM"],"ketersediaan":{"hari":["Senin","Rabu"],"jam":8},"peranBisa":["desainer"]}
-```
+## Constraint dan indeks minimum
+Email dan NIM dinormalisasi serta unik per institusi; username staf tidak berbagi jalur registrasi publik. Slug kompetisi unik per edisi atau seri, tetapi foreign key memakai ID. Invite memiliki pasangan tim/penerima aktif unik sesuai aturan. Achievement memiliki status dan version untuk optimistic concurrency. EvidenceObject memiliki objectKey unik dan status upload/scan. PointLedger punya idempotency key unik untuk mencegah poin ganda. Indeks pada institutionId + periodId + status + createdAt untuk antrean dan dashboard; foreign key mencegah orphan. Soft delete/arsip dipakai untuk domain yang memiliki riwayat.
 
-## 3. Aturan Mock
-- Min 12 users, 5 competitions (2 roadmap penuh), 4 teams (2 terbentuk), 10 achievements (campur status), 4 consultants (2 verified).
-- Tanggal konsisten 2026. ID stabil `u-01`, `pkm-re`, dll.
-- Akses via `services-mock.ts` async pura-pura (delay 300ms) agar gampang ganti fetch real Tahap 2.
-- localStorage keys: `talenta-role`, `talenta-profile`, `talenta-checklist:<user>:<slug>`, `talenta-achievements`, `talenta-invites`.
+## Data dan migrasi
+JSON saat ini berada di mocks/ dan src/mocks/, dengan 8 user, 4 kompetisi, 3 tim, 4 prestasi, 2 roadmap. Data ini hanya fixture demo, bukan data mahasiswa produksi. Jangan otomatis memasukkan identitas mock ke MySQL produksi. Seed produksi hanya referensi minimal dan bootstrap super admin satu kali, memakai rahasia dari environment/operasi. Migrasi SQL wajib committed, diuji pada staging dengan data lintas periode, dan punya rencana rollback atau forward fix.
+
+## Zona waktu dan data historis
+Simpan timestamp UTC, tanggal kalender dan tahun akademik sebagai field eksplisit; tampilkan Asia/Jakarta. Aturan poin, komposisi tim, roadmap, dan publikasi konten memiliki versi agar perubahan masa depan tidak mengubah hasil lama. Retensi bukti, audit, dan akun diputuskan sebelum go-live.

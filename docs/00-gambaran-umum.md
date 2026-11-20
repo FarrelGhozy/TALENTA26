@@ -1,50 +1,24 @@
-# 00 — Gambaran Umum TALENTA
+# 00 — Gambaran umum
 
-## 1. Identitas Produk
-- **Nama:** TALENTA — Platform Pembinaan dan Prestasi Mahasiswa.
-- **Tagline usulan:** Dari Kenali Potensi sampai Catat Prestasi.
-- **Fokus awal:** Kompetisi nasional Belmawa yang dipilih tim (contoh: PKM, PIMNAS, ON-MIPA, GEMASTIK, KMI Expo, dll — daftar final di `07-spesifikasi-roadmap.md`).
-- **Jalur kedua:** Prestasi mandiri — konferensi internasional, Best Delegate, kejuaraan olahraga, nominasi, kompetisi eksternal, capaian lain sesuai kebijakan kampus.
+TALENTA adalah platform satu kampus untuk pembinaan lomba dan pencatatan prestasi mahasiswa. Rilis pertama menghubungkan katalog lomba, profil, tim, roadmap, pengajuan prestasi, validasi, dashboard, dan ranking publik. Tujuannya adalah operasi berulang lintas tahun akademik dengan riwayat tetap utuh.
 
-## 2. Masalah (PRB-01 s/d PRB-05, perlu validasi)
-1. Mahasiswa tidak tahu kompetisi yang cocok → butuh katalog + panduan pilih target.
-2. Sulit cari partner beregu yang cocok (target, skill, waktu) → butuh rekomendasi + undangan + status tim.
-3. Persiapan butuh arahan materi/latihan/target/jadwal → butuh roadmap template.
-4. Waktu/anggaran dosen terbatas → belajar mandiri default, konsultasi opsional sesuai kapasitas.
-5. Prestasi luar jalur pembinaan tercecer → butuh formulir mandiri + verifikasi + dashboard terverifikasi.
+## Pembedaan status
+- Saat ini: frontend demo React/Vite, JSON mock, localStorage, GitHub Pages.
+- Target: frontend dan backend terpisah, Bun/Elysia, Prisma/MySQL, RustFS, image GHCR, Compose di home server melalui Cloudflare Tunnel.
+- Berikutnya: SSO kampus dan kemungkinan multi-kampus setelah pilot; AI dan beasiswa bukan bagian rilis awal.
 
-> Status: rumusan awal blueprint, **belum tervalidasi**. Tahap 1 mock dipakai untuk uji validasi (lihat `13-peta-jalan.md`).
+## Prinsip
+Informasi lomba punya sumber dan tanggal pembaruan. Pengajuan punya status serta riwayat. Statistik dan ranking hanya menghitung data sesuai definisi. Identitas rilis awal adalah klaim mahasiswa sendiri; jangan tampilkan seolah telah dicocokkan kampus. Dosen hanya kontak konsultasi yang dikelola validator.
 
-## 3. Tujuan Produk (dari PRD §1.1)
-1. Bantu pilih kompetisi relevan (minat, skill, pengalaman, kesiapan, target).
-2. Bantu temukan partner tim.
-3. Beri panduan persiapan mandiri (materi, latihan, target, tenggat).
-4. Sediakan konsultasi opsional tanpa menjadikan pelatihan langsung satu-satunya pembinaan.
-5. Tampung prestasi binaan maupun mandiri.
-6. Bantu pengelola pantau partisipasi, progres, seleksi internal, verifikasi.
+## Istilah
+- Periode akademik: rentang mulai/akhir untuk kompetisi, aktivitas, dan ranking.
+- Kompetisi: program lomba terkelola; dapat individu atau beregu.
+- Target: satu pilihan kompetisi aktif mahasiswa dalam periode.
+- Validator: petugas domain konten dan verifikasi prestasi.
+- Super admin: pengelola teknis, peran, konfigurasi, serta semua fungsi validator.
+- Prestasi sah: pengajuan berstatus disetujui validator.
+- Poin ranking: nilai dari prestasi lomba sah berdasarkan aturan berversi.
+- Publikasi: konten yang lolos dari draft dan dapat dibaca pengunjung.
 
-## 4. Prinsip Produk (mengikat FE + Mock)
-1. **Journey-first:** tiap halaman harus jelas langkah sebelum/sesudahnya (lihat `03-alur-pengguna.md`).
-2. **Sederhana:** pilihan jelas, kolom singkat, petunjuk mudah. Maks 7 field wajib per form Tahap 1.
-3. **Transparan:** tiap rekomendasi ada alasan; tiap status ada arti + aksi lanjutan.
-4. **Mandiri-default:** roadmap bisa jalan tanpa dosen; kontak dosen hanya jika sudah konfirmasi.
-5. **Adil & aman:** skor matching bukan ranking mutlak; data minim; akses per peran.
-6. **Jujur kemampuan:** yang masih mock/simulasi wajib berlabel `Simulasi`/`Rencana`. Khusus AI: dilarang klaim aktif di Tahap 1.
-7. **Siap multi-kampus:** `institutionId` ada di semua entity sejak mock (lihat `10-model-data-mock.md`), walau filter baru aktif penuh di P2.
-
-## 5. Glosarium Operasional
-| Istilah | Arti di TALENTA | Catatan FE |
-|---|---|---|
-| Matching partner | Saran rekan tim berdasar target+skill+peran+waktu | Tampilkan skor + alasan, bukan ranking |
-| Roadmap | Urutan belajar/latihan per kompetisi | Template statis di Tahap 1 |
-| Prestasi mandiri | Pengajuan capaian oleh mahasiswa sendiri | Status awal selalu `Menunggu verifikasi` |
-| Verifikasi | Pemeriksaan bukti sebelum sah | Yang ditolak/belum lengkap tidak dihitung |
-| Tim terbentuk | Undangan disetujui + komposisi penuhi aturan | Boolean turunan, bukan manual |
-| MVP P0 | Inti demo satu journey utuh | Scope di `01-lingkup-tahapan.md` |
-
-## 6. Batasan Jujur (wajib tampil di UI Mock)
-- Tidak ada AI otomatis penuh di Tahap 1.
-- Tidak ada pertemuan daring bulanan wajib.
-- Tidak ada analitik lintas kampus / integrasi sistem di Tahap 1.
-- Statistik hanya klaim sesuai data mock institusi sendiri.
-- WhatsApp dosen hanya tampil jika `isVerifiedContact=true`.
+## Batas klaim
+Jangan mencantumkan beasiswa, SKPI, BAAK, AI aktif, atau validasi identitas kampus tanpa keputusan/integrasi resmi. Logo dan aset visual saat ini adalah aset proyek; penggunaan identitas resmi perlu pemeriksaan pemilik produk/kampus sebelum rilis institusional.

@@ -1,61 +1,26 @@
-# 06 — Spesifikasi Matching Partner (Transparan, Mock v1)
+# 06 — Matching, undangan, dan tim
 
-## 1. Tujuan
-Rekomendasikan partner beregu yang relevan, bisa dijelaskan, tidak dianggap ranking mutlak.
+## Tujuan
+Membantu mahasiswa menemukan rekan yang sesuai untuk satu edisi lomba beregu. Rekomendasi adalah saran yang dapat dijelaskan, bukan ukuran kemampuan atau keputusan penerimaan.
 
-## 2. Input (dari profil + kompetisi)
-- `targetKompetisiId` harus sama (filter keras).
-- `peranDibutuhkan` vs `peranBisa`: complement, bukan duplikat.
-- `skill[]` + level, `minat[]`, `pengalaman`, `ketersediaan{hari[], jamPerMinggu}`.
+## Input dan kelayakan
+Kandidat harus aktif pada institusi dan edisi lomba yang sama, belum berada pada tim terkunci, tidak mengundang dirinya, dan memiliki profil yang boleh ditampilkan. Aturan format individu/beregu, jumlah minimum/maksimum, peran wajib, serta tenggat undangan berasal dari versi kompetisi yang diterbitkan validator.
 
-## 3. Skor v1 Mock (0–100, bisa dijelaskan)
-```
-skor = 30*targetSama (0/1)
-     + 25*komplemenPeran (0..1: 1 jika isi peran kosong tim)
-     + 20*komplemenSkill (Jaccard komplemen: skill yg menutup gap)
-     + 15*overlapWaktu (overlapJam / max(kebutuhan))
-     + 10*kemiripanMinat (Jaccard minat)
-```
-- Bulatkan integer. Tampilkan sebagai `Cocok 82%`.
-- Jika `targetSama=0` → tidak tampil sama sekali.
-- Jika `overlapJam < 4` → penalti -15 + label `Waktu sempit`.
+## Skor awal yang dapat diuji
+Rumus demo lama boleh menjadi baseline eksperimen: kecocokan target, peran yang melengkapi tim, skill yang dibutuhkan, overlap waktu, dan minat. Saat backend dibangun, bobot, definisi overlap, data hilang, serta fairness diuji dengan contoh nyata; hasil tidak ditampilkan sebagai persentase probabilitas jika tidak terkalibrasi. UI menampilkan label seperti Kesesuaian tinggi dan alasan konkret. Hindari leaderboard kandidat.
 
-Contoh alasan generator (`lib/matchScore.ts`):
-- `+peran: Kamu butuh Hustler, Rina bisa itu`
-- `+skill: Menutup gap Figma/Analisis data`
-- `+waktu: Overlap 8 jam/minggu (Senin, Rabu)`
-- `!catatan: Angkatan beda 2 thn — pertimbangkan gaya kerja`
+Aturan awal yang diwarisi dari demo untuk ditinjau, bukan kebijakan final: maksimum 5 undangan aktif, masa berlaku 14 hari, pembentukan tim mengikuti min/max kompetisi, serta pengarsipan tim saat target berganti. Validator/super admin dapat mengubah aturan untuk edisi mendatang; perubahan tidak merusak tim lama.
 
-## 4. Aturan Tim (`lib/teamRules.ts`)
-Contoh per kompetisi (final di admin mock):
-| Kompetisi | min–max | Peran wajib |
-|---|---|---|
-| PKM-RE | 3–5 | ketua, penulis, riset |
-| GEMASTIK (div tim) | 3–3 | programmer, desainer, presenter |
-| ON-MIPA | 1–1 (individu) | — (matching nonaktif, tampilkan info individu) |
+## Transaksi
+- Kirim undangan: cek kepemilikan tim, status target, kapasitas, duplikat, jumlah aktif, dan tenggat dalam satu transaksi.
+- Terima undangan: cek penerima, status belum kedaluwarsa, slot tim, peran dan konflik keanggotaan. Dua penerimaan bersamaan tidak boleh melewati maksimum.
+- Tolak/batalkan: ubah status dan catat peristiwa; tidak membeberkan alasan pribadi penolak.
+- Keluar tim: sebelum tim terkunci seleksi, mahasiswa dapat keluar dengan konfirmasi; setelahnya memerlukan tindakan validator yang diaudit.
+- Ganti target: arsipkan target/tim lama secara atomik, jangan hapus riwayat.
+- Tidak ada kandidat: jelaskan alasannya, sediakan ubah filter, permintaan bantuan validator, dan alur individu hanya jika aturan lomba mengizinkan.
 
-`isTeamFormed = accepted>=min-1 && total<=max && peranWajibTerpenuhi`.
+## Privasi
+Kartu kandidat cukup nama tampilan, prodi, minat/skill yang dibagikan, dan ketersediaan ringkas. NIM, email, nomor WA, serta bukti prestasi tidak ditampilkan. Akses detail hanya sesuai keanggotaan tim dan kebijakan data.
 
-## 5. Perilaku Undangan (keputusan usulan, kunci di Gate)
-- Max 5 undangan aktif per pengirim.
-- Kedaluwarsa 14 hari (mock: tombol `Simulasikan kedaluwarsa`).
-- Ditolak → beri 3 alternatif + alasan tidak wajib diisi penolak (hormati privasi, hanya `Belum cocok`).
-- Keluar tim → tim `mencari` lagi, riwayat mock disimpan.
-- Ganti target → arsipkan tim lama, mulai baru.
-- Tidak dapat partner → EmptyState: `Coba longgarkan filter / ganti peran / hubungi admin`.
-
-## 6. Kejujuran UI (wajib)
-- Footer list: `Rekomendasi adalah saran. Bukan peringkat kemampuan.`
-- Tidak ada leaderboard skor global.
-- Badge `Mock` pada tombol simulasi periodik.
-
-## 7. Implementasi FE Pecah
-```
-features/matching/
-  types.ts
-  services-mock.ts   # fetch users.json + filter target
-  hooks/useMatches.ts
-  components/PartnerCard.tsx  MatchReasons.tsx  InviteActions.tsx
-lib/matchScore.ts  lib/teamRules.ts
-```
-Fungsi `scoreMatch(me, candidate, competition)` pure + unit test ringan (vitest) di Tahap 1.
+## Uji wajib
+Kapasitas tepat batas, undangan kedaluwarsa, penerimaan serentak, satu mahasiswa dua tim aktif, target berubah, lomba individu, kandidat kosong, serta akun yang mencoba membaca undangan orang lain.

@@ -1,56 +1,39 @@
-# 05 — Spesifikasi Fungsional Per Modul (FR-001 s/d FR-044)
+# 05 — Spesifikasi fungsional dan penerimaan
 
-> Format per FR: Kebutuhan → Input → Validasi → Edge → Kriteria terima Tahap 1.
+Semua item di bawah adalah target, bukan status implementasi. ID kebutuhan stabil untuk backlog dan uji docs/18.
 
-## Modul A — Akun & Profil (FR-001 s/d FR-004, P0)
-- **FR-001 Buat akun (mock):** input nama, email kampus, password(min 8), prodi, angkatan. Validasi email unik (cek mock). Edge: email duplikat → error inline. Terima: bisa masuk `/app/beranda` dengan role mahasiswa.
-- **FR-002 Isi profil:** field wajib: displayName, prodi, angkatan, minat[](max 5), skill[](dengan level 1-3), pengalaman(text ≤280), ketersediaan(jam/minggu + hari), targetKompetisiId. Optional: portofolio link, peran preferensi.
-- **FR-003 Sederhana:** tiap step ≤7 field, ada progress bar, tombol Simpan draft (localStorage). Dilarang minta: NIK, alamat lengkap, data ortu.
-- **FR-004 Dasar rekomendasi:** profil tersimpan → tombol `Lihat rekomendasi` aktif. Skor tampil sebagai `Cocok 82% — karena ...` bukan ranking absolut. Tooltip wajib.
+| ID | Kebutuhan | Aturan penerimaan |
+|---|---|---|
+| AUTH-01 | Registrasi mahasiswa manual | nama, NIM, email, password; NIM dan email unik; akun publik hanya mahasiswa; pesan duplikat aman |
+| AUTH-02 | Login, logout, pemulihan | sesi aman, logout memutus sesi, reset satu kali dan kedaluwarsa; rate limit; tidak ada Google login |
+| AUTH-03 | Bootstrap staf | seed awal super admin lewat secret dan prosedur satu kali; validator dibuat/dinonaktifkan super admin; seed tidak berisi password tetap |
+| PROF-01 | Profil mahasiswa | prodi, angkatan, minat, skill, pengalaman, waktu tersedia; simpan draft; perubahan terlihat lintas perangkat |
+| PROF-02 | Identitas | NIM tidak tampil publik; status identitas belum diverifikasi kampus; NIM tidak otomatis dipercaya untuk fasilitas resmi |
+| COMP-01 | Katalog | pengunjung hanya melihat konten terbit; cari/filter tahun, bidang, tingkat, format tim, status |
+| COMP-02 | Konten validator | draft, pratinjau, terbit, arsip; syarat, sumber, jadwal, aturan tim, pembaruan tanggal |
+| COMP-03 | Periode | kompetisi dapat diadakan ulang; edisi berbeda punya ID sendiri dan relasi ke tahun akademik |
+| TARG-01 | Target | satu aktif per mahasiswa/periode; ganti target dengan konfirmasi dan arsip tim lama |
+| MATCH-01 | Rekomendasi | hanya kandidat yang memilih kompetisi/edisi sama dan memenuhi syarat; alasan dan batas data jelas |
+| TEAM-01 | Undangan | pengirim dan penerima terotorisasi; kapasitas, duplikat, kedaluwarsa dan transaksi serentak aman |
+| TEAM-02 | Tim | status dibentuk dari anggota diterima dan komposisi; lomba individu tidak memerlukan tim |
+| ROAD-01 | Roadmap | validator membuat fase, tugas, sumber, tenggat; mahasiswa melihat versi terbit dan menandai progres sendiri |
+| ROAD-02 | Konsultasi | validator mengisi kontak WA, status persetujuan dan konteks kapasitas; tombol hanya untuk kontak yang diterbitkan |
+| SEL-01 | Seleksi internal | jadwal, peserta/tim, hasil dan status konfirmasi; hasil tidak otomatis menjadi prestasi sah |
+| ACH-01 | Pengajuan | individu/tim, kategori, tingkat, hasil, tanggal, penyelenggara, bukti 1–3 file; dapat dibuat tanpa target |
+| ACH-02 | Revisi | mahasiswa hanya memperbaiki saat perlu_perbaikan; versi sebelumnya tetap tersedia untuk audit |
+| VER-01 | Keputusan | validator/super admin setuju, minta perbaikan, tolak; alasan wajib untuk dua tindakan terakhir; jejak aktor/waktu |
+| VER-02 | Koreksi | keputusan sah yang salah dibatalkan/dikoreksi melalui aksi khusus beralasan dan audit; poin serta statistik dihitung ulang |
+| RANK-01 | Poin | hanya prestasi lomba disetujui; aturan tingkat×hasil berversi; satu pengajuan satu pemberian poin aktif |
+| RANK-02 | Ranking | tahun akademik default; total sepanjang waktu terpisah; tie break stabil; hanya identitas publik minimum |
+| DASH-01 | Dashboard | mahasiswa/validator/super admin sesuai scope, setiap angka punya definisi, periode dan sumber |
+| ADMIN-01 | Pengelolaan | super admin mengatur periode, poin, staf, role, audit dan status sistem; semua perubahan sensitif diaudit |
+| OPS-01 | Deploy | dua image GHCR, Compose server, root .env, migrasi terkontrol, health, backup dan rollback |
 
-## Modul B — Kompetisi & Jadwal (FR-005 s/d FR-008)
-- **FR-005 Daftar awal:** dari `competitions.json` min 5 Belmawa (PKM-RE, PKM-K, GEMASTIK, ON-MIPA, KMI). Kartu: nama, kategori, tingkat, deadline, badge `Pendaftaran/Seleksi/Selesai`.
-- **FR-006 Kelola admin:** field: namaResmi, deskripsi, tujuan, syaratPeserta[], komposisiTim{min,max,peranWajib[]}, tahapan[], jadwalResmi[], jadwalSeleksiInternal. Admin edit in-memory + tombol Reset mock.
-- **FR-007 Pilih target:** 1 mahasiswa 1 target aktif (ganti boleh, tapi tim lama jadi `arsip`). Konfirmasi modal jika sudah punya tim.
-- **FR-008 Halaman kompetisi:** tab Info | Syarat & Tim | Jadwal | Roadmap | Konsultan. Jika data kosong → EmptyState + CTA hubungi admin.
+## Validasi umum
+Semua input divalidasi di backend. Tanggal tidak boleh keliru karena zona waktu; lampiran diperiksa tipe MIME nyata, ekstensi, ukuran, dan jumlah. Teks bebas dibatasi panjang, di-escape saat tampil, dan tidak menerima HTML aktif. Pagination, sort, dan filter memiliki batas agar query tidak menghabiskan server. Operasi mutasi yang rentan klik ganda memakai idempotensi/constraint database.
 
-## Modul C — Matching & Tim (FR-009 s/d FR-015)
-Detail algoritma di `06-spesifikasi-matching.md`. Di sini kontrak UI:
-- **FR-009 Kelompokkan:** filter: target sama, peran dibutuhkan, ketersediaan overlap ≥ 4 jam/minggu (mock).
-- **FR-010 Rekomendasi:** list + skor + 3 alasan teratas. Sort default skor, bisa sort prodi/angkatan.
-- **FR-011 Transparan:** tiap kartu ada `Kenapa cocok?` → popover alasan. Footer: `Skor adalah saran, bukan peringkat kemampuan.`
-- **FR-012 Undangan:** kirim (max 5 aktif), terima/tolak. Toast + update badge. Tolak wajib tawarkan 3 alternatif.
-- **FR-013 Status tim:** banner `Mencari / Menunggu X lagi / Terbentuk ✓`. Tombol ke persiapan disabled sampai terbentuk.
-- **FR-014 Jadwal:** Tahap 1: realtime mock (tombol `Simulasikan matching 15-harian` untuk demo). Keputusan final di `14`.
-- **FR-015 Aturan tim:** ikut `teamRules.ts` per kompetisi. Keluar tim → konfirmasi + tim kembali Mencari.
+## Keadaan antarmuka
+Setiap daftar punya empty state yang menjelaskan langkah lanjut. Form mempertahankan data saat gagal, menunjukkan error di field, mencegah submit ganda, dan memberi konfirmasi sebelum tindakan yang mengubah riwayat. Layar tidak menampilkan keberhasilan palsu saat API gagal.
 
-## Modul D — Roadmap (FR-016 s/d FR-021)
-Detail konten di `07`. Kontrak:
-- **FR-016 Template:** per kompetisi 6–10 minggu, 4–6 fase.
-- **FR-017 Isi:** materi/topik, skill dilatih, latihan/tugas, target mingguan, indikator, persiapan seleksi, tenggat.
-- **FR-018 Urutan:** fase terkunci berurutan (bisa lihat, tapi checklist sarankan urut). Progress bar lokal.
-- **FR-019 Sumber:** link belajar dikelola admin, tiap item ada label `Wajib/Pelengkap`.
-- **FR-020/021 AI:** Tahap 1 DILARANG klaim AI. Komponen `AiSuggestionBox` hanya tampil dengan badge `Rencana — belum aktif` + isi statis contoh.
-
-## Modul E — Halaman Kompetisi & Konsultasi (FR-022 s/d FR-027)
-- **FR-022 Ringkas terpusat:** satu halaman persiapan gabungkan info+jadwal+roadmap+konsultan.
-- **FR-023/024 Dosen:** card foto/nama/bidang + tombol WA hanya jika verified. Jika belum → `Segera diumumkan`.
-- **FR-025 Kapasitas:** teks `Konsultasi sesuai kapasitas. Harap buat janji.` Dilarang tampilkan `Selalu online`.
-- **FR-026 Daring bulanan:** tidak ada di Tahap 1 (tunda, perlu persetujuan).
-- **FR-027 Progres/pengingat:** Tahap 1: checklist lokal + daftar tenggat. Reminder otomatis = P1.
-
-## Modul F — Seleksi Internal (FR-028 s/d FR-030)
-- **FR-028 Info:** timeline seleksi per kompetisi (berkas → presentasi → pengumuman).
-- **FR-029 Hasil:** tabel delegasi mock dengan badge `Terverifikasi panitia / Menunggu`.
-- **FR-030 Hubungan prestasi:** juara 1/2/3 seleksi TETAP ajukan via form prestasi (kategori `Seleksi Internal`), agar tidak campur dengan prestasi eksternal. Ada checkbox `Berasal dari seleksi internal TALENTA`.
-
-## Modul G — Prestasi Mandiri (FR-031 s/d FR-037)
-Detail di `08`. Ringkas: terbuka semua mahasiswa, field: nama, penyelenggara, kategori, tanggal, tingkat (lokal/nasional/internasional), jenis capaian (partisipasi/nominasi/penghargaan/juara 1/2/3), bukti (mock file), deskripsi. Status awal `menunggu`. Hanya `disetujui` masuk dashboard.
-
-## Modul H — Dashboard (FR-038 s/d FR-041)
-Detail di `09`. Ringkas: kartu (terdaftar, peserta per kompetisi, tim terbentuk, pengajuan vs status, terverifikasi per kategori/tingkat, delegasi). Wajib tampilkan `Cakupan: Inst-01 • Periode: mock 2026 • Sumber: data mock`.
-
-## Modul I — Multi-kampus (FR-042 s/d FR-044, P2)
-- Semua mock sudah ada `institutionId`.
-- Filter institusi tampil disabled di Tahap 1 dengan tooltip `P2`.
-- Tidak ada klaim lintas kampus, tidak ada integrasi di Tahap 1.
+## Perubahan dari demo
+Rute /daftar, admin konten, revisi pengajuan, bukti nyata, ranking, dan banyak alur di atas belum ada di repo. Adapter API saat ini adalah kerangka, bukan kontrak akhir. Migrasi implementasi mengikuti docs/13.

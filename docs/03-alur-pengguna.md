@@ -1,58 +1,24 @@
-# 03 — Alur Pengguna (Journey + State)
+# 03 — Alur pengguna dan status
 
-## Journey Utama J1: Mahasiswa Binaan (P0)
-```
-Daftar(mock) → Profil (minat/skill/pengalaman/waktu/target)
- → Rekomendasi partner → Undang/Terima → Tim Terbentuk?
-   Ya → Halaman Kompetisi (info+jadwal+roadmap+konsultan)
-     → Checklist persiapan → Seleksi internal (lihat jadwal)
-     → Ajukan prestasi → Menunggu → Dashboard
-   Tidak → fallback: ganti target / cari mandiri / hubungi admin
-```
+## J1 Daftar, profil, target, tim, persiapan
+Pengunjung melihat lomba → mahasiswa daftar/login manual → mengisi profil → memilih target kompetisi aktif pada periode → lomba individu langsung menuju persiapan; lomba beregu menuju rekomendasi/undangan/tim → roadmap dan progres. Jika tidak ada kandidat, tampilkan filter yang dapat dilonggarkan, jalur hubungi validator, dan penjelasan; tidak membuat tim palsu. Jika target diganti, simpan riwayat target dan arsipkan tim lama setelah konfirmasi.
 
-## Journey J2: Prestasi Mandiri (tanpa binaan)
-```
-Buka /prestasi/baru → isi (nama, penyelenggara, kategori, tanggal, tingkat, jenis capaian, bukti)
- → submit → Menunggu verifikasi → (Perlu perbaikan | Disetujui | Ditolak)
- → jika Disetujui → masuk profil + dashboard
-```
+## J2 Pengajuan dan validasi
+Mahasiswa mengisi draft → unggah bukti → kirim → status menunggu. Validator membuka antrean dan bukti privat → setujui, minta perbaikan dengan alasan, atau tolak dengan alasan. Perbaikan membuat revisi baru dan kembali menunggu. Setelah disetujui, data masuk statistik; jika prestasi lomba, peristiwa poin dibuat. Koreksi keputusan tidak menimpa jejak lama.
 
-## Journey J3: Verifikator
-```
-Antrian → Detail (data + bukti mock) → [Minta perbaikan | Setujui | Tolak + alasan wajib]
- → status berubah → mahasiswa lihat status + alasan
-```
+## J3 Konten
+Validator membuat draft kompetisi, syarat, jadwal, aturan tim, roadmap, konsultan/WA, seleksi → pratinjau → terbitkan. Publik hanya menerima konten terbit. Perubahan jadwal mencatat tanggal dan sumber. Konten bisa diarsip tanpa memutus referensi pengajuan lama.
 
-## Journey J4: Admin Program
-```
-Kelola kompetisi (CRUD in-memory) → kelola roadmap template → kelola konsultan verified
- → lihat dashboard operasional
-```
+## J4 Tahun akademik baru
+Super admin membuat periode berikutnya dan aturan poin berversi → validator mengisi kompetisi/roadmap baru atau menyalin draft terkurasi → periode diaktifkan → target dan ranking periode baru dimulai; riwayat periode lama tetap dapat dibaca. Satu periode aktif untuk satu institusi.
 
-## State Machine Penting
+## State inti
+| Objek | Status | Perubahan sah |
+|---|---|---|
+| Konten kompetisi | draft, terbit, arsip | draft→terbit→arsip; revisi terbit memerlukan jejak |
+| Undangan | menunggu, diterima, ditolak, kedaluwarsa, dibatalkan | hanya penerima menjawab; sistem mengakhiri saat tenggat |
+| Tim | mencari, terbentuk, terkunci_seleksi, arsip | perubahan anggota validasi ulang aturan |
+| Pengajuan | draft, menunggu, perlu_perbaikan, disetujui, ditolak, dibatalkan | setiap transisi diaudit |
+| Akun | aktif, nonaktif | penonaktifan memutus sesi baru tanpa menghapus riwayat |
 
-### Undangan partner
-```
-diajukan → [diterima | ditolak | kedaluwarsa(14 hari, usulan)]
-- ditolak → slot bebas, boleh undang lain, tampilkan saran alternatif
-- diterima + cek komposisi → tim Terbentuk / Menunggu anggota lagi
-```
-Aturan turunan `isTeamFormed`: `acceptedCount+1 >= minAnggota && <= maxAnggota && semua peran wajib terisi`.
-
-### Tim
-```
-mencari → sebagian → terbentuk → (keluar/ganti: kembali ke mencari, log-like dicatat mock)
-```
-
-### Prestasi
-```
-draft(lokal) → menunggu → [perlu_perbaikan → menunggu(revisi) | disetujui | ditolak]
-- hanya `disetujui` dihitung di dashboard.
-- `perlu_perbaikan` dan `ditolak` wajib ada `catatan`.
-```
-
-### Validasi yang harus ada di FE Tahap 1
-- Tidak bisa buka roadmap sebelum `targetKompetisi` dipilih.
-- Tidak bisa klaim tim terbentuk sebelum aturan komposisi lolos (tombol disabled + tooltip).
-- Form prestasi: tanggal tidak boleh masa depan jauh, bukti wajib (mock: nama file), kategori & jenis capaian wajib (bedakan partisipasi/nominasi/penghargaan/juara).
-- WA dosen: tombol disabled + label `Belum terverifikasi` jika `isVerifiedContact=false`.
+Setiap alur harus mengatur ulang percobaan setelah jaringan gagal, mencegah klik ganda, menampilkan pesan validasi per field, dan mempertahankan input yang aman saat error.

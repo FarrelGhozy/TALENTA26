@@ -1,53 +1,28 @@
-# 08 — Spesifikasi Prestasi Mandiri & Verifikasi
+# 08 — Prestasi, bukti, dan verifikasi
 
-## 1. Akses
-- Terbuka semua mahasiswa, tanpa syarat ikut binaan. Rute `/app/prestasi/baru`.
-- Bisa ajukan individu atau atas nama tim (pilih anggota tim mock).
+## Data pengajuan
+Mahasiswa dapat mengajukan tanpa target lomba. Form mencakup judul kegiatan, penyelenggara, tanggal capaian, kategori, tingkat, hasil, deskripsi ringkas, apakah terkait kompetisi/seleksi internal, peserta tim bila relevan, dan 1–3 bukti. Kategori lomba dipisahkan dari konferensi, olahraga, seni, dan lain-lain untuk aturan ranking. Kategori dan hasil yang dapat dipilih dikelola sebagai data referensi dengan kode stabil.
 
-## 2. Field Formulir (validasi Tahap 1)
-| Field | Wajib | Aturan |
-|---|---|---|
-| namaKegiatan | Ya | 5–120 char |
-| penyelenggara | Ya | 3–80 char |
-| kategori | Ya | select: kompetisi, konferensi, olahraga, seni, nominasi, lain |
-| tanggal | Ya | date, tidak > hari ini +7 hari |
-| tingkat | Ya | lokal, nasional, internasional |
-| jenisCapaian | Ya | partisipasi, nominasi, penghargaan, juara_1, juara_2, juara_3, best_delegate |
-| deskripsi | Tidak | ≤500 char |
-| bukti | Ya (mock) | 1–3 file mock (nama+ukuran), Tahap 2 baru upload real. Tampilkan `Mode mock — file tidak benar-benar diunggah` |
-| dariSeleksiInternal | Tidak | checkbox, jika Ya wajib pilih kompetisi + peringkat |
-| anggotaTim | Jika beregu | multi-select dari tim mock |
+## Bukti di RustFS
+Browser mengunggah multipart ke API pada origin aplikasi. Backend memeriksa sesi dan kepemilikan pengajuan, membuat object key acak dengan prefix privat, membatasi tipe PDF/JPEG/PNG dan ukuran, lalu meneruskan stream ke RustFS. Nama asli hanya metadata tampilan, tidak menjadi path. Bucket privat dan endpoint RustFS tetap internal; unduh melalui API yang memeriksa izin dan meneruskan file. Jika pengajuan dibatalkan/ditolak, kebijakan retensi menentukan penghapusan nanti. Pemindaian malware dan sanitasi metadata gambar menjadi gate produksi sesuai risiko deployment.
 
-Contoh yang harus lolos: `Konferensi Internasional X — Best Delegate — internasional — penghargaan`.
+## Status dan aturan transisi
+| Dari | Aksi | Ke | Syarat |
+|---|---|---|---|
+| draft | kirim | menunggu | field dan bukti valid |
+| menunggu | minta perbaikan | perlu_perbaikan | alasan wajib |
+| perlu_perbaikan | kirim revisi | menunggu | versi baru, bukti lama tetap tercatat |
+| menunggu | setujui | disetujui | validator berwenang, cek duplikat |
+| menunggu | tolak | ditolak | alasan wajib |
+| draft/menunggu | batalkan | dibatalkan | pemilik, sebelum keputusan final |
+| disetujui | koreksi | status koreksi sesuai aksi | super admin/validator berwenang, alasan, jejak dan pembalikan poin |
 
-## 3. Status & Aksi
-```
-menunggu → perlu_perbaikan → menunggu (revisi ke-1,2...)
-menunggu → disetujui | ditolak
-```
-- Baru submit → `menunggu`.
-- Verifikator: `Minta perbaikan` (catatan wajib, min 10 char), `Setujui`, `Tolak` (alasan wajib + kategori alasan: bukti_kurang, data_tidak_valid, duplikat, lain).
-- Mahasiswa: lihat timeline status + catatan + tombol `Perbaiki & kirim ulang` jika perlu_perbaikan.
-- Hanya `disetujui` masuk profil + dashboard. Lainnya tidak dihitung (tampilkan strikethrough di riwayat dengan label).
+Keputusan tidak mengubah klaim/bukti versi sebelumnya. Satu tindakan verifikasi menghasilkan satu audit event. Prestasi disetujui dapat muncul pada dashboard; hanya lomba sah memengaruhi ranking. Seleksi internal bukan otomatis prestasi.
 
-## 4. Bukti Diterima (usulan, kunci Gate)
-- Kompetisi: sertifikat/piagam atau surat resmi.
-- Konferensi: sertifikat + (Best Delegate: bukti award).
-- Olahraga: piagam + foto podium/dok resmi.
-- Nominasi: surat/umumkan resmi (bukan klaim).
-- Mock: cukup nama file; Tahap 2: PDF/JPG/PNG ≤5MB, cek manual verifikator.
+## Antrean validator
+Filter status, periode, kategori, tingkat; cari nama dan kegiatan; urut prioritas dan umur antrean. Detail memperlihatkan data, versi, bukti, kemungkinan duplikat, riwayat, dan panel keputusan. Kesalahan jaringan tidak boleh menampilkan keputusan sukses. Dua validator yang membuka data sama harus mendapat konflik versi, bukan saling menimpa.
 
-## 5. Antrian Verifikator (FE)
-- Tabel: tanggal, nama, kegiatan, tingkat, jenis, status badge, aksi Lihat.
-- Filter: status, tingkat, kategori. Search nama/kegiatan.
-- Detail: data kiri, bukti mock kanan (`EvidenceViewerMock` tampilkan nama file + tombol Unduh mock), panel keputusan bawah.
-- Audit mock: siapa + kapan + catatan (localStorage).
+Validator mencocokkan nama pada klaim dan bukti sebatas pemeriksaan prestasi, tanpa menyatakan identitas mahasiswa telah diverifikasi oleh kampus. Sengketa identitas atau klaim palsu harus dapat ditandai, disembunyikan sementara dari ranking, lalu diselesaikan melalui koreksi yang diaudit.
 
-## 6. Komponen FE
-```
-features/prestasi/
-  types.ts  services-mock.ts
-  hooks/useAchievementForm.ts  hooks/useVerification.ts
-  components/AchievementForm.tsx  StatusTimeline.tsx  EvidenceMock.tsx
-  components/DecisionPanel.tsx (verifikator)
-```
+## Uji penerimaan
+Pengajuan tanpa target, revisi berkali-kali, bukti gagal unggah, bukti milik orang lain, file palsu, keputusan serentak, koreksi setelah disetujui, statistik dan poin setelah pembalikan, serta kebocoran URL bukti.
