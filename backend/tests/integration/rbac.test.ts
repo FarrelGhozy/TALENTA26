@@ -4,7 +4,12 @@ import { prisma, closeDatabase } from '../../src/lib/prisma';
 import { hashPassword } from '../../src/lib/password';
 import { createSession } from '../../src/lib/session';
 
-process.env.DATABASE_URL = 'mysql://root@127.0.0.1:3306/talenta_test';
+// Pastikan koneksi mengarah ke database test via variabel terpecah
+process.env.DB_HOST = '127.0.0.1';
+process.env.DB_PORT = '3306';
+process.env.DB_USER = 'root';
+process.env.DB_PASSWORD = '';
+process.env.DB_NAME = 'talenta_test';
 process.env.NODE_ENV = 'test';
 
 describe('Stage 2 — Backend RBAC Guard Test Suite', () => {

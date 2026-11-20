@@ -18,7 +18,7 @@ Mock hanya untuk demo/tes, tidak ada toggle mock pada image produksi. Vite mengg
 Kontrak variabel yang direncanakan:
 - IMAGE_TAG: commit SHA atau tag rilis immutable, dipakai kedua image.
 - PUBLIC_ORIGIN: URL HTTPS domain aktif.
-- DATABASE_URL: user MySQL aplikasi khusus.
+- DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (atau fallback DATABASE_URL): kredensial MySQL aplikasi khusus.
 - SESSION_SECRET dan COOKIE_SECRET: rahasia acak kuat.
 - S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_FORCE_PATH_STYLE=true: service account RustFS dan bucket privat.
 - SUPER_ADMIN_BOOTSTRAP_*: hanya untuk bootstrap satu kali; dihapus/diputar setelahnya.

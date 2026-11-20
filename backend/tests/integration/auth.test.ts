@@ -2,8 +2,12 @@ import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { createServer } from '../../src/app/server';
 import { prisma, closeDatabase } from '../../src/lib/prisma';
 
-// Pastikan koneksi mengarah ke database test
-process.env.DATABASE_URL = 'mysql://root@127.0.0.1:3306/talenta_test';
+// Pastikan koneksi mengarah ke database test via variabel terpecah
+process.env.DB_HOST = '127.0.0.1';
+process.env.DB_PORT = '3306';
+process.env.DB_USER = 'root';
+process.env.DB_PASSWORD = '';
+process.env.DB_NAME = 'talenta_test';
 process.env.NODE_ENV = 'test';
 
 describe('Stage 2 — Backend Auth, RBAC & Profile Test Suite', () => {
