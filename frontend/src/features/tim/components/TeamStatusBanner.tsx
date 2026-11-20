@@ -43,7 +43,7 @@ export const TeamStatusBanner: React.FC<TeamStatusBannerProps> = ({
           </div>
           <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
             {isFormed
-              ? 'Susunan tim telah memenuhi batas minimal anggota resmi Belmawa. Ruang persiapan & roadmap belajar kini dapat diakses penuh.'
+              ? 'Susunan tim telah memenuhi batas minimal anggota kompetisi. Ruang persiapan & roadmap belajar kini dapat diakses penuh.'
               : 'Susunan tim belum mencapai jumlah minimal atau peran wajib. Cari rekan tim tambahan melalui pencocokan partner.'}
           </p>
         </div>

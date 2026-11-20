@@ -13,7 +13,7 @@ export const ScheduleTimeline: React.FC<{
       <section aria-labelledby="jadwal-resmi">
         <h3 id="jadwal-resmi" className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-blue-700" />
-          <span>Jadwal Resmi Kompetisi Nasional Belmawa</span>
+          <span>Jadwal Kompetisi</span>
         </h3>
         <ol className="border-l-2 border-blue-200 ml-3 pl-5 space-y-5">
           {jadwalResmi.map((item, idx) => (

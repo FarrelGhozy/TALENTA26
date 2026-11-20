@@ -46,7 +46,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
         <div className="space-y-2 text-center sm:text-left flex-1">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <span className="text-xs font-bold text-slate-900">
-              Foto Profil Resmi Mahasiswa
+              Foto Profil Mahasiswa
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               <ShieldCheck className="w-3 h-3 text-emerald-600" />

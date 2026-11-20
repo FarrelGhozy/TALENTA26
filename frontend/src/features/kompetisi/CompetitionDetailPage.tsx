@@ -174,7 +174,7 @@ export const CompetitionDetailPage: React.FC = () => {
                   <h2 className="font-bold text-slate-900 text-sm">Alur Tahapan Pelaksanaan Lomba</h2>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Siklus persiapan delegasi UNIDA Gontor hingga pengajuan rekognisi prestasi resmi di TALENTA.
+                  Siklus persiapan delegasi UNIDA Gontor hingga pengajuan prestasi di TALENTA.
                 </p>
               </div>
 

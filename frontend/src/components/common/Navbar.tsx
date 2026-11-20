@@ -134,7 +134,7 @@ export const Navbar: React.FC = () => {
           <Link to="/" className="flex items-center gap-3 group">
             <img
               src={assetUrl('images/logo-icon.png')}
-              alt="Logo Resmi TALENTA UNIDA Gontor"
+              alt="Logo TALENTA UNIDA Gontor"
               className="w-9 h-9 rounded-xl shadow-xs group-hover:scale-105 transition-transform object-cover border border-white/20"
             />
             <div>

@@ -42,7 +42,7 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
                   </div>
                 </div>
                 <Badge color={isVerified ? 'emerald' : 'slate'} size="sm" dot>
-                  {isVerified ? 'Resmi Kampus' : 'Verifikasi'}
+                  {isVerified ? 'Kontak tersedia' : 'Belum tersedia'}
                 </Badge>
               </div>
 
@@ -52,10 +52,10 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
                     href={`https://wa.me/${c.waMock}?text=${waMessage}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex w-full items-center justify-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors min-h-[40px] shadow-2xs"
+                    className="inline-flex w-full items-center justify-center gap-2 text-xs font-bold px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors min-h-[44px] shadow-2xs"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                    Hubungi via WhatsApp Resmi
+                    Hubungi via WhatsApp
                   </a>
                 ) : (
                   <div>
@@ -64,11 +64,11 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
                       disabled
                       aria-disabled="true"
                       title="Kontak belum diverifikasi admin"
-                      className="w-full text-xs px-3 py-2 rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed min-h-[40px] font-medium"
+                      className="w-full text-xs px-3 py-2 rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed min-h-[44px] font-medium"
                     >
                       Kontak Segera Diumumkan
                     </button>
-                    <p className="text-[10px] text-slate-400 mt-1">Menunggu penerbitan Surat Tugas oleh fakultas.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Kontak belum diterbitkan.</p>
                   </div>
                 )}
               </div>

@@ -119,7 +119,7 @@ export const TeamPage: React.FC = () => {
     {
       label: `Kuantitas Anggota (${validation.acceptedCount}/${validation.minNeeded}–${validation.maxAllowed} org)`,
       satisfied: validation.acceptedCount >= validation.minNeeded && validation.acceptedCount <= validation.maxAllowed,
-      desc: validation.acceptedCount < validation.minNeeded ? `Kurang ${validation.minNeeded - validation.acceptedCount} anggota lagi` : 'Sesuai batas resmi',
+      desc: validation.acceptedCount < validation.minNeeded ? `Kurang ${validation.minNeeded - validation.acceptedCount} anggota lagi` : 'Sesuai batas kompetisi',
     },
     {
       label: 'Penetapan Ketua Tim',
@@ -252,7 +252,7 @@ export const TeamPage: React.FC = () => {
               Lanjutkan ke Katalog Perlombaan
             </h3>
             <p className="text-xs text-blue-100/85 leading-relaxed">
-              Tim Anda membidik <strong className="text-white font-bold">{competition.namaResmi}</strong>. Kunjungi katalog lomba untuk menyimak 3 tahapan pembinaan (Pembinaan, Seleksi Internal, dan Input Prestasi), jadwal kegiatan, serta pedoman teknis resmi Belmawa.
+              Tim Anda membidik <strong className="text-white font-bold">{competition.namaResmi}</strong>. Kunjungi katalog lomba untuk menyimak 3 tahapan pembinaan (Pembinaan, Seleksi Internal, dan Input Prestasi), jadwal kegiatan, serta informasi kompetisi.
             </p>
           </div>
 

@@ -129,7 +129,7 @@ export const ProfilePage: React.FC = () => {
   if (loading) return <PageLoading message="Memuat profil dan minat mahasiswa..." />;
 
   const stepsMeta = [
-    { num: 1, label: 'Identitas & Akademik', icon: UserCheck, desc: 'NIM, prodi & foto resmi' },
+    { num: 1, label: 'Identitas & Akademik', icon: UserCheck, desc: 'NIM, prodi & foto' },
     { num: 2, label: 'Minat, Skill & Peran', icon: Layers, desc: 'Keahlian komplementer tim' },
     { num: 3, label: 'Target Belmawa & Waktu', icon: Target, desc: 'Kompetisi & ketersediaan' },
   ];

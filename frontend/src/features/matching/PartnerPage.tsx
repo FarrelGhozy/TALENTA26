@@ -173,7 +173,7 @@ export const PartnerPage: React.FC = () => {
             Prinsip Kecocokan Partner:
           </span>
           <p className="leading-relaxed text-[11px] text-slate-500">
-            Skor kecocokan dihitung secara adil berdasarkan: <strong>Kesesuaian Target Kompetisi (40%)</strong>, <strong>Komplementaritas Peran & Skill (30%)</strong>, <strong>Sinkronisasi Hari Belajar (20%)</strong>, dan <strong>Diversitas Angkatan/Prodi (10%)</strong>. Skor ini adalah alat bantu pencarian, bukan penilaian mutlak kecerdasan.
+            Skor kecocokan membantu menemukan calon rekan. Lihat alasan pada setiap rekomendasi untuk memahami faktor yang dipertimbangkan.
           </p>
         </div>
       </div>
