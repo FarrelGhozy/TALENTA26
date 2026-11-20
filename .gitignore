@@ -59,9 +59,12 @@ desktop.ini
 *.swp
 *~
 
-# ── Storage & Uploads ──
+# ── Storage, Uploads & Backups ──
 .storage/
 storage/
+backups/
+*.sql.gz
+*.sql.gz.sha256
 
 # ── Misc ──
 *.pem

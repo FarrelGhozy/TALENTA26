@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Trophy, Download } from 'lucide-react';
 import { AdminStats } from '../../services/types';
-import { statsService, competitionService } from '@talenta/services';
+import { statsService, competitionService, dashboardService } from '@talenta/services';
 import { Competition } from '../../types';
 import { ScopeBanner } from './components/ScopeBanner';
 import { StatCards } from './components/StatCards';
@@ -16,6 +16,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -37,8 +38,16 @@ export const AdminDashboardPage: React.FC = () => {
     };
   }, []);
 
-  const handleExportData = () => {
-    notify('Laporan rekapitulasi pembinaan 2026 berhasil disiapkan (unduhan simulasi).');
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      await dashboardService.downloadAchievementsCsv();
+      notify('Laporan rekapitulasi prestasi resmi berhasil diunduh.', 'success');
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengunduh rekapitulasi prestasi.', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) return <PageLoading message="Memuat analitik dashboard admin..." />;
@@ -86,9 +95,10 @@ export const AdminDashboardPage: React.FC = () => {
             size="md"
             variant="outline"
             onClick={handleExportData}
+            disabled={exporting}
             leftIcon={<Download className="w-4 h-4" />}
           >
-            Ekspor Data
+            {exporting ? 'Mengunduh...' : 'Ekspor Data'}
           </Button>
           <Link to="/validator/prestasi">
             <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>

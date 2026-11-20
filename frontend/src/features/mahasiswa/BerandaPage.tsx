@@ -118,6 +118,28 @@ export const BerandaPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Banner Perhatian Jika Ada Revisi Prestasi */}
+      {revisionCount > 0 && (
+        <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+            <div>
+              <div className="text-xs font-bold text-orange-900">
+                Perhatian: {revisionCount} Pengajuan Prestasi Memerlukan Perbaikan
+              </div>
+              <div className="text-xs text-orange-700 mt-0.5">
+                Validator meminta revisi kelengkapan berkas/bukti pendukung. Silakan periksa catatan review dan unggah dokumen perbaikan.
+              </div>
+            </div>
+          </div>
+          <Link to="/app/prestasi" className="shrink-0">
+            <Button size="sm" variant="outline" className="border-orange-300 text-orange-900 hover:bg-orange-100">
+              Periksa Berkas Sekarang
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Top Welcome Card */}
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-48 bg-gradient-to-l from-blue-100/60 via-sky-50/40 to-transparent pointer-events-none -z-0" />

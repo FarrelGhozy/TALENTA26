@@ -13,14 +13,21 @@ import type {
   User,
 } from '../../types';
 import {
+  AcademicPeriodItem,
+  AuditLogItem,
   IAchievementService,
   ICompetitionService,
   IConsultantService,
+  IDashboardService,
   IMatchingService,
   IRoadmapService,
   IStatsService,
+  ISystemService,
   ITeamService,
   IUserService,
+  PointRuleItem,
+  StudentDashboardData,
+  SystemHealthSummary,
 } from '../types';
 
 export interface ApiError {
@@ -496,4 +503,106 @@ export const consultantApiService: IConsultantService = {
 
 export const statsApiService: IStatsService = {
   getAdminStats: () => apiFetch('/stats/admin'),
+};
+
+export const systemApiService: ISystemService = {
+  getUsers: (params) => {
+    const qs = new URLSearchParams();
+    if (params?.role) qs.set('role', params.role);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.search) qs.set('q', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ users: any[]; total: number; page: number; totalPages: number }>(`/system/users${query}`);
+  },
+  updateUserStatus: (userId, status) => {
+    return apiFetch(`/system/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+  createStaff: (data) => {
+    return apiFetch('/system/users/staff', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateStaffRole: (userId, role) => {
+    return apiFetch(`/system/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+  getAcademicPeriods: () => {
+    return apiFetch<AcademicPeriodItem[]>('/system/academic-periods');
+  },
+  createAcademicPeriod: (data) => {
+    return apiFetch<AcademicPeriodItem>('/system/academic-periods', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  activateAcademicPeriod: (id) => {
+    return apiFetch<AcademicPeriodItem>(`/system/academic-periods/${id}/activate`, {
+      method: 'POST',
+    });
+  },
+  getPointRules: () => {
+    return apiFetch<{ activeVersion: number | null; activeRules: PointRuleItem[]; versions: any[] }>('/system/point-rules');
+  },
+  createPointRuleVersion: (rules) => {
+    return apiFetch('/system/point-rules/version', {
+      method: 'POST',
+      body: JSON.stringify({ rules }),
+    });
+  },
+  getAuditLogs: (params) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set('action', params.action);
+    if (params?.actorId) qs.set('actorId', params.actorId);
+    if (params?.targetType) qs.set('targetType', params.targetType);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ logs: AuditLogItem[]; total: number; page: number; totalPages: number }>(`/system/audit-logs${query}`);
+  },
+  getHealth: () => {
+    return apiFetch<SystemHealthSummary>('/system/health');
+  },
+};
+
+export const dashboardApiService: IDashboardService = {
+  getStudentDashboard: () => apiFetch<StudentDashboardData>('/me/dashboard'),
+  getAdminDashboard: () => apiFetch<any>('/admin/dashboard'),
+  downloadAchievementsCsv: async (filters): Promise<void> => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.academicPeriodId) params.set('academicPeriodId', filters.academicPeriodId);
+    if (filters?.category) params.set('category', filters.category);
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const token = localStorage.getItem('talenta-token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/admin/export${qs}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gagal mengunduh CSV: status ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rekap-prestasi-talenta-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
 };

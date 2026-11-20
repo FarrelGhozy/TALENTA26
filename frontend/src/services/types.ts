@@ -83,3 +83,136 @@ export interface AdminStats {
 export interface IStatsService {
   getAdminStats(): Promise<AdminStats>;
 }
+
+export interface AcademicPeriodItem {
+  id: string;
+  name: string;
+  year: number;
+  semester: string;
+  isActive: boolean;
+  createdAt: string;
+  _count?: {
+    competitions: number;
+    achievements: number;
+  };
+}
+
+export interface PointRuleItem {
+  id?: string;
+  level: 'lokal' | 'nasional' | 'internasional';
+  result: 'partisipasi' | 'finalis' | 'juara_3' | 'juara_2' | 'juara_1' | 'penghargaan_khusus';
+  points: number;
+  version?: number;
+  isActive?: boolean;
+}
+
+export interface AuditLogItem {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId?: string | null;
+  metadata?: any;
+  createdAt: string;
+  actor?: {
+    id: string;
+    email: string;
+    role: string;
+    studentProfile?: {
+      fullName: string;
+    } | null;
+  } | null;
+}
+
+export interface SystemHealthSummary {
+  status: 'healthy' | 'degraded';
+  database: {
+    status: string;
+    type: string;
+  };
+  storage: {
+    status: string;
+    type: string;
+  };
+  system: {
+    uptimeSeconds: number;
+    memory: {
+      heapUsedMb: number;
+      heapTotalMb: number;
+      rssMb: number;
+    };
+  };
+  metrics: {
+    totalUsers: number;
+    pendingVerifications: number;
+    auditLogsCount: number;
+  };
+}
+
+export interface ISystemService {
+  getUsers(params?: { role?: string; status?: string; search?: string; page?: number; limit?: number }): Promise<{
+    users: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }>;
+  updateUserStatus(userId: string, status: 'active' | 'suspended' | 'pending_verification'): Promise<any>;
+  createStaff(data: { email: string; password: string; role: 'validator' | 'super_admin' }): Promise<any>;
+  updateStaffRole(userId: string, role: 'validator' | 'super_admin'): Promise<any>;
+  getAcademicPeriods(): Promise<AcademicPeriodItem[]>;
+  createAcademicPeriod(data: { name: string; year: number; semester: 'ganjil' | 'genap' }): Promise<AcademicPeriodItem>;
+  activateAcademicPeriod(id: string): Promise<AcademicPeriodItem>;
+  getPointRules(): Promise<{ activeVersion: number | null; activeRules: PointRuleItem[]; versions: any[] }>;
+  createPointRuleVersion(rules: PointRuleItem[]): Promise<any>;
+  getAuditLogs(params?: { action?: string; actorId?: string; targetType?: string; page?: number; limit?: number }): Promise<{
+    logs: AuditLogItem[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }>;
+  getHealth(): Promise<SystemHealthSummary>;
+}
+
+export interface StudentDashboardData {
+  profile: {
+    completionPercentage: number;
+    nim: string | null;
+    fullName: string | null;
+    studyProgram: string | null;
+    faculty: string | null;
+  };
+  targetCompetition: any;
+  activeTeam: any;
+  roadmapProgress: {
+    roadmapId: string;
+    version: number;
+    totalTasks: number;
+    completedTasks: number;
+    percentage: number;
+  } | null;
+  submissions: {
+    total: number;
+    menunggu: number;
+    perlu_perbaikan: number;
+    disetujui: number;
+    ditolak: number;
+    draft: number;
+  };
+  points: {
+    currentPeriod: string;
+    totalPoints: number;
+  };
+  actionableSteps: Array<{
+    id: string;
+    title: string;
+    description: string;
+    actionUrl: string;
+    isCompleted: boolean;
+    priority: 'high' | 'medium' | 'low';
+  }>;
+}
+
+export interface IDashboardService {
+  getStudentDashboard(): Promise<StudentDashboardData>;
+  getAdminDashboard(): Promise<any>;
+  downloadAchievementsCsv(filters?: { status?: string; academicPeriodId?: string; category?: string }): Promise<void>;
+}
