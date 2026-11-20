@@ -59,7 +59,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
                 {user.nama}
               </h4>
               <p className="text-[11px] text-slate-500 font-medium">
-                {user.prodi} • Angkatan {user.angkatan}
+                {user.prodi}{user.angkatan ? ` • Angkatan ${user.angkatan}` : ''}
               </p>
             </div>
           </div>

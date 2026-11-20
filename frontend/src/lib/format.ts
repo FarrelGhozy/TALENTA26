@@ -8,6 +8,7 @@ export function formatDate(dateString: string): string {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      timeZone: 'Asia/Jakarta',
     });
   } catch {
     return dateString;

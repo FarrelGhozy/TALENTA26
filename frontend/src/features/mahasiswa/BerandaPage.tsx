@@ -157,14 +157,14 @@ export const BerandaPage: React.FC = () => {
                   {getGreeting()},
                 </span>
                 <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200/60">
-                  Mahasiswa Binaan Belmawa 2026
+                  Mahasiswa
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                 {currentUser?.nama}
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                {currentUser?.prodi} • Angkatan {currentUser?.angkatan} • Universitas Darussalam Gontor
+                {currentUser?.prodi}{currentUser?.angkatan ? ` • Angkatan ${currentUser.angkatan}` : ''} • Universitas Darussalam Gontor
               </p>
             </div>
           </div>

@@ -430,7 +430,7 @@ export const LandingPage: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 mb-1">
               <Trophy className="w-3.5 h-3.5" />
-              Agenda Utama Belmawa 2026
+              Daftar Kompetisi
             </div>
             <h2 id="kompetisi-preview" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               Pilihan Lomba Paling Populer
@@ -485,13 +485,13 @@ export const LandingPage: React.FC = () => {
                       </span>
                     </div>
                     <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      Resmi Belmawa
+                      Informasi kompetisi
                     </span>
                   </div>
                 </CardContent>
 
                 <div className="px-5 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">Tahun 2026</span>
+                  <span className="text-slate-400 font-medium">Kompetisi</span>
                   <Link
                     to={`/kompetisi/${comp.slug}`}
                     aria-label={`Detail ${comp.namaResmi}`}

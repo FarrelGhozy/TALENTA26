@@ -50,17 +50,17 @@ export const CompetitionListPage: React.FC = () => {
       <div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-            Kurikulum Pembinaan Nasional
+            Pembinaan Mahasiswa
           </span>
           <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-            Tahun 2026
+            Katalog
           </span>
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
           Katalog Kompetisi Pembinaan Mahasiswa
         </h1>
         <p className="text-xs text-slate-500 mt-1" aria-live="polite">
-          {loading ? 'Memuat daftar kompetisi…' : `${filtered.length} dari ${competitions.length} kompetisi Belmawa siap diikuti.`}
+          {loading ? 'Memuat daftar kompetisi…' : `${filtered.length} dari ${competitions.length} kompetisi tersedia.`}
         </p>
       </div>
 

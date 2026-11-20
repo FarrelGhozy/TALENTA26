@@ -79,7 +79,7 @@ export const AdminDashboardPage: React.FC = () => {
               Pusat Kendali Pengelola
             </span>
             <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-              Tahun Akademik 2026
+              Operasional
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">

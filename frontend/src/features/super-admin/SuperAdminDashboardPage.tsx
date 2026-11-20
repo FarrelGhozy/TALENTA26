@@ -50,7 +50,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const [isCreatePeriodOpen, setIsCreatePeriodOpen] = useState(false);
   const [periodForm, setPeriodForm] = useState({
     name: '',
-    year: 2026,
+    year: Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())),
     semester: 'ganjil' as 'ganjil' | 'genap',
   });
 
@@ -207,7 +207,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
       await systemService.createAcademicPeriod(periodForm);
       notify('Periode akademik baru berhasil ditambahkan', 'success');
       setIsCreatePeriodOpen(false);
-      setPeriodForm({ name: '', year: 2026, semester: 'ganjil' });
+      setPeriodForm({ name: '', year: Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())), semester: 'ganjil' });
       loadPeriods();
     } catch (err: any) {
       notify(err.message || 'Gagal membuat periode akademik', 'error');
@@ -300,6 +300,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
+      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
       {loading && <PageLoading message="Memuat data operasional super admin..." />}
 
       {/* ========================================================================= */}
@@ -711,6 +712,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* MODAL: TAMBAH STAF */}
       {/* ========================================================================= */}
+      </div>
       <Modal
         isOpen={isCreateStaffOpen}
         onClose={() => setIsCreateStaffOpen(false)}

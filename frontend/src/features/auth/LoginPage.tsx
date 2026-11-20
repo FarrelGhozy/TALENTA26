@@ -64,7 +64,7 @@ export const LoginPage: React.FC = () => {
           Universitas Darussalam Gontor
         </div>
         <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
-          Portal Prestasi & Akselerasi Belmawa 2026
+          Portal Pembinaan dan Prestasi Mahasiswa
         </h1>
       </div>
 
@@ -114,7 +114,7 @@ export const LoginPage: React.FC = () => {
       {/* Trust mark footer */}
       <div className="pt-6 border-t border-slate-200/80 text-center flex items-center justify-center gap-2 text-xs text-slate-400">
         <ShieldCheck className="w-4 h-4 text-slate-400" />
-        <span>Terhubung dengan kurikulum pembinaan nasional Belmawa Kemdiktisaintek 2026</span>
+        <span>Pembinaan dan pencatatan prestasi mahasiswa</span>
       </div>
     </div>
   );

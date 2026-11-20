@@ -91,7 +91,7 @@ function mapBackendUserToFrontend(raw: any): User {
     nama: profile?.fullName || raw.fullName || raw.email?.split('@')[0] || 'Pengguna',
     email: raw.email || '',
     prodi: profile?.studyProgram || 'Teknik Informatika',
-    angkatan: 2026,
+    angkatan: 0,
     role: [role],
     skill: Array.isArray(profile?.skills) ? profile.skills : [],
     minat: Array.isArray(profile?.interests) ? profile.interests : [],
@@ -128,7 +128,7 @@ function mapBackendCandidateToFrontend(c: any): MatchCandidate {
       nama: c.nama || c.user?.nama || 'Mahasiswa',
       email: '', // Zero PII in matching
       prodi: c.prodi || c.user?.prodi || '',
-      angkatan: 2026,
+      angkatan: 0,
       role: ['mahasiswa'],
       skill: c.skill || c.user?.skill || [],
       minat: c.minat || c.user?.minat || [],

@@ -15,7 +15,7 @@ export const ScopeBanner: React.FC = () => {
       <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
         <span className="flex items-center gap-1">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          Periode: <strong className="text-slate-800">2026 Belmawa</strong>
+          <strong className="text-slate-800">Pembinaan mahasiswa</strong>
         </span>
         <span aria-hidden="true">•</span>
         <span className="flex items-center gap-1">

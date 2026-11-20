@@ -24,7 +24,7 @@ export const Footer: React.FC = () => {
                 TALENTA UNIDA Gontor
               </span>
               <span className="text-[10px] bg-blue-500/25 text-sky-300 font-bold px-2 py-0.5 rounded border border-blue-400/40">
-                2026
+                TALENTA
               </span>
             </div>
             <p className="text-xs text-slate-300/90 leading-relaxed max-w-md">
@@ -89,7 +89,7 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-blue-900/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            © 2026 Universitas Darussalam Gontor — TALENTA Pembinaan Mahasiswa.
+            TALENTA — Pembinaan Mahasiswa.
           </div>
           <div className="flex items-center gap-1.5 text-slate-400">
             <span>Untuk generasi khaira ummah berprestasi</span>

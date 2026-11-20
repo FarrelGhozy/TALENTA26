@@ -265,7 +265,7 @@ export const VerificationDetailPage: React.FC = () => {
                 {author?.nama || achievement.userId}
               </strong>
               <div className="text-[11px] text-slate-500">
-                {author ? `${author.prodi} • Angkatan ${author.angkatan} • ${author.email}` : 'Data pengaju tidak ditemukan'}
+                {author ? `${author.prodi}${author.angkatan ? ` • Angkatan ${author.angkatan}` : ''} • ${author.email}` : 'Data pengaju tidak ditemukan'}
               </div>
             </div>
 

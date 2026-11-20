@@ -114,7 +114,7 @@ export const PreparationPage: React.FC = () => {
               Ruang Belajar & Persiapan Mandiri
             </span>
             <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-              Belmawa 2026
+              Persiapan
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">

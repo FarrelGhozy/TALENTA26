@@ -23,10 +23,7 @@ export const RankingPage: React.FC = () => {
         ? achievementService.getLifetimeRanking()
         : achievementService.getRanking
         ? achievementService.getRanking()
-        : Promise.resolve({
-            period: { id: 'mock', name: 'Tahun Akademik 2026/2027 Ganjil', year: 2026, semester: 'ganjil' },
-            ranking: [],
-          });
+        : Promise.reject(new Error('Layanan ranking tidak tersedia.'));
 
     fetcher
       .then((data) => {
@@ -45,8 +42,6 @@ export const RankingPage: React.FC = () => {
     };
   }, [activeTab]);
 
-  if (loading) return <PageLoading message="Memuat rekapitulasi ranking resmi institusi…" />;
-
   const ranking = rankingData?.ranking || [];
   const periodName = rankingData?.period?.name || 'Periode Akademik Aktif';
 
@@ -56,7 +51,7 @@ export const RankingPage: React.FC = () => {
         <PageHeader
           eyebrow={periodName}
           title="Ranking Prestasi Mahasiswa"
-          description="Papan peringkat resmi dari akumulasi poin prestasi lomba berstatus disetujui validator. Dihitung otomatis berdasar aturan poin berversi."
+          description="Papan peringkat berdasarkan akumulasi poin prestasi lomba berstatus disetujui validator. Dihitung otomatis berdasar aturan poin berversi."
         />
       </div>
 
@@ -76,13 +71,15 @@ export const RankingPage: React.FC = () => {
         </div>
       </div>
 
-      {error ? (
+      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
+      {loading ? <PageLoading message="Memuat ranking prestasi…" /> : null}
+      {!loading && error ? (
         <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
           {error}
         </p>
       ) : null}
 
-      {!error && ranking.length === 0 ? (
+      {!loading && !error && ranking.length === 0 ? (
         <EmptyState
           icon={<Trophy aria-hidden="true" className="h-6 w-6 text-slate-400" />}
           title="Belum Ada Prestasi di Papan Peringkat"
@@ -90,7 +87,7 @@ export const RankingPage: React.FC = () => {
         />
       ) : null}
 
-      {ranking.length > 0 ? (
+      {!loading && !error && ranking.length > 0 ? (
         <ol className="space-y-3" aria-label="Daftar peringkat prestasi mahasiswa">
           {ranking.map((item) => {
             const isTop1 = item.rank === 1;
@@ -151,10 +148,11 @@ export const RankingPage: React.FC = () => {
         </ol>
       ) : null}
 
+      </div>
       <div className="rounded-xl bg-slate-100/90 border border-slate-200 p-4 text-xs leading-relaxed text-slate-600">
         <strong className="block text-slate-800 font-bold mb-0.5">Perlindungan Data Pribadi:</strong>
-        Papan peringkat publik hanya menampilkan nama mahasiswa, program studi, perolehan poin lomba resmi, dan jumlah capaian sah.
-        Sesuai UU No. 27/2022 (UU PDP) dan kebijakan kampus, NIM, email, nomor kontak, serta dokumen berkas bukti sertifikat <strong>tidak dipublikasikan</strong>.
+        Papan peringkat publik hanya menampilkan nama mahasiswa, program studi, perolehan poin lomba, dan jumlah capaian sah.
+        NIM, email, nomor kontak, serta dokumen berkas bukti sertifikat <strong>tidak dipublikasikan</strong>.
       </div>
     </div>
   );

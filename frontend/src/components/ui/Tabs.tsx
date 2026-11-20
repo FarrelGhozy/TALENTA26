@@ -22,16 +22,23 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
             key={tab.id}
             role="tab"
             aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             aria-controls={`panel-${tab.id}`}
             id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onChange(tab.id);
-              }
+              const index = tabs.findIndex((item) => item.id === tab.id);
+              let next = index;
+              if (e.key === 'ArrowRight') next = (index + 1) % tabs.length;
+              else if (e.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+              else if (e.key === 'Home') next = 0;
+              else if (e.key === 'End') next = tabs.length - 1;
+              else return;
+              e.preventDefault();
+              onChange(tabs[next].id);
+              document.getElementById(`tab-${tabs[next].id}`)?.focus();
             }}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer min-h-[40px] ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer min-h-[44px] ${
               isActive
                 ? 'border-blue-700 text-blue-700 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'

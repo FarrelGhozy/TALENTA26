@@ -184,7 +184,7 @@ export const TeamPage: React.FC = () => {
               Audit Kelayakan Formasi Tim Belmawa
             </h3>
           </div>
-          <span className="text-[11px] text-slate-400">Pedoman Dikti 2026</span>
+          <span className="text-[11px] text-slate-400">Aturan kompetisi</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

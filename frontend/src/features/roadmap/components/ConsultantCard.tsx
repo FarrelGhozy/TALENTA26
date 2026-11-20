@@ -15,7 +15,7 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
       </CardHeader>
       <CardContent className="p-4 space-y-3 text-xs">
         <p className="text-[11px] text-slate-500 leading-relaxed">
-          Dosen pembimbing resmi yang ditugaskan universitas. Gunakan etika komunikasi santun saat menghubungi via WhatsApp.
+          Kontak konsultasi yang tersedia untuk kompetisi ini. Gunakan etika komunikasi santun saat menghubungi via WhatsApp.
         </p>
 
         {consultants.length === 0 && (

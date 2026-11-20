@@ -115,7 +115,7 @@ export const CompetitionDetailPage: React.FC = () => {
           </Badge>
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider inline-flex items-center gap-1">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Tingkat {competition.tingkat} • Belmawa 2026
+            Tingkat {competition.tingkat}
           </span>
         </div>
 
