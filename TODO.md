@@ -39,10 +39,11 @@ Gate 3: perjalanan profil → target → tim → persiapan berjalan tanpa mock d
 Status gate: **selesai 21 November 2026**. Seluruh 43 uji integrasi lintas auth, rbac, dan domain lulus; typecheck, lint (0 error/warning), build produksi, dan build demo lulus. Bukti lengkap: docs/21-validasi-stage-3.md.
 
 ## Stage 4 — Prestasi, bukti, verifikasi, ranking
-- [ ] Pengajuan prestasi, revisi, jejak keputusan, deteksi duplikat, file bukti privat di RustFS, validasi tipe/ukuran dan hak akses.
-- [ ] Validator memutuskan status; tindakan tercatat dan tidak boleh mengubah riwayat diam-diam.
-- [ ] Poin lomba disetujui dihitung menurut aturan berversi; ranking tahunan dan riwayat keseluruhan; data publik minimum.
+- [x] Pengajuan prestasi, revisi, jejak keputusan, deteksi duplikat, file bukti privat di RustFS, validasi tipe/ukuran dan hak akses. Bukti: Migrasi 20261120221116_add_achievements_evidence_point_ledger aktif; integrasi RustFS S3 privat terverifikasi; batas 8 MB max (PDF/JPG/PNG); anti-IDOR teruji (403 Forbidden); deteksi duplikat aktif.
+- [x] Validator memutuskan status; tindakan tercatat dan tidak boleh mengubah riwayat diam-diam. Bukti: Rute /api/v1/admin/achievements/:id/decisions dan /corrections dilindungi RBAC validator/super admin; catatan wajib pada revisi/penolakan/koreksi; optimistic locking (versioning) mencegah *race condition* verifikasi serentak (409 Conflict); audit event lengkap.
+- [x] Poin lomba disetujui dihitung menurut aturan berversi; ranking tahunan dan riwayat keseluruhan; data publik minimum. Bukti: PointRule versi 1 terpasang; buku besar PointLedger mengelola award dan reversal atomik; kategori non-lomba 0 poin lomba; /api/v1/ranking dan /ranking/lifetime bebas PII (tanpa NIM, email, no HP, atau berkas).
 Gate 4: unggah/unduh terotorisasi, revisi, dua pengajuan serentak, perhitungan poin, dan koreksi keputusan lulus.
+Status gate: **selesai 21 November 2026**. Seluruh 25 uji integrasi Stage 4 (total 68 uji otomatis sistem) lulus; typecheck, lint (0 error/warning), build produksi, dan build demo lulus. Bukti lengkap: docs/22-validasi-stage-4.md.
 
 ## Stage 5 — Operasi admin, kualitas, dan keamanan
 - [ ] Super admin mengelola peran staf, konfigurasi, bobot poin, audit, dashboard kesehatan dan operasi; validator mengelola data domain.

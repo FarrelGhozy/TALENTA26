@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, ChevronRight, FileText } from 'lucide-react';
+import { AlertCircle, ChevronRight, FileText, Edit3 } from 'lucide-react';
 import { Achievement } from '../../../types';
 import { formatDate, formatAchievementCategory, formatAchievementLevel } from '../../../lib/format';
 import { AchievementStatusBadge, AchievementTypeBadge } from './StatusBadge';
@@ -7,7 +7,8 @@ import { AchievementStatusBadge, AchievementTypeBadge } from './StatusBadge';
 export const AchievementTable: React.FC<{
   achievements: Achievement[];
   onSelect?: (achievement: Achievement) => void;
-}> = ({ achievements, onSelect }) => {
+  onRevise?: (achievement: Achievement) => void;
+}> = ({ achievements, onSelect, onRevise }) => {
   if (achievements.length === 0) {
     return (
       <div className="text-center py-12 text-xs text-slate-400 bg-white rounded-2xl border border-slate-200/90 p-6 space-y-2">
@@ -30,7 +31,7 @@ export const AchievementTable: React.FC<{
               <th scope="col" className="py-3.5 px-4">Capaian</th>
               <th scope="col" className="py-3.5 px-4">Tanggal</th>
               <th scope="col" className="py-3.5 px-4">Status Verifikasi</th>
-              {onSelect && <th scope="col" className="py-3.5 px-4 text-right">Aksi</th>}
+              {(onSelect || onRevise) && <th scope="col" className="py-3.5 px-4 text-right">Aksi</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -77,15 +78,27 @@ export const AchievementTable: React.FC<{
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <AchievementStatusBadge status={item.status} />
                   </td>
-                  {onSelect && (
+                  {(onSelect || onRevise) && (
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => onSelect(item)}
-                        aria-label={`Periksa pengajuan ${item.nama}`}
-                        className="font-extrabold text-blue-700 hover:text-blue-900 min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-blue-50 cursor-pointer inline-flex items-center gap-1 transition-colors"
-                      >
-                        Periksa <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+                      {onSelect && (
+                        <button
+                          onClick={() => onSelect(item)}
+                          aria-label={`Periksa pengajuan ${item.nama}`}
+                          className="font-extrabold text-blue-700 hover:text-blue-900 min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-blue-50 cursor-pointer inline-flex items-center gap-1 transition-colors text-xs"
+                        >
+                          Periksa <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {onRevise && item.status === 'perlu_perbaikan' && (
+                        <button
+                          onClick={() => onRevise(item)}
+                          aria-label={`Revisi pengajuan ${item.nama}`}
+                          className="font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 min-h-[34px] px-3 py-1 rounded-xl cursor-pointer inline-flex items-center gap-1.5 transition-colors text-xs border border-amber-300 shadow-2xs"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Revisi Berkas
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

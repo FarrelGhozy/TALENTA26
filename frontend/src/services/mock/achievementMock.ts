@@ -44,8 +44,93 @@ export const achievementMockService: IAchievementService = {
       ...list[idx],
       status,
       catatan: catatan || list[idx].catatan,
+      version: (list[idx].version || 1) + 1,
     };
     setItem(ACHIEVEMENTS_KEY, list);
     return list[idx];
+  },
+
+  async submitRevision(id: string, data: any, files?: File[]): Promise<Achievement> {
+    const list = getAchievements();
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx === -1) throw new Error('Data prestasi tidak ditemukan');
+
+    const newEvidence = files && files.length > 0
+      ? files.map((f, i) => ({ id: `ev-mock-${Date.now()}-${i}`, nama: f.name, size: f.size }))
+      : list[idx].bukti;
+
+    list[idx] = {
+      ...list[idx],
+      ...data,
+      bukti: newEvidence,
+      status: 'menunggu',
+      version: (list[idx].version || 1) + 1,
+      catatan: undefined,
+    };
+    setItem(ACHIEVEMENTS_KEY, list);
+    return list[idx];
+  },
+
+  async correct(id: string, reason: string): Promise<Achievement> {
+    const list = getAchievements();
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx === -1) throw new Error('Data prestasi tidak ditemukan');
+
+    list[idx] = {
+      ...list[idx],
+      status: 'perlu_perbaikan',
+      catatan: `[KOREKSI] ${reason}`,
+      version: (list[idx].version || 1) + 1,
+    };
+    setItem(ACHIEVEMENTS_KEY, list);
+    return list[idx];
+  },
+
+  getEvidenceDownloadUrl(evidenceId: string): string {
+    return `#download-mock-${evidenceId}`;
+  },
+
+  async getRanking() {
+    return {
+      period: {
+        id: 'mock-period',
+        name: 'Tahun Akademik 2026/2027 Ganjil',
+        year: 2026,
+        semester: 'ganjil',
+      },
+      ranking: [
+        {
+          rank: 1,
+          userId: 'u1',
+          fullName: 'Ahmad Bintang Prestasi',
+          studyProgram: 'Teknik Informatika',
+          points: 18,
+          approvedCount: 1,
+          juara1Count: 1,
+        },
+      ],
+    };
+  },
+
+  async getLifetimeRanking() {
+    return {
+      period: {
+        id: 'lifetime',
+        name: 'Sepanjang Waktu (Lifetime)',
+        year: 0,
+        semester: 'all',
+      },
+      ranking: [
+        {
+          rank: 1,
+          userId: 'u1',
+          fullName: 'Ahmad Bintang Prestasi',
+          studyProgram: 'Teknik Informatika',
+          points: 18,
+          approvedCount: 1,
+          juara1Count: 1,
+        },
+      ],
+    };
   },
 };

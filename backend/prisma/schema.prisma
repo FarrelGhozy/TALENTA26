@@ -52,6 +52,45 @@ enum TargetStatus {
   archived
 }
 
+enum AchievementStatus {
+  draft
+  menunggu
+  perlu_perbaikan
+  disetujui
+  ditolak
+  dibatalkan
+}
+
+enum AchievementCategory {
+  kompetisi
+  konferensi
+  olahraga
+  seni
+  nominasi
+  lain
+  seleksi_internal
+}
+
+enum AchievementLevel {
+  lokal
+  nasional
+  internasional
+}
+
+enum AchievementResult {
+  partisipasi
+  finalis
+  juara_3
+  juara_2
+  juara_1
+  penghargaan_khusus
+}
+
+enum PointLedgerType {
+  award
+  reversal
+}
+
 model Institution {
   id        String   @id @default(cuid())
   code      String   @unique
@@ -63,6 +102,9 @@ model Institution {
   auditEvents     AuditEvent[]
   academicPeriods AcademicPeriod[]
   competitions    Competition[]
+  achievements    Achievement[]
+  pointRules      PointRule[]
+  pointLedgers    PointLedger[]
 
   @@map("institutions")
 }
@@ -79,6 +121,8 @@ model AcademicPeriod {
 
   institution  Institution   @relation(fields: [institutionId], references: [id])
   competitions Competition[]
+  achievements Achievement[]
+  pointLedgers PointLedger[]
 
   @@index([institutionId, isActive])
   @@map("academic_periods")
@@ -105,6 +149,10 @@ model User {
   sentInvites         TeamInvite[]         @relation("SentInvites")
   receivedInvites     TeamInvite[]         @relation("ReceivedInvites")
   roadmapProgress     RoadmapProgress[]
+  achievements        Achievement[]
+  uploadedEvidences   AchievementEvidence[]
+  decidedAchievements AchievementDecision[]
+  pointLedgers        PointLedger[]
 
   @@index([institutionId, role, status])
   @@map("users")
@@ -162,6 +210,7 @@ model Competition {
   teams              Team[]
   roadmaps           Roadmap[]
   consultantContacts ConsultantContact[]
+  achievements       Achievement[]
 
   @@index([institutionId, status])
   @@index([academicPeriodId])
@@ -371,4 +420,132 @@ model AuditEvent {
   @@index([institutionId, createdAt])
   @@index([actorId, action])
   @@map("audit_events")
+}
+
+model Achievement {
+  id                    String              @id @default(cuid())
+  institutionId         String
+  userId                String
+  academicPeriodId      String?
+  competitionId         String?
+  name                  String
+  organizer             String
+  category              AchievementCategory @default(kompetisi)
+  level                 AchievementLevel    @default(nasional)
+  result                AchievementResult   @default(juara_1)
+  eventDate             DateTime
+  description           String?             @db.Text
+  isFromInternalSelection Boolean           @default(false)
+  status                AchievementStatus   @default(menunggu)
+  version               Int                 @default(1)
+  reviewNote            String?             @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  institution    Institution           @relation(fields: [institutionId], references: [id])
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod?       @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
+  competition    Competition?          @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  evidences      AchievementEvidence[]
+  revisions      AchievementRevision[]
+  decisions      AchievementDecision[]
+  pointLedgers   PointLedger[]
+
+  @@index([institutionId, status])
+  @@index([userId, status])
+  @@index([academicPeriodId])
+  @@index([competitionId])
+  @@map("achievements")
+}
+
+model AchievementEvidence {
+  id            String   @id @default(cuid())
+  achievementId String
+  uploaderId    String
+  objectKey     String
+  fileName      String
+  fileSize      Int
+  mimeType      String
+  uploadedAt    DateTime @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  uploader    User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([achievementId])
+  @@index([uploaderId])
+  @@map("achievement_evidences")
+}
+
+model AchievementRevision {
+  id            String   @id @default(cuid())
+  achievementId String
+  versionNumber Int
+  snapshotJson  Json
+  note          String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@index([achievementId, versionNumber])
+  @@map("achievement_revisions")
+}
+
+model AchievementDecision {
+  id             String            @id @default(cuid())
+  achievementId  String
+  decidedById    String
+  action         String
+  previousStatus AchievementStatus
+  newStatus      AchievementStatus
+  reason         String?           @db.Text
+  version        Int
+  createdAt      DateTime          @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  decidedBy   User        @relation(fields: [decidedById], references: [id], onDelete: Restrict)
+
+  @@index([achievementId])
+  @@index([decidedById])
+  @@map("achievement_decisions")
+}
+
+model PointRule {
+  id            String            @id @default(cuid())
+  institutionId String
+  version       Int               @default(1)
+  level         AchievementLevel
+  result        AchievementResult
+  points        Int
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+
+  @@unique([institutionId, version, level, result])
+  @@index([institutionId, version, isActive])
+  @@map("point_rules")
+}
+
+model PointLedger {
+  id               String          @id @default(cuid())
+  institutionId    String
+  userId           String
+  achievementId    String
+  academicPeriodId String?
+  ruleVersion      Int             @default(1)
+  points           Int
+  type             PointLedgerType @default(award)
+  reason           String?         @db.Text
+  createdAt        DateTime        @default(now())
+
+  institution    Institution     @relation(fields: [institutionId], references: [id])
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement    Achievement     @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod? @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId, userId])
+  @@index([achievementId])
+  @@index([academicPeriodId])
+  @@map("point_ledgers")
 }

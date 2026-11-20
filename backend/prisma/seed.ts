@@ -323,7 +323,61 @@ async function main() {
     }
   }
 
-  console.log('[SEED] Inisialisasi basis data Stage 3 selesai dengan aman.');
+  // 8. Aturan Poin Berversi (PointRule Versi 1 sesuai docs/09)
+  const defaultRules: Array<{
+    level: 'lokal' | 'nasional' | 'internasional';
+    result: 'partisipasi' | 'finalis' | 'juara_3' | 'juara_2' | 'juara_1' | 'penghargaan_khusus';
+    points: number;
+  }> = [
+    { level: 'lokal', result: 'partisipasi', points: 1 },
+    { level: 'lokal', result: 'finalis', points: 2 },
+    { level: 'lokal', result: 'juara_3', points: 4 },
+    { level: 'lokal', result: 'juara_2', points: 6 },
+    { level: 'lokal', result: 'juara_1', points: 8 },
+    { level: 'lokal', result: 'penghargaan_khusus', points: 2 },
+
+    { level: 'nasional', result: 'partisipasi', points: 2 },
+    { level: 'nasional', result: 'finalis', points: 5 },
+    { level: 'nasional', result: 'juara_3', points: 10 },
+    { level: 'nasional', result: 'juara_2', points: 14 },
+    { level: 'nasional', result: 'juara_1', points: 18 },
+    { level: 'nasional', result: 'penghargaan_khusus', points: 5 },
+
+    { level: 'internasional', result: 'partisipasi', points: 3 },
+    { level: 'internasional', result: 'finalis', points: 8 },
+    { level: 'internasional', result: 'juara_3', points: 16 },
+    { level: 'internasional', result: 'juara_2', points: 22 },
+    { level: 'internasional', result: 'juara_1', points: 30 },
+    { level: 'internasional', result: 'penghargaan_khusus', points: 8 },
+  ];
+
+  for (const r of defaultRules) {
+    await prisma.pointRule.upsert({
+      where: {
+        institutionId_version_level_result: {
+          institutionId: institution.id,
+          version: 1,
+          level: r.level,
+          result: r.result,
+        },
+      },
+      update: {
+        points: r.points,
+        isActive: true,
+      },
+      create: {
+        institutionId: institution.id,
+        version: 1,
+        level: r.level,
+        result: r.result,
+        points: r.points,
+        isActive: true,
+      },
+    });
+  }
+  console.log('[SEED] Aturan bobot poin prestasi versi 1 berhasil dipasang.');
+
+  console.log('[SEED] Inisialisasi basis data Stage 4 selesai dengan aman.');
 }
 
 main()

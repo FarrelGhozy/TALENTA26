@@ -23,6 +23,14 @@ export interface AppConfig {
     pass: string;
     from: string;
   };
+  s3: {
+    endpoint?: string;
+    region: string;
+    bucket: string;
+    accessKey?: string;
+    secretKey?: string;
+    forcePathStyle: boolean;
+  };
 }
 
 export function resolveDatabaseConfig(): DatabaseConfig {
@@ -104,6 +112,15 @@ export function loadConfig(): AppConfig {
         }
       : undefined;
 
+  const s3 = {
+    endpoint: process.env.S3_ENDPOINT,
+    region: process.env.S3_REGION || 'us-east-1',
+    bucket: process.env.S3_BUCKET || 'talentadevtest',
+    accessKey: process.env.S3_ACCESS_KEY,
+    secretKey: process.env.S3_SECRET_KEY,
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+  };
+
   return {
     port,
     nodeEnv,
@@ -114,6 +131,7 @@ export function loadConfig(): AppConfig {
     superAdminBootstrapEmail,
     superAdminBootstrapPassword,
     smtp,
+    s3,
   };
 }
 

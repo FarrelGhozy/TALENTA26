@@ -13,14 +13,17 @@ export const AchievementNewPage: React.FC = () => {
   const { notify } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (data: Omit<Achievement, 'id' | 'status' | 'institutionId'>) => {
+  const handleSubmit = async (
+    data: Omit<Achievement, 'id' | 'status' | 'institutionId'>,
+    files?: File[]
+  ) => {
     setLoading(true);
     try {
-      await achievementService.create(data);
+      await achievementService.create(data, files);
       notify('Pengajuan prestasi terkirim. Status: Menunggu verifikasi.');
       navigate('/app/prestasi');
-    } catch {
-      notify('Gagal mengirim pengajuan. Coba lagi.', 'error');
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengirim pengajuan. Coba lagi.', 'error');
     } finally {
       setLoading(false);
     }

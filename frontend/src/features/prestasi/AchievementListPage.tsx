@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, CheckCircle2, Clock, Plus, Search, Filter } from 'lucide-react';
+import { Award, CheckCircle2, Clock, Plus, Search, Filter, AlertTriangle, X } from 'lucide-react';
 import { Achievement } from '../../types';
 import { achievementService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { AchievementTable } from './components/AchievementTable';
@@ -12,28 +13,86 @@ type StatusFilter = 'semua' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'di
 
 export const AchievementListPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const { notify } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
+  // State untuk modal revisi
+  const [revisionItem, setRevisionItem] = useState<Achievement | null>(null);
+  const [revisedName, setRevisedName] = useState('');
+  const [revisedOrganizer, setRevisedOrganizer] = useState('');
+  const [revisionNote, setRevisionNote] = useState('');
+  const [revisionFiles, setRevisionFiles] = useState<File[]>([]);
+  const [submittingRevision, setSubmittingRevision] = useState(false);
+
+  const fetchAchievements = () => {
     if (!currentUser) return;
-    let cancelled = false;
     achievementService
       .getAll(currentUser.id)
       .then((data) => {
-        if (cancelled) return;
         setAchievements(data);
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+  };
+
+  useEffect(() => {
+    fetchAchievements();
   }, [currentUser]);
+
+  const openRevisionModal = (item: Achievement) => {
+    setRevisionItem(item);
+    setRevisedName(item.nama);
+    setRevisedOrganizer(item.penyelenggara);
+    setRevisionNote('');
+    setRevisionFiles([]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    if (files.length > 3) {
+      notify('Maksimal 3 berkas bukti yang diizinkan.', 'error');
+      return;
+    }
+    for (const f of files) {
+      if (f.size > 8 * 1024 * 1024) {
+        notify(`Berkas '${f.name}' melebihi batas maksimal 8 MB.`, 'error');
+        return;
+      }
+    }
+    setRevisionFiles(files);
+  };
+
+  const handleSubmitRevision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!revisionItem) return;
+    setSubmittingRevision(true);
+    try {
+      if (achievementService.submitRevision) {
+        await achievementService.submitRevision(
+          revisionItem.id,
+          {
+            name: revisedName.trim(),
+            organizer: revisedOrganizer.trim(),
+            note: revisionNote.trim() || 'Perbaikan berkas oleh mahasiswa',
+          },
+          revisionFiles.length > 0 ? revisionFiles : undefined
+        );
+      }
+      notify('Revisi pengajuan berhasil dikirimkan. Status kembali menunggu verifikasi.');
+      setRevisionItem(null);
+      fetchAchievements();
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengirim revisi.', 'error');
+    } finally {
+      setSubmittingRevision(false);
+    }
+  };
 
   if (loading) return <PageLoading message="Memuat rekap data prestasi..." />;
 
@@ -180,8 +239,119 @@ export const AchievementListPage: React.FC = () => {
             Daftar Riwayat Pengajuan
           </h2>
         </div>
-        <AchievementTable achievements={filtered} />
+        <AchievementTable
+          achievements={filtered}
+          onRevise={openRevisionModal}
+        />
       </div>
+
+      {/* Modal Revisi Berkas */}
+      {revisionItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                Formulir Revisi Pengajuan
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRevisionItem(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+                aria-label="Tutup modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {revisionItem.catatan && (
+              <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-950 text-xs">
+                <strong className="block font-bold">Catatan Perbaikan dari Verifikator:</strong>
+                <p className="mt-1">{revisionItem.catatan}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitRevision} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Nama Kegiatan / Capaian
+                </label>
+                <input
+                  type="text"
+                  value={revisedName}
+                  onChange={(e) => setRevisedName(e.target.value)}
+                  required
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Penyelenggara
+                </label>
+                <input
+                  type="text"
+                  value={revisedOrganizer}
+                  onChange={(e) => setRevisedOrganizer(e.target.value)}
+                  required
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Unggah Berkas Bukti Baru / Perbaikan (Opsional, PDF/JPG/PNG max 8 MB)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {revisionFiles.length > 0 && (
+                  <p className="text-[11px] text-emerald-600 mt-1 font-semibold">
+                    {revisionFiles.length} berkas baru dipilih
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Catatan Tindak Lanjut Perbaikan
+                </label>
+                <textarea
+                  rows={2}
+                  value={revisionNote}
+                  onChange={(e) => setRevisionNote(e.target.value)}
+                  placeholder="Contoh: Sudah diperbarui SK pengesahan dari rektorat..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRevisionItem(null)}
+                  disabled={submittingRevision}
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={submittingRevision}
+                >
+                  Kirim Revisi
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

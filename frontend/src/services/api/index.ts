@@ -1,10 +1,13 @@
 import { API_BASE_URL } from '../../config/env';
 import type {
+  Achievement,
+  AchievementProof,
   Competition,
   Consultant,
   Invite,
   MatchCandidate,
   Profile,
+  RankingResponse,
   Role,
   Team,
   User,
@@ -335,12 +338,153 @@ export const roadmapApiService: IRoadmapService = {
     apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ userId, taskId }) }),
 };
 
+function mapBackendAchievementToFrontend(raw: any): Achievement {
+  const evidences: AchievementProof[] = Array.isArray(raw.evidences)
+    ? raw.evidences.map((e: any) => ({
+        id: e.id,
+        nama: e.fileName || e.name || 'berkas.pdf',
+        size: e.fileSize || e.size || 0,
+        mimeType: e.mimeType,
+        uploadedAt: e.uploadedAt,
+      }))
+    : Array.isArray(raw.bukti)
+    ? raw.bukti
+    : [];
+
+  return {
+    id: raw.id,
+    institutionId: raw.institutionId || 'unida-gontor',
+    userId: raw.userId,
+    nama: raw.name || raw.nama || '',
+    penyelenggara: raw.organizer || raw.penyelenggara || '',
+    kategori: raw.category || raw.kategori || 'kompetisi',
+    tanggal: raw.eventDate ? new Date(raw.eventDate).toISOString().split('T')[0] : (raw.tanggal || ''),
+    tingkat: raw.level || raw.tingkat || 'nasional',
+    jenisCapaian: raw.result || raw.jenisCapaian || 'juara_1',
+    deskripsi: raw.description || raw.deskripsi,
+    bukti: evidences,
+    status: raw.status || 'menunggu',
+    version: raw.version || 1,
+    catatan: raw.reviewNote || raw.catatan,
+    dariSeleksiInternal: Boolean(raw.isFromInternalSelection || raw.dariSeleksiInternal),
+    competitionSlug: raw.competition?.slug || raw.competitionSlug,
+  };
+}
+
 export const achievementApiService: IAchievementService = {
-  getAll: (userId) => apiFetch(`/achievements${userId ? `?userId=${userId}` : ''}`),
-  getById: (id) => apiFetch(`/achievements/${id}`),
-  create: (data) => apiFetch('/achievements', { method: 'POST', body: JSON.stringify(data) }),
-  verify: (id, status, catatan) =>
-    apiFetch(`/achievements/${id}/verify`, { method: 'PATCH', body: JSON.stringify({ status, catatan }) }),
+  getAll: async (userId?: string, status?: string): Promise<Achievement[]> => {
+    const endpoint = userId
+      ? `/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`
+      : `/admin/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`;
+    try {
+      const res = await apiFetch<any[]>(endpoint);
+      return Array.isArray(res) ? res.map(mapBackendAchievementToFrontend) : [];
+    } catch {
+      const fallback = await apiFetch<any[]>(`/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`);
+      return Array.isArray(fallback) ? fallback.map(mapBackendAchievementToFrontend) : [];
+    }
+  },
+
+  getById: async (id: string): Promise<Achievement | null> => {
+    try {
+      const res = await apiFetch<any>(`/admin/achievements/${id}`);
+      return mapBackendAchievementToFrontend(res);
+    } catch {
+      const res = await apiFetch<any>(`/me/achievements/${id}`);
+      return mapBackendAchievementToFrontend(res);
+    }
+  },
+
+  create: async (data: any, files?: File[]): Promise<Achievement> => {
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append('nama', data.nama || data.name);
+      formData.append('penyelenggara', data.penyelenggara || data.organizer);
+      formData.append('kategori', data.kategori || data.category);
+      formData.append('tingkat', data.tingkat || data.level);
+      formData.append('jenisCapaian', data.jenisCapaian || data.result);
+      formData.append('tanggal', data.tanggal || data.eventDate);
+      if (data.deskripsi || data.description) formData.append('deskripsi', data.deskripsi || data.description);
+      if (data.competitionSlug) formData.append('competitionSlug', data.competitionSlug);
+      formData.append('dariSeleksiInternal', String(Boolean(data.dariSeleksiInternal)));
+      for (const f of files) {
+        formData.append('evidence', f);
+      }
+      const res = await apiFetch<any>('/me/achievements', {
+        method: 'POST',
+        body: formData,
+      });
+      return mapBackendAchievementToFrontend(res);
+    }
+
+    const res = await apiFetch<any>('/me/achievements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  submitRevision: async (id: string, data: any, files?: File[]): Promise<Achievement> => {
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      if (data.nama || data.name) formData.append('nama', data.nama || data.name);
+      if (data.penyelenggara || data.organizer) formData.append('penyelenggara', data.penyelenggara || data.organizer);
+      if (data.kategori || data.category) formData.append('kategori', data.kategori || data.category);
+      if (data.tingkat || data.level) formData.append('tingkat', data.tingkat || data.level);
+      if (data.jenisCapaian || data.result) formData.append('jenisCapaian', data.jenisCapaian || data.result);
+      if (data.tanggal || data.eventDate) formData.append('tanggal', data.tanggal || data.eventDate);
+      if (data.deskripsi || data.description) formData.append('deskripsi', data.deskripsi || data.description);
+      if (data.catatan || data.note) formData.append('catatan', data.catatan || data.note);
+      for (const f of files) {
+        formData.append('evidence', f);
+      }
+      const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+        method: 'POST',
+        body: formData,
+      });
+      return mapBackendAchievementToFrontend(res);
+    }
+
+    const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  verify: async (id: string, statusOrAction: any, catatan?: string, version?: number): Promise<Achievement> => {
+    let action = statusOrAction;
+    if (statusOrAction === 'disetujui') action = 'approve';
+    else if (statusOrAction === 'perlu_perbaikan') action = 'request_changes';
+    else if (statusOrAction === 'ditolak') action = 'reject';
+
+    const res = await apiFetch<any>(`/admin/achievements/${id}/decisions`, {
+      method: 'POST',
+      body: JSON.stringify({ action, reason: catatan, version }),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  correct: async (id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement> => {
+    const res = await apiFetch<any>(`/admin/achievements/${id}/corrections`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, version, targetStatus }),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  getEvidenceDownloadUrl: (evidenceId: string): string => {
+    const token = localStorage.getItem('talenta-token');
+    return `${API_BASE_URL}/evidence/${evidenceId}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
+
+  getRanking: async (periodId?: string): Promise<RankingResponse> => {
+    return apiFetch<RankingResponse>(`/ranking${periodId ? `?periodId=${periodId}` : ''}`);
+  },
+
+  getLifetimeRanking: async (): Promise<RankingResponse> => {
+    return apiFetch<RankingResponse>('/ranking/lifetime');
+  },
 };
 
 export const consultantApiService: IConsultantService = {

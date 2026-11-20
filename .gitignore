@@ -59,6 +59,10 @@ desktop.ini
 *.swp
 *~
 
+# ── Storage & Uploads ──
+.storage/
+storage/
+
 # ── Misc ──
 *.pem
 *.key

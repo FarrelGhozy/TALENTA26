@@ -126,8 +126,11 @@ export interface Roadmap {
 }
 
 export interface AchievementProof {
+  id?: string;
   nama: string;
   size: number;
+  mimeType?: string;
+  uploadedAt?: string;
 }
 
 export type AchievementCategory =
@@ -150,7 +153,7 @@ export type AchievementType =
   | 'juara_3'
   | 'best_delegate';
 
-export type AchievementStatus = 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak';
+export type AchievementStatus = 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak' | 'draft' | 'dibatalkan';
 
 export interface Achievement {
   id: string;
@@ -162,11 +165,33 @@ export interface Achievement {
   tanggal: string;
   tingkat: AchievementLevel;
   jenisCapaian: AchievementType;
+  deskripsi?: string;
   bukti: AchievementProof[];
   status: AchievementStatus;
+  version?: number;
   catatan?: string;
   dariSeleksiInternal: boolean;
   competitionSlug?: string;
+}
+
+export interface RankingItem {
+  rank: number;
+  userId: string;
+  fullName: string;
+  studyProgram: string;
+  points: number;
+  approvedCount: number;
+  juara1Count: number;
+}
+
+export interface RankingResponse {
+  period: {
+    id: string;
+    name: string;
+    year: number;
+    semester: string;
+  } | null;
+  ranking: RankingItem[];
 }
 
 export interface Consultant {

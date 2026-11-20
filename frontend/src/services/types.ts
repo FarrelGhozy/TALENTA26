@@ -5,6 +5,7 @@ import {
   Invite,
   MatchCandidate,
   Profile,
+  RankingResponse,
   Roadmap,
   Team,
   User,
@@ -50,10 +51,15 @@ export interface IRoadmapService {
 }
 
 export interface IAchievementService {
-  getAll(userId?: string): Promise<Achievement[]>;
+  getAll(userId?: string, status?: string): Promise<Achievement[]>;
   getById(id: string): Promise<Achievement | null>;
-  create(data: Omit<Achievement, 'id' | 'status' | 'institutionId'>): Promise<Achievement>;
-  verify(id: string, status: Achievement['status'], catatan?: string): Promise<Achievement>;
+  create(data: any, files?: File[]): Promise<Achievement>;
+  submitRevision?(id: string, data: any, files?: File[]): Promise<Achievement>;
+  verify(id: string, statusOrAction: any, catatan?: string, version?: number): Promise<Achievement>;
+  correct?(id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement>;
+  getEvidenceDownloadUrl?(evidenceId: string): string;
+  getRanking?(periodId?: string): Promise<RankingResponse>;
+  getLifetimeRanking?(): Promise<RankingResponse>;
 }
 
 export interface IConsultantService {

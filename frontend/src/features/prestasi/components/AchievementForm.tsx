@@ -7,9 +7,11 @@ import { Select } from '../../../components/ui/Select';
 
 interface AchievementFormProps {
   userId: string;
-  onSubmit: (data: Omit<Achievement, 'id' | 'status' | 'institutionId'>) => Promise<void>;
+  onSubmit: (data: Omit<Achievement, 'id' | 'status' | 'institutionId'>, files?: File[]) => Promise<void>;
   isLoading: boolean;
 }
+
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB
 
 const PRESET_FILES = [
   { label: 'Sertifikat Juara 1 PKM (PDF)', name: 'sertifikat-juara-1-pkm.pdf', size: 245000 },
@@ -28,20 +30,44 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
   const [tingkat, setTingkat] = useState<AchievementLevel>('nasional');
   const [jenisCapaian, setJenisCapaian] = useState<AchievementType>('juara_1');
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [fileName, setFileName] = useState('');
-  const [fileSize, setFileSize] = useState(150000);
+  const [selectedRealFiles, setSelectedRealFiles] = useState<File[]>([]);
+  const [presetFileName, setPresetFileName] = useState('');
+  const [presetFileSize, setPresetFileSize] = useState(150000);
   const [dariSeleksiInternal, setDariSeleksiInternal] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormError('');
+    if (!e.target.files) return;
+    const fileList = Array.from(e.target.files);
+    if (fileList.length > 3) {
+      setFormError('Maksimal berkas bukti yang diizinkan adalah 3 berkas.');
+      return;
+    }
+    for (const f of fileList) {
+      if (f.size > MAX_FILE_SIZE) {
+        setFormError(`Ukuran berkas '${f.name}' melebihi batas maksimal 8 MB.`);
+        return;
+      }
+      const ext = f.name.toLowerCase().split('.').pop();
+      if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+        setFormError(`Berkas '${f.name}' harus berformat PDF, JPG, atau PNG.`);
+        return;
+      }
+    }
+    setSelectedRealFiles(fileList);
+    setPresetFileName('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (nama.trim().length < 4) {
-      setFormError('Nama kegiatan minimal 4 karakter.');
+    if (nama.trim().length < 3) {
+      setFormError('Nama kegiatan minimal 3 karakter.');
       return;
     }
-    if (penyelenggara.trim().length < 3) {
-      setFormError('Penyelenggara kegiatan wajib diisi.');
+    if (penyelenggara.trim().length < 2) {
+      setFormError('Penyelenggara kegiatan minimal 2 karakter.');
       return;
     }
     const today = new Date().toISOString().split('T')[0];
@@ -49,31 +75,39 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
       setFormError('Tanggal kegiatan tidak boleh berada di masa depan.');
       return;
     }
-    if (!fileName.trim()) {
-      setFormError('Berkas bukti sertifikat wajib diunggah (pilih salah satu contoh berkas cepat di bawah).');
+
+    const hasRealFiles = selectedRealFiles.length > 0;
+    const hasPreset = Boolean(presetFileName.trim());
+
+    if (!hasRealFiles && !hasPreset) {
+      setFormError('Wajib mengunggah minimal 1 berkas bukti (pilih berkas dari perangkat atau gunakan contoh cepat).');
       return;
     }
-    const validExt = /\.(pdf|jpg|jpeg|png)$/i.test(fileName.trim());
-    if (!validExt) {
-      setFormError('Bukti harus berformat PDF, JPG, atau PNG.');
-      return;
-    }
-    onSubmit({
-      userId,
-      nama: nama.trim(),
-      penyelenggara: penyelenggara.trim(),
-      kategori,
-      tingkat,
-      jenisCapaian,
-      tanggal,
-      bukti: [{ nama: fileName.trim(), size: fileSize }],
-      dariSeleksiInternal,
-    });
+
+    const bukti = hasRealFiles
+      ? selectedRealFiles.map((f) => ({ nama: f.name, size: f.size }))
+      : [{ nama: presetFileName.trim(), size: presetFileSize }];
+
+    onSubmit(
+      {
+        userId,
+        nama: nama.trim(),
+        penyelenggara: penyelenggara.trim(),
+        kategori,
+        tingkat,
+        jenisCapaian,
+        tanggal,
+        bukti,
+        dariSeleksiInternal,
+      },
+      hasRealFiles ? selectedRealFiles : undefined
+    );
   };
 
   const handleSelectPresetFile = (file: (typeof PRESET_FILES)[0]) => {
-    setFileName(file.name);
-    setFileSize(file.size);
+    setSelectedRealFiles([]);
+    setPresetFileName(file.name);
+    setPresetFileSize(file.size);
     setFormError('');
   };
 
@@ -169,9 +203,9 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
         </div>
       </div>
 
-      {/* Simulator File Upload Dropzone */}
+      {/* File Upload Dropzone */}
       <div className="pt-4 border-t border-slate-100 space-y-3">
-        <label htmlFor="bukti" className="block text-xs font-bold text-slate-800">
+        <label htmlFor="bukti-file-input" className="block text-xs font-bold text-slate-800">
           Dokumen Bukti Pendukung (Sertifikat / SK Juara / Piagam)
         </label>
 
@@ -182,17 +216,35 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
 
           <div className="space-y-1">
             <div className="font-extrabold text-slate-800 text-sm">
-              Area Unggah Berkas Bukti (Simulasi)
+              Pilih Berkas Bukti Nyata (Maksimal 3 berkas, 8 MB per berkas)
             </div>
             <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-              Format yang diterima: <strong>PDF, JPG, atau PNG</strong>. Di mode demo, gunakan tombol contoh cepat di bawah:
+              Format yang diterima: <strong>PDF, JPG, atau PNG</strong>. Disimpan secara privat dan terenkripsi.
             </p>
           </div>
 
-          {/* Quick Preset Buttons */}
-          <div className="space-y-1.5 pt-1">
+          <div>
+            <label
+              htmlFor="bukti-file-input"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-blue-800 transition-colors shadow-2xs"
+            >
+              <UploadCloud className="w-4 h-4" />
+              <span>Pilih Berkas dari Perangkat</span>
+            </label>
+            <input
+              id="bukti-file-input"
+              type="file"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+              className="sr-only"
+            />
+          </div>
+
+          {/* Quick Preset Buttons for Demo */}
+          <div className="space-y-1.5 pt-2 border-t border-blue-100/80">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Pilih Berkas Contoh Demo:
+              Atau Gunakan Berkas Contoh Demo Cepat:
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
               {PRESET_FILES.map((f) => (
@@ -201,7 +253,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
                   type="button"
                   onClick={() => handleSelectPresetFile(f)}
                   className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                    fileName === f.name
+                    presetFileName === f.name
                       ? 'bg-blue-700 text-white border-blue-800 shadow-xs'
                       : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-white'
                   }`}
@@ -213,19 +265,53 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
             </div>
           </div>
 
-          {/* Selected File Card Indicator */}
-          {fileName && (
+          {/* Selected Real Files Indicator */}
+          {selectedRealFiles.length > 0 && (
+            <div className="space-y-2 pt-1">
+              {selectedRealFiles.map((file, idx) => (
+                <div
+                  key={`${file.name}-${idx}`}
+                  className="p-3 bg-white rounded-xl border border-emerald-300 flex items-center justify-between gap-3 text-left shadow-2xs"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xs text-slate-900 truncate">{file.name}</div>
+                      <div className="text-[10px] text-slate-400">
+                        {(file.size / 1024).toFixed(0)} KB • Berkas Asli Terpilih
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedRealFiles(selectedRealFiles.filter((_, i) => i !== idx))
+                    }
+                    className="text-slate-400 hover:text-rose-600 cursor-pointer p-1"
+                    aria-label={`Hapus berkas ${file.name}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Selected Preset File Indicator */}
+          {presetFileName && selectedRealFiles.length === 0 && (
             <div className="p-3 bg-white rounded-xl border border-emerald-300 flex items-center justify-between gap-3 text-left shadow-2xs">
               <div className="flex items-center gap-2.5 min-w-0">
                 <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-extrabold text-xs text-slate-900 truncate">{fileName}</div>
-                  <div className="text-[10px] text-slate-400">{(fileSize / 1024).toFixed(0)} KB • Berkas Terpilih</div>
+                  <div className="font-extrabold text-xs text-slate-900 truncate">{presetFileName}</div>
+                  <div className="text-[10px] text-slate-400">
+                    {(presetFileSize / 1024).toFixed(0)} KB • Berkas Contoh Demo
+                  </div>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setFileName('')}
+                onClick={() => setPresetFileName('')}
                 className="text-slate-400 hover:text-rose-600 cursor-pointer p-1"
                 aria-label="Batalkan pilihan file"
               >

@@ -11,6 +11,7 @@ import { targetRoutes } from '../modules/targets';
 import { matchingRoutes } from '../modules/matching';
 import { teamRoutes } from '../modules/teams';
 import { roadmapRoutes } from '../modules/roadmaps';
+import { achievementRoutes } from '../modules/achievements';
 
 export function createServer() {
   const currentConfig = loadConfig();
@@ -37,7 +38,8 @@ export function createServer() {
     .use(targetRoutes)
     .use(matchingRoutes)
     .use(teamRoutes)
-    .use(roadmapRoutes);
+    .use(roadmapRoutes)
+    .use(achievementRoutes);
 
   return app;
 }
