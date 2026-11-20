@@ -2,7 +2,7 @@ export interface DatabaseConfig {
   host: string;
   port: number;
   user: string;
-  password: string;
+  password?: string;
   name: string;
   url: string;
 }
@@ -29,7 +29,7 @@ export function resolveDatabaseConfig(): DatabaseConfig {
   const host = process.env.DB_HOST;
   const port = parseInt(process.env.DB_PORT || '3306', 10);
   const user = process.env.DB_USER;
-  const password = process.env.DB_PASSWORD || '';
+  const password = process.env.DB_PASSWORD ? process.env.DB_PASSWORD : undefined;
   const name = process.env.DB_NAME;
 
   // Prioritaskan variabel terpecah (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
@@ -59,7 +59,7 @@ export function resolveDatabaseConfig(): DatabaseConfig {
       host: parsed.hostname || '127.0.0.1',
       port: parseInt(parsed.port || '3306', 10),
       user: decodeURIComponent(parsed.username || 'root'),
-      password: decodeURIComponent(parsed.password || ''),
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
       name: parsed.pathname.replace(/^\//, '') || 'talenta_dev',
       url: rawUrl,
     };
@@ -68,7 +68,7 @@ export function resolveDatabaseConfig(): DatabaseConfig {
       host: '127.0.0.1',
       port: 3306,
       user: 'root',
-      password: '',
+      password: undefined,
       name: 'talenta_dev',
       url: rawUrl,
     };

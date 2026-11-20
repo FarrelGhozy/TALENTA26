@@ -6,6 +6,11 @@ import { formatErrorResponse } from './middleware/error';
 import { healthRoutes } from '../modules/health';
 import { authRoutes } from '../modules/auth';
 import { profileRoutes } from '../modules/profile';
+import { competitionRoutes } from '../modules/competitions';
+import { targetRoutes } from '../modules/targets';
+import { matchingRoutes } from '../modules/matching';
+import { teamRoutes } from '../modules/teams';
+import { roadmapRoutes } from '../modules/roadmaps';
 
 export function createServer() {
   const currentConfig = loadConfig();
@@ -27,7 +32,12 @@ export function createServer() {
     .use(authPlugin)
     .use(healthRoutes)
     .use(authRoutes)
-    .use(profileRoutes);
+    .use(profileRoutes)
+    .use(competitionRoutes)
+    .use(targetRoutes)
+    .use(matchingRoutes)
+    .use(teamRoutes)
+    .use(roadmapRoutes);
 
   return app;
 }

@@ -1,0 +1,120 @@
+import { Elysia, t } from 'elysia';
+import * as roadmapService from './service';
+import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
+import { assertRole } from '../../app/middleware/rbac';
+
+export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
+  .use(authPlugin)
+  // Public / Mahasiswa Roadmap
+  .get('/roadmaps/:competitionSlug', async ({ params }) => {
+    const roadmap = await roadmapService.getRoadmapByCompetitionSlug(params.competitionSlug);
+    return { data: roadmap };
+  })
+  .get(
+    '/roadmaps/:competitionSlug/checklist',
+    async ({ auth, params, query }) => {
+      assertAuthenticated(auth);
+      // Mendukung pengecekan untuk user login sendiri
+      const targetUserId = (query as any)?.userId || auth.user.id;
+      const checklist = await roadmapService.getChecklistProgress(targetUserId, params.competitionSlug);
+      return { data: checklist };
+    }
+  )
+  .post(
+    '/roadmaps/:competitionSlug/checklist',
+    async ({ auth, params, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['mahasiswa']);
+
+      const checklist = await roadmapService.toggleChecklistTask(
+        auth.user.id,
+        params.competitionSlug,
+        body.taskId,
+        auth.user.institutionId
+      );
+
+      return { data: checklist };
+    },
+    {
+      body: t.Object({
+        taskId: t.String(),
+        userId: t.Optional(t.String()),
+      }),
+    }
+  )
+  // Consultants
+  .get('/consultants', async ({ query }) => {
+    const slug = (query as any)?.slug || (query as any)?.competitionSlug;
+    if (!slug) {
+      return { data: [] };
+    }
+    const consultants = await roadmapService.getConsultantsByCompetitionSlug(slug);
+    return { data: consultants };
+  })
+  .get('/consultants/:competitionSlug', async ({ params }) => {
+    const consultants = await roadmapService.getConsultantsByCompetitionSlug(params.competitionSlug);
+    return { data: consultants };
+  })
+  // Validator & Admin Endpoints
+  .post(
+    '/admin/roadmaps/:competitionSlug',
+    async ({ auth, params, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['validator', 'super_admin']);
+
+      const result = await roadmapService.createOrUpdateRoadmap(
+        auth.user.id,
+        params.competitionSlug,
+        body.phases,
+        auth.user.institutionId
+      );
+
+      return { data: result };
+    },
+    {
+      body: t.Object({
+        phases: t.Array(
+          t.Object({
+            orderIndex: t.Number(),
+            title: t.String(),
+            description: t.Optional(t.String()),
+            targetDays: t.Optional(t.Number()),
+            tasks: t.Array(
+              t.Object({
+                orderIndex: t.Number(),
+                title: t.String(),
+                description: t.Optional(t.String()),
+                isRequired: t.Optional(t.Boolean()),
+                resourceUrl: t.Optional(t.String()),
+                resourceTitle: t.Optional(t.String()),
+              })
+            ),
+          })
+        ),
+      }),
+    }
+  )
+  .post(
+    '/admin/consultants',
+    async ({ auth, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['validator', 'super_admin']);
+
+      const result = await roadmapService.createConsultantContact(
+        auth.user.id,
+        body,
+        auth.user.institutionId
+      );
+
+      return { data: result };
+    },
+    {
+      body: t.Object({
+        competitionSlug: t.String(),
+        name: t.String(),
+        field: t.String(),
+        whatsappNumber: t.String(),
+        capacityNote: t.Optional(t.String()),
+      }),
+    }
+  );

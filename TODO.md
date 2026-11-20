@@ -32,10 +32,11 @@ Gate 2: uji migrasi ulang, akun duplikat, sesi, otorisasi lintas pengguna/peran,
 Status gate: **selesai 20 November 2026**. Bukti lengkap: docs/20-validasi-stage-2.md.
 
 ## Stage 3 — Domain mahasiswa dan kompetisi
-- [ ] Profil, periode akademik, katalog kompetisi, aturan tim per kompetisi, target, matching transparan, undangan, tim, dan roadmap dengan data persisten.
-- [ ] Validator mengelola kompetisi, jadwal, roadmap, sumber, seleksi, dan kontak konsultasi WhatsApp yang disetujui.
-- [ ] Pastikan alur berulang lintas periode: arsip target/tim lama, kompetisi baru, perubahan aturan berversi.
+- [x] Profil, periode akademik, katalog kompetisi, aturan tim per kompetisi, target, matching transparan, undangan, tim, dan roadmap dengan data persisten. Bukti: Skema Prisma & migrasi MySQL 20261120181913_add_competitions_teams_roadmaps aktif; matching transparan tanpa PII; pembentukan tim dengan penguncian pesimistik (concurrency-safe race condition check); checklist progres roadmap persisten di database.
+- [x] Validator mengelola kompetisi, jadwal, roadmap, sumber, seleksi, dan kontak konsultasi WhatsApp yang disetujui. Bukti: Rute admin /api/v1/admin/competitions, /api/v1/admin/roadmaps/:slug, /api/v1/admin/consultants dilindungi RBAC validator/super_admin; kontak konsultasi WhatsApp resmi terintegrasi.
+- [x] Pastikan alur berulang lintas periode: arsip target/tim lama, kompetisi baru, perubahan aturan berversi. Bukti: Pergantian target kompetisi secara atomik mengarsipkan target dan keanggotaan tim lama; versioning pada entitas Team dan Roadmap; seluruh 22 uji integrasi Stage 3 lulus (total 43 uji lulus).
 Gate 3: perjalanan profil → target → tim → persiapan berjalan tanpa mock dan tahan refresh/pergantian perangkat.
+Status gate: **selesai 21 November 2026**. Seluruh 43 uji integrasi lintas auth, rbac, dan domain lulus; typecheck, lint (0 error/warning), build produksi, dan build demo lulus. Bukti lengkap: docs/21-validasi-stage-3.md.
 
 ## Stage 4 — Prestasi, bukti, verifikasi, ranking
 - [ ] Pengajuan prestasi, revisi, jejak keputusan, deteksi duplikat, file bukti privat di RustFS, validasi tipe/ukuran dan hak akses.

@@ -37,6 +37,11 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
         faculty: t.Optional(t.String()),
         phone: t.Optional(t.String()),
         bio: t.Optional(t.String()),
+        skills: t.Optional(t.Any()),
+        interests: t.Optional(t.Any()),
+        availability: t.Optional(t.Any()),
+        rolesCapable: t.Optional(t.Any()),
+        experience: t.Optional(t.String()),
       }),
     }
   );

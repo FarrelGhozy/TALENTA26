@@ -111,6 +111,37 @@ export function formatErrorResponse(
     }
   }
 
+  // Tangani error Prisma konflik duplikat (P2002) & deadlock konkurensi (P2034 / 1213)
+  const anyErr = error as any;
+  if (anyErr?.code === 'P2002' || anyErr?.cause?.code === 'ER_DUP_ENTRY') {
+    return {
+      status: 409,
+      body: {
+        error: {
+          code: 'CONFLICT',
+          message: 'Data sudah ada atau terjadi konflik entitas.',
+          requestId,
+        },
+      },
+    };
+  }
+  if (
+    anyErr?.code === 'P2034' ||
+    anyErr?.cause?.originalCode === '1213' ||
+    anyErr?.message?.includes('Deadlock')
+  ) {
+    return {
+      status: 409,
+      body: {
+        error: {
+          code: 'CONFLICT',
+          message: 'Terjadi konflik konkurensi pada data. Silakan coba kembali.',
+          requestId,
+        },
+      },
+    };
+  }
+
   // Error tak terduga: sembunyikan detail teknis/stack trace
   console.error(`[UNHANDLED_ERROR] [${requestId}]:`, error);
   return {

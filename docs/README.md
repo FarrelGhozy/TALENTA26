@@ -25,6 +25,7 @@ Dokumen ini menggambarkan target produk dan implementasi bertahap. Status aplika
 | 18-rencana-pengujian.md | strategi uji dan penerimaan produksi |
 | 19-validasi-stage-1.md | hasil pemeriksaan dan bukti penutupan Stage 1 |
 | 20-validasi-stage-2.md | hasil pemeriksaan dan bukti penutupan Stage 2 |
+| 21-validasi-stage-3.md | hasil pemeriksaan dan bukti penutupan Stage 3 |
 
 Baca PRD_TALENTA.md → 14 → 01 → 02 → 03 → 05. Untuk implementasi baca spesifikasi modul, 10, 16, 12, 18, lalu 13. Untuk operasi baca 15 dan 17.
 

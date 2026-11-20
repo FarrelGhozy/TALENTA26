@@ -9,9 +9,14 @@ export interface UpdateStudentProfileDto {
   faculty?: string;
   phone?: string;
   bio?: string;
+  skills?: any;
+  interests?: any;
+  availability?: any;
+  rolesCapable?: any;
+  experience?: string;
 }
 
-export async function getStudentProfile(userId: string): Promise<StudentProfile> {
+export async function getStudentProfile(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
   });
@@ -20,7 +25,16 @@ export async function getStudentProfile(userId: string): Promise<StudentProfile>
     throw new NotFoundError('Profil mahasiswa tidak ditemukan.');
   }
 
-  return profile;
+  const activeTarget = await prisma.studentTarget.findFirst({
+    where: { userId, status: 'active' },
+    include: { competition: true },
+  });
+
+  return {
+    ...profile,
+    targetKompetisiSlug: activeTarget?.competition.slug || null,
+    targetKompetisiNama: activeTarget?.competition.name || null,
+  };
 }
 
 export async function updateStudentProfile(
@@ -75,9 +89,27 @@ export async function updateStudentProfile(
     updateData.bio = dto.bio ? dto.bio.trim() : null;
   }
 
+  const jsonUpdateData: any = { ...updateData };
+
+  if (dto.skills !== undefined) {
+    jsonUpdateData.skills = dto.skills;
+  }
+  if (dto.interests !== undefined) {
+    jsonUpdateData.interests = dto.interests;
+  }
+  if (dto.availability !== undefined) {
+    jsonUpdateData.availability = dto.availability;
+  }
+  if (dto.rolesCapable !== undefined) {
+    jsonUpdateData.rolesCapable = dto.rolesCapable;
+  }
+  if (dto.experience !== undefined) {
+    jsonUpdateData.experience = dto.experience;
+  }
+
   const updatedProfile = await prisma.studentProfile.update({
     where: { userId },
-    data: updateData,
+    data: jsonUpdateData,
   });
 
   await recordAuditEvent({

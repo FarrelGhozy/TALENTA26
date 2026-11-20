@@ -1,5 +1,14 @@
 import { API_BASE_URL } from '../../config/env';
-import type { Role, User } from '../../types';
+import type {
+  Competition,
+  Consultant,
+  Invite,
+  MatchCandidate,
+  Profile,
+  Role,
+  Team,
+  User,
+} from '../../types';
 import {
   IAchievementService,
   ICompetitionService,
@@ -74,16 +83,103 @@ function mapBackendUserToFrontend(raw: any): User {
     prodi: profile?.studyProgram || 'Teknik Informatika',
     angkatan: 2026,
     role: [role],
-    skill: [],
-    minat: [],
-    ketersediaan: { hari: ['Senin', 'Rabu'], jam: 4 },
-    peranBisa: ['Anggota'],
+    skill: Array.isArray(profile?.skills) ? profile.skills : [],
+    minat: Array.isArray(profile?.interests) ? profile.interests : [],
+    ketersediaan: profile?.availability || { hari: ['Senin', 'Rabu'], jam: 4 },
+    peranBisa: Array.isArray(profile?.rolesCapable) ? profile.rolesCapable : ['Anggota'],
+  };
+}
+
+function mapBackendCompetitionToFrontend(raw: any): Competition {
+  return {
+    slug: raw.slug,
+    institutionId: raw.institutionId || 'unida-gontor',
+    namaResmi: raw.name || raw.namaResmi || '',
+    kategori: raw.category || raw.kategori || '',
+    tingkat: raw.level || raw.tingkat || '',
+    deskripsi: raw.description || raw.deskripsi || '',
+    syarat: Array.isArray(raw.requirements) ? raw.requirements : raw.syarat || [],
+    komposisi: {
+      min: raw.minTeamMembers ?? raw.komposisi?.min ?? 1,
+      max: raw.maxTeamMembers ?? raw.komposisi?.max ?? 3,
+      peranWajib: Array.isArray(raw.requiredRoles) ? raw.requiredRoles : raw.komposisi?.peranWajib || [],
+    },
+    tahapan: raw.tahapan || [],
+    jadwal: Array.isArray(raw.scheduleTimeline) ? raw.scheduleTimeline : raw.jadwal || [],
+    seleksiInternal: raw.seleksiInternal || [],
+  };
+}
+
+function mapBackendCandidateToFrontend(c: any): MatchCandidate {
+  return {
+    user: {
+      id: c.userId || c.user?.id || '',
+      institutionId: 'unida-gontor',
+      nama: c.nama || c.user?.nama || 'Mahasiswa',
+      email: '', // Zero PII in matching
+      prodi: c.prodi || c.user?.prodi || '',
+      angkatan: 2026,
+      role: ['mahasiswa'],
+      skill: c.skill || c.user?.skill || [],
+      minat: c.minat || c.user?.minat || [],
+      ketersediaan: c.ketersediaan || c.user?.ketersediaan || { hari: ['Fleksibel'], jam: 4 },
+      peranBisa: c.peranBisa || c.user?.peranBisa || ['Anggota'],
+    },
+    matchScore: c.skorKecocokan ?? c.matchScore ?? 50,
+    reasons: c.alasanKecocokan || c.reasons || [],
+    isOverlapTime: true,
+  };
+}
+
+function mapBackendInviteToFrontend(inv: any): Invite {
+  return {
+    id: inv.id,
+    institutionId: 'unida-gontor',
+    dari: inv.senderId || inv.dari,
+    ke: inv.receiverId || inv.ke,
+    teamId: inv.teamId,
+    status: inv.status,
+    createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString().split('T')[0] : '',
+  };
+}
+
+function mapBackendTeamToFrontend(raw: any): Team | null {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    institutionId: raw.institutionId || 'unida-gontor',
+    competitionSlug: raw.competition?.slug || raw.competitionSlug || '',
+    nama: raw.name || raw.nama || '',
+    anggota: (raw.members || raw.anggota || []).map((m: any) => ({
+      userId: m.userId,
+      status: m.status === 'active' || m.status === 'diterima' ? 'diterima' : 'diajukan',
+    })),
+    isFormed: raw.status === 'terbentuk' || raw.status === 'terkunci_seleksi',
+    status: raw.status === 'terkunci_seleksi' ? 'terbentuk' : raw.status,
+  };
+}
+
+function mapBackendConsultantToFrontend(c: any): Consultant {
+  return {
+    id: c.id,
+    institutionId: c.institutionId || 'unida-gontor',
+    nama: c.nama || c.name || '',
+    bidang: Array.isArray(c.bidang) ? c.bidang : [c.field || 'Konsultan'],
+    assignmentApproved: Boolean(c.assignmentApproved ?? c.isApproved),
+    isVerifiedContact: Boolean(c.isVerifiedContact ?? c.isApproved),
+    waMock: c.waMock || c.whatsappNumber || '',
   };
 }
 
 export const competitionApiService: ICompetitionService = {
-  getAll: () => apiFetch('/competitions'),
-  getBySlug: (slug) => apiFetch(`/competitions/${slug}`),
+  getAll: async () => {
+    const list = await apiFetch<any[]>('/competitions');
+    return Array.isArray(list) ? list.map(mapBackendCompetitionToFrontend) : [];
+  },
+  getBySlug: async (slug) => {
+    const raw = await apiFetch<any>(`/competitions/${slug}`);
+    return raw ? mapBackendCompetitionToFrontend(raw) : null;
+  },
   save: (competition) => apiFetch('/competitions', { method: 'POST', body: JSON.stringify(competition) }),
 };
 
@@ -150,30 +246,90 @@ export const userApiService: IUserService & {
     });
     return mapBackendUserToFrontend(res);
   },
-  getProfile: () => apiFetch('/me/profile'),
-  setTargetCompetition: (userId, slug) =>
-    apiFetch(`/users/${userId}/target`, { method: 'POST', body: JSON.stringify({ slug }) }),
+  getProfile: async (userId: string): Promise<Profile | null> => {
+    try {
+      const raw = await apiFetch<any>('/me/profile');
+      if (!raw) return null;
+      return {
+        userId: raw.userId || userId,
+        institutionId: 'unida-gontor',
+        targetKompetisiSlug: raw.targetKompetisiSlug || '',
+        kelengkapan: 100,
+      };
+    } catch {
+      return null;
+    }
+  },
+  setTargetCompetition: async (userId: string, slug: string): Promise<Profile> => {
+    await apiFetch('/me/target', { method: 'POST', body: JSON.stringify({ slug }) });
+    return {
+      userId,
+      institutionId: 'unida-gontor',
+      targetKompetisiSlug: slug,
+      kelengkapan: 100,
+    };
+  },
 };
 
 export const matchingApiService: IMatchingService = {
-  getMatchCandidates: (userId) => apiFetch(`/matching/candidates?userId=${userId}`),
-  getInvites: (userId) => apiFetch(`/matching/invites?userId=${userId}`),
-  sendInvite: (dari, ke, teamId) =>
-    apiFetch('/matching/invites', { method: 'POST', body: JSON.stringify({ dari, ke, teamId }) }),
-  respondInvite: (inviteId, status) =>
-    apiFetch(`/matching/invites/${inviteId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getMatchCandidates: async (userId: string): Promise<MatchCandidate[]> => {
+    const res = await apiFetch<any[]>(`/matching/candidates?userId=${userId}`);
+    return Array.isArray(res) ? res.map(mapBackendCandidateToFrontend) : [];
+  },
+  getInvites: async (userId: string): Promise<Invite[]> => {
+    const res = await apiFetch<any>(`/matching/invites?userId=${userId}`);
+    if (Array.isArray(res)) {
+      return res.map(mapBackendInviteToFrontend);
+    }
+    const incoming = Array.isArray(res?.incoming) ? res.incoming : [];
+    const outgoing = Array.isArray(res?.outgoing) ? res.outgoing : [];
+    return [...incoming, ...outgoing].map(mapBackendInviteToFrontend);
+  },
+  sendInvite: async (dari: string, ke: string, teamId: string): Promise<Invite> => {
+    const res = await apiFetch<any>('/matching/invites', {
+      method: 'POST',
+      body: JSON.stringify({ dari, ke, teamId }),
+    });
+    return mapBackendInviteToFrontend(res);
+  },
+  respondInvite: async (inviteId: string, status: 'diterima' | 'ditolak'): Promise<void> => {
+    await apiFetch(`/matching/invites/${inviteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
 };
 
 export const teamApiService: ITeamService = {
-  getTeamByUserId: (userId) => apiFetch(`/teams/my?userId=${userId}`),
-  leaveTeam: (userId, teamId) =>
-    apiFetch(`/teams/${teamId}/leave`, { method: 'POST', body: JSON.stringify({ userId }) }),
-  createTeam: (competitionSlug, creatorId, teamName) =>
-    apiFetch('/teams', { method: 'POST', body: JSON.stringify({ competitionSlug, creatorId, teamName }) }),
+  getTeamByUserId: async (userId: string): Promise<Team | null> => {
+    const raw = await apiFetch<any>(`/teams/my?userId=${userId}`);
+    return mapBackendTeamToFrontend(raw);
+  },
+  leaveTeam: async (userId: string, teamId: string): Promise<void> => {
+    await apiFetch(`/teams/${teamId}/leave`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  },
+  createTeam: async (competitionSlug: string, creatorId: string, teamName: string): Promise<Team> => {
+    const raw = await apiFetch<any>('/teams', {
+      method: 'POST',
+      body: JSON.stringify({ competitionSlug, creatorId, teamName }),
+    });
+    return mapBackendTeamToFrontend(raw)!;
+  },
 };
 
 export const roadmapApiService: IRoadmapService = {
-  getByCompetition: (slug) => apiFetch(`/roadmaps/${slug}`),
+  getByCompetition: async (slug: string) => {
+    const raw = await apiFetch<any>(`/roadmaps/${slug}`);
+    if (!raw) return null;
+    return {
+      competitionSlug: slug,
+      institutionId: raw.institutionId || 'unida-gontor',
+      fase: raw.fase || [],
+    };
+  },
   getChecklist: (userId, slug) => apiFetch(`/roadmaps/${slug}/checklist?userId=${userId}`),
   toggleChecklist: (userId, slug, taskId) =>
     apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ userId, taskId }) }),
@@ -188,7 +344,10 @@ export const achievementApiService: IAchievementService = {
 };
 
 export const consultantApiService: IConsultantService = {
-  getByCompetition: (slug) => apiFetch(`/consultants?slug=${slug}`),
+  getByCompetition: async (slug: string): Promise<Consultant[]> => {
+    const res = await apiFetch<any[]>(`/consultants?slug=${slug}`);
+    return Array.isArray(res) ? res.map(mapBackendConsultantToFrontend) : [];
+  },
 };
 
 export const statsApiService: IStatsService = {
