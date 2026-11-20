@@ -1,71 +1,50 @@
-# 04 — Sitemap & Rute React Router
+# 04 — Sitemap dan struktur repo tujuan
 
-## 1. Sitemap
-```
-/ (landing mock)
-/masuk (pilih peran mock)
-/daftar (form mini mock)
-PUBLIK:
-/kompetisi (list)
-/kompetisi/:slug (detail + jadwal + CTA pilih target)
-APP MAHASISWA (/app layout):
-  /app/beranda
-  /app/profil (form profil + target)
-  /app/partner (rekomendasi + undangan masuk/keluar)
-  /app/tim (status tim)
-  /app/kompetisi/:slug/persiapan (roadmap + konsultan)
-  /app/prestasi (riwayat + status)
-  /app/prestasi/baru (form)
-ADMIN (/admin):
-  /admin (dashboard operasional)
-  /admin/kompetisi (CRUD mock)
-  /admin/roadmap (kelola template mock)
-  /admin/konsultan (kelola verified)
-  /admin/seleksi (jadwal + delegasi mock)
-VERIFIKATOR (/verifikasi):
-  /verifikasi (antrian)
-  /verifikasi/:id (detail + aksi)
-Fallback: * → /404
-```
+Status: fondasi struktur dan rute prototipe selesai pada Stage 1. Rute bertanda **target** baru diimplementasikan setelah backend tersedia.
 
-## 2. Tabel Rute → Komponen (prinsip pecah kode)
-| Rute | Page | Pecahan komponen | Guard Tahap 1 |
-|---|---|---|---|
-| `/kompetisi` | `CompetitionListPage` | `CompetitionCard`, `CompetitionFilter` | publik |
-| `/kompetisi/:slug` | `CompetitionDetailPage` | `InfoTabs`, `ScheduleTimeline`, `TeamRuleBox` | publik |
-| `/app/profil` | `ProfilePage` | `ProfileForm/StepMinat`, `StepSkill`, `StepTarget` | mahasiswa |
-| `/app/partner` | `PartnerPage` | `PartnerCard`, `MatchReasonTooltip`, `InviteButtons` | mahasiswa |
-| `/app/tim` | `TeamPage` | `TeamStatusBanner`, `MemberList` | mahasiswa |
-| `/app/kompetisi/:slug/persiapan` | `PreparationPage` | `RoadmapChecklist`, `ConsultantCard`, `DeadlineList` | mahasiswa + punya target |
-| `/app/prestasi/baru` | `AchievementNewPage` | `AchievementForm`, `FileMockInput` | mahasiswa |
-| `/admin` | `AdminDashboardPage` | `StatCards`, `RecentTables` | admin |
-| `/verifikasi/:id` | `VerificationDetailPage` | `EvidenceViewerMock`, `DecisionPanel` | verifikator |
+## Rute publik
+Sudah ada: `/` landing; `/kompetisi` katalog; `/kompetisi/:slug` detail; `/ranking` leaderboard; `/masuk` login demo/manual prototype; `/403` dan `/404`.
 
-Aturan pecah: 1 file ≤ 150 baris, 1 komponen 1 tugas, logic fetch mock di `services/*.ts`, state form di `hooks/use*.ts`.
+Target Stage 2+: `/daftar`, `/lupa-password`, dan `/reset-password`.
 
-## 3. Struktur Folder FE (Vite, rapi)
-```
-src/
-  app/
-    router.tsx        # createBrowserRouter, lazy per page
-    guards.tsx        # RequireRole, RequireTarget
-    layouts/
-      PublicLayout.tsx  AppLayout.tsx  AdminLayout.tsx
-  features/
-    profil/ components/ hooks/ services-mock.ts  types.ts
-    kompetisi/ ...
-    matching/ ...
-    roadmap/ ...
-    prestasi/ ...
-    dashboard/ ...
-    konsultasi/ ...
-  components/ui/ (Button, Card, Badge, Modal, Tooltip, EmptyState)
-  mocks/*.json (competitions, users, roadmaps, achievements, consultants, selections)
-  lib/ (matchScore.ts, teamRules.ts, format.ts)
-  styles/
-```
+## Rute mahasiswa
+Sudah ada: `/app/beranda`, `/app/profil`, `/app/partner`, `/app/tim`, `/app/kompetisi/:slug/persiapan`, `/app/prestasi`, dan `/app/prestasi/baru`.
 
-## 4. Navigasi & Guard Detail
-- Belum pilih target → akses `/app/partner` redirect ke `/app/profil?need=target`.
-- Belum login mock → redirect `/masuk`.
-- Role salah → `/403` mock dengan tombol ganti peran.
+Target Stage 3–4: `/app/target`, `/app/undangan`, `/app/prestasi/:id`, `/app/prestasi/:id/perbaiki`, dan `/app/pengaturan`.
+
+## Rute validator
+Sudah ada sebagai prototipe: `/validator`, `/validator/prestasi`, dan `/validator/prestasi/:id`.
+
+Target Stage 3–5: `/validator/kompetisi` beserta buat/edit, `/validator/roadmap`, `/validator/konsultan`, `/validator/seleksi`, dan `/validator/laporan`.
+
+## Rute super admin
+Sudah ada sebagai prototipe: `/super-admin`, `/super-admin/analitik`, `/super-admin/design-system`, serta akses ke rute validator.
+
+Target Stage 5: `/super-admin/pengguna`, `/super-admin/staf`, `/super-admin/role`, `/super-admin/periode`, `/super-admin/poin`, `/super-admin/audit`, dan `/super-admin/sistem`.
+
+Route guard role dan fallback loading/error sudah ada untuk prototipe. Penanganan sesi kedaluwarsa dan batas API nyata menunggu Stage 2. Build production memakai root `/`; build demo Pages menerima subpath dari `VITE_BASE_PATH`.
+
+## Struktur setelah Stage 1 dan target Stage 2
+~~~
+frontend/
+  src/app/                 router, provider, layouts, guards
+  src/features/            modul domain per halaman
+  src/components/          design system bersama
+  src/services/            client API dan mock khusus pengembangan
+  public/
+backend/
+  src/app/                 bootstrap Elysia, middleware, route registration
+  src/modules/             auth, users, competitions, teams, roadmaps,
+                           achievements, verification, ranking, admin
+  src/lib/                 db, storage, audit, errors, config
+  prisma/                  schema dan migrations sesuai versi terkunci
+  tests/
+infra/                     proxy, contoh Compose dan operasi
+docs/
+compose.yaml
+.env.example
+AGENTS.md
+TODO.md
+~~~
+
+Bagian frontend dan placeholder direktori sudah diterapkan pada Stage 1. Isi backend, Prisma, Compose, proxy, dan pengujian backend masih target Stage 2+. Backend kelak memakai modul domain dengan service dan repository; handler HTTP tidak menaruh aturan bisnis. Kontrak HTTP terdokumentasi di docs/16.

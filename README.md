@@ -1,172 +1,46 @@
-# TALENTA UNIDA Gontor — Platform Pembinaan & Prestasi Mahasiswa
+# TALENTA — Pembinaan lomba dan prestasi mahasiswa
 
-Aplikasi web untuk perjalanan mahasiswa: isi profil → pilih target kompetisi →
-cari partner tim → persiapan roadmap → ajukan prestasi → verifikasi → dashboard admin.
+TALENTA ditujukan untuk membantu mahasiswa menemukan lomba, membentuk tim, mengikuti persiapan, mengajukan prestasi, dan melihat hasil yang telah divalidasi. Rancangan produksi pertama untuk satu kampus, UNIDA Gontor, ada di PRD_TALENTA.md dan docs/.
 
-> Status saat ini: **Tahap 1 — Frontend + Mock selesai.** Backend belum ada,
-> semua data berasal dari `src/mocks/*.json` + `localStorage`.
+## Status repo saat ini
 
-## Teknologi
+Repo yang dapat dijalankan sekarang adalah **frontend React/Vite Stage 1**. Mode demo memakai data JSON/localStorage dan menyediakan prototipe publik, mahasiswa, validator, super admin, ranking, serta referensi design system. Build production sudah dipisahkan ke adapter API dan tidak membawa fixture mock, tetapi belum dapat berfungsi penuh karena backend Elysia, Prisma/MySQL, RustFS, autentikasi produksi, image GHCR, dan Compose baru dikerjakan mulai Stage 2. Workflow yang ada masih menerbitkan build demo ke GitHub Pages; itu bukan deployment produksi.
 
-- React 19 + TypeScript + Vite 8
-- React Router DOM 7, Tailwind CSS 4, Lucide React
-- Runtime package manager: **Bun** (jangan pakai npm/yarn untuk proyek ini)
+Stack demo: React 19, TypeScript, Vite 8, React Router 7, Tailwind CSS 4, Lucide React, Bun. Gunakan Bun dan bun.lock; jangan mengganti package manager tanpa keputusan proyek.
 
-## Prasyarat
+## Menjalankan demo saat ini
 
-- **Bun ≥ 1.x** — cek dengan `bun --version`
-  - Install: https://bun.sh (`curl -fsSL https://bun.sh/install | bash`)
-- Git
-
-Tidak perlu database / backend untuk menjalankan mode default (mock).
-
-## Cara Menjalankan (5 menit)
-
-```bash
-# 1. Clone
-git clone https://github.com/FarrelGhozy/TALENTA26.git
-cd TALENTA26
-
-# 2. Install dependensi
-bun install
-
-# 3. Siapkan env (wajib, sekali saja)
+~~~bash
+bun install --frozen-lockfile
 cp .env.example .env
-
-# 4. Jalankan dev server
 bun run dev
+~~~
 
-# 5. Buka di browser
-# http://localhost:5173
-```
+Buka http://localhost:5173/. Mode development dan build:demo memakai data mock; build produksi hanya memuat adapter API. GitHub Pages memakai base /TALENTA26/ melalui konfigurasi workflow. Jangan memakai mode mock atau password demo untuk data mahasiswa nyata.
 
-Berhentikan server dengan `Ctrl + C`.
+Script utama: `bun run dev`, `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo`, dan `bun run preview`. Hasil gate Stage 1 dicatat di docs/19-validasi-stage-1.md.
 
-## Konfigurasi `.env`
+## Akun demo
 
-File `.env` tidak di-commit (lihat `.gitignore`). Template yang di-commit adalah `.env.example`.
+Halaman `/masuk` menyediakan kartu instan untuk role final `mahasiswa`, `validator`, dan `super_admin` pada mode demo. Form login manual juga hanya simulasi: ia mencari email fixture dan belum memverifikasi password. Semua identitas di fixture sintetis, tidak aman untuk autentikasi nyata. Hapus key `talenta-*` di localStorage untuk mereset sesi/perubahan demo lokal.
 
-| Variabel | Nilai default | Arti |
-|---|---|---|
-| `VITE_APP_ENV` | `DEPLOYMENT` | `DEPLOYMENT` = mode demo (login 1-klik). `PRODUCTION` = mode form email+password |
-| `VITE_USE_MOCK` | `true` | `true` = data dari `src/mocks/*.json`. `false` = data dari backend (Tahap 2, belum tersedia) |
-| `VITE_API_BASE_URL` | `http://localhost:3000/api` | Hanya dipakai kalau `VITE_USE_MOCK=false` |
+## Peta repo sekarang dan target
 
-Kombinasi resmi:
+Sekarang: `frontend/` berisi aplikasi, aset, konfigurasi Vite/TypeScript, adapter `factory.mock.ts` dan `factory.api.ts`; `backend/` dan `infra/` masih placeholder; `docs/` berisi kontrak target; `.github/workflows/deploy.yml` khusus build demo Pages.
 
-| Kombinasi | Dipakai untuk |
-|---|---|
-| `DEPLOYMENT` + `true` | **Default.** Demo ke dosen / eksplorasi fitur |
-| `PRODUCTION` + `true` | Uji tampilan production, data tetap mock (login form, password `demo123`) |
-| `PRODUCTION` + `false` | Tahap 2 (backend real). Belum bisa dipakai sekarang |
+Target saat stage implementasi: frontend/ aplikasi React; backend/ Bun/Elysia/Prisma; infra/ konfigurasi proxy; compose.yaml root; root .env.example; dua image GHCR public. MySQL dan RustFS existing tetap layanan luar Compose aplikasi. Struktur rinci docs/04-sitemap.md.
 
-> `DEPLOYMENT` + `false` tidak dipakai / dilarang.
+## Dokumen kerja
 
-## Akun Demo (mode mock)
+- PRD_TALENTA.md: keputusan produk, aktor, alur dan penerimaan.
+- docs/README.md: indeks spesifikasi dan bukti 00–19.
+- docs/14-keputusan-terbuka.md: keputusan pemilik produk, rekomendasi dan gate yang belum disahkan.
+- TODO.md: stage, urutan dan status.
+- AGENTS.md: aturan agen yang berlaku untuk pekerjaan berikutnya.
+- docs/15-env-mock-strategy.md dan docs/17-runbook-operasi.md: rancangan image, .env, Compose, deploy dan rollback.
 
-Buka `http://localhost:5173/masuk`.
+## Arah rilis
 
-**Mode `DEPLOYMENT`** — klik salah satu kartu peran (tanpa password):
+Mahasiswa mendaftar/login manual. Validator mengelola lomba, roadmap, kontak konsultasi, seleksi dan pengajuan prestasi. Super admin mengelola sistem/peran serta semua fungsi validator. Dosen bukan role login. Landing dan `/ranking` sudah memiliki prototipe ranking berbasis prestasi lomba berstatus disetujui; bobot saat ini hanya fixture UI dan belum boleh dipakai sebagai kebijakan kampus. Google login, AI, SSO, beasiswa, dan multi-kampus tidak masuk rilis pertama. SSO dipertimbangkan setelah integrasi kampus tersedia.
 
-| Peran | Nama | User ID |
-|---|---|---|
-| Mahasiswa (Riset/PKM) | Andi Pratama | `u-01` |
-| Mahasiswa (Desain/GEMASTIK) | Rina Kartika | `u-02` |
-| Admin Program | Budi Santoso | `u-10` |
-| Verifikator | Dr. Sari Verifikator | `u-11` |
-
-**Mode form login** (tab "Login Akun Kampus" / `PRODUCTION` + `true`):
-
-| Email | Password | Peran |
-|---|---|---|
-| `andi@mock.ac.id` | `demo123` (bebas, dicek lokal) | mahasiswa |
-| `rina@mock.ac.id` | `demo123` | mahasiswa |
-| `admin@mock.ac.id` | `demo123` | admin_program |
-| `verif@mock.ac.id` | `demo123` | verifikator |
-
-Daftar lengkap 8 user mock ada di `src/mocks/users.json`.
-
-## Script yang Tersedia
-
-| Perintah | Fungsi |
-|---|---|
-| `bun run dev` | Dev server + hot reload |
-| `bun run build` | Typecheck (`tsc`) + build produksi ke `dist/` |
-| `bun run preview` | Pratinjau hasil `dist/` secara lokal |
-| `bun run typecheck` | Cek tipe saja (`tsc --noEmit`) |
-| `bun run lint` | Lint dengan `oxlint` |
-
-Sebelum commit, pastikan keduanya bersih:
-
-```bash
-bun run typecheck
-bun run lint
-```
-
-## Alur Coba Cepat (< 10 menit)
-
-1. Login sebagai **Andi (mahasiswa)** → `/app/profil` isi 3 langkah → pilih target kompetisi.
-2. Buka `/app/partner` → lihat skor matching + alasan transparan → kirim/terima undangan.
-3. Buka `/app/tim` → cek status tim terbentuk.
-4. Buka `/app/kompetisi/:slug/persiapan` → checklist roadmap + tenggat + konsultan WA terverifikasi.
-5. Buka `/app/prestasi/baru` → ajukan prestasi mandiri.
-6. Logout → login sebagai **Verifikator** → `/verifikasi` → setujui / minta perbaikan (alasan wajib).
-7. Logout → login sebagai **Admin** → `/admin` → lihat dashboard institusi.
-
-Rute publik (tanpa login): `/` (landing), `/kompetisi`, `/kompetisi/:slug`, `/masuk`.
-
-## Struktur Proyek
-
-```
-src/
-  app/            # router, guards, layouts, error pages
-  features/       # landing, auth, kompetisi, profil, matching, tim,
-                  # roadmap, prestasi, verifikasi, dashboard, mahasiswa
-  components/     # ui (Button, Card, Modal, ...) + common (Navbar, Footer, ...)
-  services/       # types + factory (mock vs api) + mock/ + api/
-  mocks/          # data JSON demo (users, competitions, teams, ...)
-  lib/            # matchScore, teamRules, storage, format
-  config/env.ts   # baca VITE_APP_ENV / VITE_USE_MOCK
-docs/             # spesifikasi (00–15), keputusan terbuka, strategi env/mock
-mocks/            # salinan mentah JSON mock
-PRD_TALENTA.md    # product requirements
-TODO.md           # status tahapan pengerjaan
-```
-
-Aturan main: halaman/fitur hanya memanggil `services/factory.ts`, tidak import
-`mocks/` langsung. Ganti mock → API real cukup di layer `services/` (Tahap 2).
-
-## Build Produksi
-
-```bash
-# Demo (saat ini)
-VITE_APP_ENV=DEPLOYMENT VITE_USE_MOCK=true bun run build
-
-# Uji tampilan production dengan data mock
-VITE_APP_ENV=PRODUCTION VITE_USE_MOCK=true bun run build
-
-# Backend real (Tahap 2, setelah API siap)
-VITE_APP_ENV=PRODUCTION VITE_USE_MOCK=false bun run build
-```
-
-Hasil ada di `dist/` (di-ignore git). Jalankan lokal dengan `bun run preview`.
-
-## Troubleshooting
-
-| Gejala | Solusi |
-|---|---|
-| `bun: command not found` | Install Bun dulu, restart terminal |
-| Port `5173` sudah dipakai | `bun run dev -- --port 5174` |
-| Halaman putih / env tidak kebaca | Pastikan file `.env` ada (hasil `cp .env.example .env`), lalu restart `bun run dev` |
-| `VITE_APP_ENV` lowercase (`deployment`) | Wajib kapital: `DEPLOYMENT` atau `PRODUCTION` |
-| Login gagal "Email tidak terdaftar" | Pakai email dari tabel demo di atas, cek `src/mocks/users.json` |
-| Redirect ke `/masuk` terus | Logout lalu login ulang dengan peran yang sesuai (guard `RequireRole`) |
-| `bun install` error / lockfile aneh | Hapus `node_modules`, lalu `bun install` ulang. Jangan commit `node_modules/` |
-| Perlu reset data mock lokal | Hapus key `talenta-*` di DevTools → Application → Local Storage, lalu refresh |
-
-## Dokumen Lanjutan
-
-- `PRD_TALENTA.md` — kebutuhan produk lengkap
-- `TODO.md` — status sprint & gate Tahap 2
-- `docs/15-env-mock-strategy.md` — strategi ENV + mock (wajib baca sebelum ubah `services/`)
-- `docs/14-keputusan-terbuka.md` — keputusan yang belum final (matching, AI, verifikasi, dashboard)
+Home server memakai MySQL, RustFS, Cloudflare Tunnel dan domain pribadi yang sudah ada. GitHub Actions kelak membangun image dan push ke GHCR public; operator server menyiapkan root .env lalu menjalankan docker compose pull dan docker compose up -d. Rancangan ini belum bisa dijalankan dari repo sekarang.

@@ -4,11 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint src"
+    "dev": "vite frontend --config frontend/vite.config.ts",
+    "build": "tsc -p frontend && vite build frontend --config frontend/vite.config.ts --mode production",
+    "build:demo": "tsc -p frontend && vite build frontend --config frontend/vite.config.ts --mode demo",
+    "preview": "vite preview frontend --config frontend/vite.config.ts",
+    "typecheck": "tsc -p frontend --noEmit",
+    "lint": "oxlint frontend/src"
   },
   "dependencies": {
     "lucide-react": "^1.63.0",

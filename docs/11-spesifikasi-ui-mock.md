@@ -1,49 +1,49 @@
-# 11 — Spesifikasi UI Mock (Tahap 1, Vite Pecah Komponen)
+# 11 — Rancangan UI/UX produksi
 
-## 1. Prinsip FE
-- 1 route = 1 folder page ≤150 baris; komponen kecil di `features/*/components/`.
-- UI kit di `components/ui/`: Button, Card, Badge, Input, Select, Modal, Tooltip, EmptyState, Tabs, Timeline.
-- Semua teks Indonesia, santai-formal. Setiap mock/simulasikan ada badge `Mock`.
-- Mobile-first, max-width 1120px, sidebar collapse di ≤768px.
+Nama file dipertahankan agar tautan lama tidak putus; isi ini menggantikan spesifikasi UI mock. Desain akhir dapat merombak tampilan saat Stage 1 selama kebutuhan dan akses tetap terpenuhi.
 
-## 2. Spec Per Halaman (ringkas tapi siap bangun)
+## Baseline Stage 1
+Fondasi UI telah diterapkan dan diuji pada 390×844, 768×1024, dan viewport desktop. Halaman `/super-admin/design-system` memperlihatkan aksi, status, form valid/invalid, informasi, sukses, peringatan, loading, dan empty state. Ini baseline yang harus dikembangkan, bukan klaim bahwa semua komponen produksi telah selesai.
 
-### `/` Landing mock
-Hero: nama + tagline + 3 masalah → CTA Lihat kompetisi + Masuk. Section: cara kerja 4 langkah, daftar kompetisi preview (3 kartu), footer jujur `Demo mock`.
+Semua ikon produk berasal dari Lucide React. Emoji, SVG ikon buatan tangan, dan pustaka ikon kedua tidak dipakai tanpa keputusan proyek. Ikon dekoratif memakai `aria-hidden`; kontrol icon-only wajib memiliki nama aksesibel. Token dasar warna, radius, bayangan, tipografi, dan focus ring berada di `frontend/src/index.css`.
 
-### `/kompetisi` + `/kompetisi/:slug`
-Filter: search, kategori, tingkat. Card: nama, deadline badge, tombol Detail. Detail: Tabs (Info/Syarat&Tim/Jadwal/Roadmap preview/Konsultan). CTA `Pilih sebagai target` (jika belum login mock → ke /masuk).
+## Arah visual
+Identitas UNIDA yang sudah ada menjadi bahan awal, bukan persetujuan brand resmi. Gunakan palet biru utama, aksen seperlunya, tipografi terbaca, ruang putih cukup, dan komponen konsisten. Hindari klaim pemasaran seperti jaminan beasiswa/SKPI/BAAK. Landing harus menjelaskan manfaat dan alur, lalu menampilkan lomba terbit serta ranking terverifikasi dengan sumber/periode.
 
-### `/app/profil`
-Stepper 3: 1) Identitas+Prodi 2) Minat/Skill/Pengalaman 3) Waktu+Target. Tiap step validasi inline. Komponen: `StepMinat` (chip select max5), `StepSkill` (add skill+level), `StepTarget` (radio kompetisi). Tombol Simpan draft + Selesai → ke partner.
+## Struktur navigasi
+- Publik: Beranda, Kompetisi, Ranking, Masuk/Daftar. CTA utama Jelajahi lomba atau Mulai.
+- Mahasiswa: Beranda, Profil, Target/Kompetisi, Partner/Tim, Persiapan, Prestasi. Pada mobile gunakan menu ringkas dengan posisi jelas.
+- Validator: Ringkasan, Kompetisi, Roadmap, Konsultan, Seleksi, Verifikasi, Laporan.
+- Super admin: Ringkasan, Pengguna/Staf, Periode, Poin, Audit, Sistem; akses fungsi validator tetap jelas.
+- Breadcrumb pada halaman detail/edit; peran dan institusi terlihat di area akun. Tidak ada role switcher pada akun produksi.
 
-### `/app/partner`
-Header filter (peran, skill). List `PartnerCard`: avatar initial, nama, prodi, skor + `Kenapa cocok?` tooltip, tombol Undang. Tab Undangan masuk/keluar dengan badge count. EmptyState jika target individu (ON-MIPA): `Kompetisi individu — tidak perlu partner`.
+## Pola halaman
+### Landing dan ranking
+Hero satu pesan utama dan dua CTA; di bawahnya langkah proses nyata, kompetisi terbaru, ranking per tahun akademik, capaian terverifikasi, penjelasan asal data, footer bantuan/kebijakan. Ranking tidak menampilkan NIM, kontak, atau foto default. Jika data kosong, jelaskan belum ada prestasi terverifikasi.
+Tampilkan sorotan tiga mahasiswa teratas berupa nama tampilan, poin, posisi, dan ringkasan capaian lomba sah, dengan tautan ke ranking lengkap. Jangan memakai foto dari akun pribadi secara otomatis.
 
-### `/app/tim`
-`TeamStatusBanner` (Mencari/Menunggu/Terbentuk). `MemberList` + tombol Keluar (modal konfirmasi) + CTA ke Persiapan (disabled sampai terbentuk + tooltip alasan).
+### Katalog dan detail kompetisi
+Filter yang mudah dibersihkan, jumlah hasil, kartu dengan tahun, tingkat, format individu/beregu, tenggat dan status sumber. Detail punya info, syarat, jadwal, komposisi tim, roadmap terbit, dan kontak. Bedakan jadwal resmi dengan internal.
 
-### `/app/kompetisi/:slug/persiapan`
-Atas: info ringkas + countdown deadline. Tengah: `RoadmapChecklist` (fase accordion + checkbox). Samping: `DeadlineList` + `ConsultantCard` (WA button verified only) + `AiBoxMock` (badge Rencana).
+### Onboarding mahasiswa
+Form bertahap: akun, identitas/profil dasar, minat/skill, target. NIM/email dicek unik; beri pemberitahuan bahwa identitas belum terverifikasi kampus. Simpan draft dan tampilkan progres. Alur prestasi mandiri tidak diblokir oleh target lomba.
 
-### `/app/prestasi` + `/baru`
-Tabel riwayat: tanggal, kegiatan, jenis badge warna (partisipasi abu, nominasi kuning, penghargaan biru, juara hijau, ditolak merah), status badge, aksi Lihat/Perbaiki. Form: 2 kolom desktop, 1 kolom mobile, `FileMockInput` (input file tapi hanya simpan nama, ada label mock).
+### Partner, tim, persiapan
+Kartu partner menampilkan alasan rekomendasi dan data minimum. Undangan masuk/keluar dan status tim terpisah. Perubahan target/tim memakai dialog yang menyebut dampak. Roadmap menunjukkan aksi pekan ini, keseluruhan fase, progres, dan keterlambatan tanpa menyalahkan pengguna.
 
-### `/admin`, `/verifikasi`
-Admin: `StatCards` (6 kartu) + tabel recent + tab Kelola (kompetisi/roadmap/konsultan/seleksi) pakai Drawer form sederhana. Verifikasi: tabel antrean + detail split (kiri data, kanan bukti) + `DecisionPanel` (3 tombol + textarea catatan, validasi wajib).
+### Pengajuan dan verifikasi
+Form prestasi menyajikan ringkasan aturan, upload progres, pratinjau bukti, validasi inline, review sebelum kirim. Riwayat memakai timeline status dan alasan. Validator melihat antrean padat tetapi terbaca; detail membandingkan revisi, bukti, keputusan dan audit. Tombol keputusan tidak berdekatan tanpa pembeda visual.
 
-## 3. State & Feedback
-- Loading: skeleton 300ms. Error: EmptyState + tombol Coba lagi (mock tidak pernah 500, tapi siapkan).
-- Toast untuk undang/keputusan/simpan. Modal konfirmasi untuk ganti target/keluar tim/tolak.
-- Warna status: menunggu kuning, perlu_perbaikan oranye, disetujui hijau, ditolak merah, terbentuk hijau, mencari abu.
+### Admin
+Pengelolaan konten memakai daftar, filter, draft, pratinjau dan publikasi. Super admin mendapat konfigurasi dengan penjelasan dampak, riwayat versi dan konfirmasi perubahan yang sensitif.
 
-## 4. Checklist Pecah Kode (contoh Partner)
-```
-features/matching/
-  PartnerPage.tsx (≤120 baris: layout + hooks saja)
-  components/PartnerCard.tsx (≤100)
-  components/MatchReasons.tsx (≤60)
-  components/InviteActions.tsx (≤80)
-  hooks/useMatches.ts  hooks/useInvites.ts
-```
-Lint: eslint + prettier; dilarang import antar-features langsung, lewat `lib/` atau props.
+## Sistem komponen
+Token warna, tipografi, spacing, radius, shadow, breakpoint, state; Button, Input, Select, Radio/Checkbox, FileUpload, Table, Pagination, FilterBar, Badge, Alert, Toast, Modal, Drawer, Tabs, Stepper, Timeline, EmptyState, Skeleton, ErrorState. Komponen mengekspresikan disabled, pending, valid, invalid, success; label dan pesan error terhubung secara semantik. Tabel panjang punya versi mobile yang tetap mempertahankan aksi utama.
+
+## Standar interaksi
+Target WCAG 2.2 AA sebagai kriteria desain yang diuji; fokus terlihat, urutan tab masuk akal, dialog mengunci fokus dan bisa ditutup, status dinarasikan untuk screen reader, target sentuh memadai, kontras teks jelas. Motion mengikuti prefers-reduced-motion. Jangan memakai warna saja untuk status. Form error menunjukkan lokasi dan cara memperbaiki; peringatan tindakan destruktif menyebut akibat yang sebenarnya.
+
+## Uji desain sebelum implementasi penuh
+Prototipe 360px, 768px, 1440px; uji pengguna untuk J1–J4; cek keyboard, zoom 200%, jaringan lambat, daftar kosong/panjang, nama panjang, tanggal tanpa jadwal, dua role staf, dan error unggah. Simpan keputusan desain sebagai hasil uji, bukan selera subjektif.
+
+Stage 1 telah memeriksa reflow mobile/tablet/desktop, menu mobile, fokus keyboard, login salah/benar, redirect role, dan state dasar. Uji pengguna nyata, zoom 200%, jaringan lambat, upload, daftar panjang, serta WCAG lengkap tetap gate Stage 5 karena membutuhkan alur/backend produksi. Bukti ada di docs/19-validasi-stage-1.md.

@@ -41,6 +41,7 @@ jobs:
     env:
       VITE_APP_ENV: DEPLOYMENT
       VITE_USE_MOCK: "true"
+      VITE_BASE_PATH: /TALENTA26/
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,17 +55,17 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build
-        run: bun run build
+        run: bun run build:demo
 
       - name: SPA fallback for GitHub Pages
         run: |
-          touch dist/.nojekyll
-          cp dist/index.html dist/404.html
+          touch frontend/dist/.nojekyll
+          cp frontend/dist/index.html frontend/dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: frontend/dist
 
   deploy:
     needs: build

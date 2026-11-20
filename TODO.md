@@ -1,35 +1,65 @@
-# TODO — TALENTA (FIX, siap eksekusi)
+# TODO — Rencana bertahap TALENTA menuju produksi
 
-> Rancangan fix v1.0 (2026-10-29). ENV kapital: `DEPLOYMENT` | `PRODUCTION`. Mock switch: `VITE_USE_MOCK=true|false`. Runtime: **Bun saja** (`bun install` / `bun run` / `bunx`), tanpa npm.
+Status diperbarui 20 November 2026. Tanda [x] hanya untuk bukti yang sudah ada; rencana berikutnya belum diimplementasikan. Lihat docs/13-peta-jalan.md untuk urutan, dependensi, dan gate yang rinci.
 
-## Tahap 0 — Init (Selesai ✓)
-- [x] Init Vite react-ts
-- [x] Install: `react-router-dom`, `@tailwindcss/vite`, `tailwindcss`, `lucide-react`
-- [x] Setup `.env.example` & `.env` (`VITE_APP_ENV=DEPLOYMENT`, `VITE_USE_MOCK=true`)
-- [x] Buat struktur rapi `src/app, features/*, components/ui, lib, mocks, config, services` (file ≤150 baris)
-- [x] Copy `/mocks/*.json` → `src/mocks/` + buat `src/config/env.ts` + `services/factory.ts`
-- [x] Verifikasi: `bun run build` sukses (DEPLOYMENT & PRODUCTION)
+## Kondisi awal yang terverifikasi
+- [x] Frontend React/Vite dengan rute mahasiswa, kompetisi publik, verifikasi, dashboard admin, adapter mock/API.
+- [x] Data demo di JSON dan perubahan di localStorage; typecheck dan lint lulus pada audit dokumentasi.
+- [ ] Backend Elysia, Prisma/MySQL, RustFS, auth produksi, CI GHCR, Compose produksi, dan pengujian otomatis belum ada.
+- [ ] Beberapa rute admin dan alur revisi prestasi yang disebut dokumen lama belum ada; jangan tandai sebagai selesai.
 
-## Tahap 1 — FE + Mock (`DEPLOYMENT + true`) (Selesai ✓)
-- [x] Sprint 1 Kerangka+Publik: router, layouts, UI kit, `/`, `/kompetisi`, `/kompetisi/:slug`, login card 4 akun peran demo (DEPLOYMENT), form login (PRODUCTION), DemoBanner tanpa switcher peran di navbar
-- [x] Sprint 2 Mahasiswa inti: `/app/profil` (stepper 3 langkah), `/app/partner` (skor matching, popover alasan transparan, undang/terima), `/app/tim` + `lib/matchScore.ts` + `teamRules.ts` + keluar tim modal
-- [x] Sprint 3 Persiapan+Prestasi: `/app/kompetisi/:slug/persiapan` (roadmap checklist mandiri, tenggat waktu, konsultan WA verified only, `AiBoxMock` badge simulasi), `/app/prestasi` & `/baru` (form prestasi mandiri & seleksi internal, simulasi bukti)
-- [x] Sprint 4 Admin+Verifikasi+Dashboard: `/admin` (dashboard indikator institusi, ScopeBanner, distribusi kompetisi), `/verifikasi` & `/verifikasi/:id` (antrean tab, DecisionPanel alasan wajib jika tolak/perbaikan)
-- [x] Sprint 5 Polish: EmptyState terpadu, guard RequireRole & RequireTarget, disclaimer kejujuran sistem, build produksi 100% lulus tanpa error
+## Stage D0 — Rekonsiliasi dokumentasi
+- [x] Audit repo dan identifikasi konflik dokumen/kode.
+- [x] Putuskan peran rilis awal, login manual, satu kampus, RustFS/MySQL existing, GHCR public, ranking lomba.
+- [x] Selaraskan PRD, spesifikasi, keputusan, AGENTS, README, dan TODO; hapus klaim mock yang diperlakukan sebagai kebijakan final.
+- [x] Tinjau dokumen dengan pemilik produk; arahan lanjutan mengesahkan scope Stage 1. Keputusan yang belum dapat disahkan kampus tetap tercatat dengan pemilik dan gate di docs/14, bukan dianggap final.
+Gate D0: tidak ada kontradiksi lintas dokumen, setiap fitur punya status nyata/rencana, dan semua keputusan terbuka punya pemilik.
 
-## Gate Fix
-- [ ] Demo J1 (profil→partner→tim→roadmap) + J2 (prestasi mandiri) + J3 (verifikasi) <10 mnt
-- [ ] Kunci `docs/14` (sudah FIX, tinggal tandatangan) + freeze docs → tag `v0-mock-fix`
+## Stage 1 — Fondasi repo dan desain UI
+- [x] Pindahkan frontend ke frontend/; sediakan backend/ dan infra/ sesuai docs/04. Bukti: build dan lint lulus; base root untuk lokal, GitHub Pages tetap memakai subpath.
+- [x] Hapus klaim beasiswa, SKPI, dan BAAK dari UI demo dan data kompetisi; pencarian teks pada frontend/src dan mocks tidak menemukan klaim tersebut.
+- [x] Pertahankan demo mock sebagai jalur pengembangan, bukan paket produksi. `build:demo` memakai adapter mock; `build` mode production memakai adapter API dan hasil bundle telah dipindai agar fixture mock tidak ikut.
+- [x] Buat fondasi design system, sitemap final, dan prototipe responsif untuk publik, mahasiswa, validator, super admin. Ikon produk distandardkan ke Lucide; ranking publik serta workspace validator/super admin tersedia sebagai prototipe Stage 1.
+- [x] Uji navigasi keyboard, fokus terlihat, mobile 390×844, tablet 768×1024, desktop, login manual gagal/berhasil, redirect lintas role, loading, kosong, error, dan alur mahasiswa/validator/super admin di browser lokal.
+Gate 1: frontend build/lint/typecheck bersih setelah pemindahan; rancangan UI disetujui dan dapat diuji.
+Status gate: **selesai 20 November 2026**. Route lazy-loading menurunkan bundle entry produksi menjadi sekitar 340 kB tanpa peringatan chunk 500 kB. Bukti lengkap: docs/19-validasi-stage-1.md.
 
-## Tahap 2 — Final (`PRODUCTION + false`, setelah Gate)
-- [ ] Ganti `services/mock` → `services/api` real (interface sama, tanpa ubah hooks)
-- [ ] Auth real (form login → JWT), RBAC BE, upload storage, audit verifikasi
-- [ ] Reminder + progres BE (P1), multi-kampus + analitik (P2) terpisah
-- [ ] Build: `VITE_APP_ENV=PRODUCTION VITE_USE_MOCK=false bun run build`
-- [ ] Cek: `bun run typecheck` + `bun run lint` harus bersih sebelum commit
+## Stage 2 — Fondasi backend, data, dan autentikasi
+- [ ] Siapkan Elysia, Prisma versi stabil untuk MySQL, skema awal, migrations, seed super admin yang aman, dan health endpoints.
+- [ ] Implementasi daftar/login manual, hash password, sesi aman, reset password, NIM/email unik, rate limiting, RBAC backend, audit.
+- [ ] Hubungkan ke MySQL existing melalui variabel root .env; tidak ada data nyata dalam seed.
+Gate 2: uji migrasi ulang, akun duplikat, sesi, otorisasi lintas pengguna/peran, dan pemulihan akun lulus.
 
-## File Acuan
-- ENV: `docs/15-env-mock-strategy.md`, `.env.example`
-- Keputusan fix: `docs/14-keputusan-terbuka.md`
-- Aturan agen: `.opencode/AGENTS.md`
-- Dummy: `/mocks/*.json` (8 user, 4 kompetisi, 3 tim, 4 prestasi)
+## Stage 3 — Domain mahasiswa dan kompetisi
+- [ ] Profil, periode akademik, katalog kompetisi, aturan tim per kompetisi, target, matching transparan, undangan, tim, dan roadmap dengan data persisten.
+- [ ] Validator mengelola kompetisi, jadwal, roadmap, sumber, seleksi, dan kontak konsultasi WhatsApp yang disetujui.
+- [ ] Pastikan alur berulang lintas periode: arsip target/tim lama, kompetisi baru, perubahan aturan berversi.
+Gate 3: perjalanan profil → target → tim → persiapan berjalan tanpa mock dan tahan refresh/pergantian perangkat.
+
+## Stage 4 — Prestasi, bukti, verifikasi, ranking
+- [ ] Pengajuan prestasi, revisi, jejak keputusan, deteksi duplikat, file bukti privat di RustFS, validasi tipe/ukuran dan hak akses.
+- [ ] Validator memutuskan status; tindakan tercatat dan tidak boleh mengubah riwayat diam-diam.
+- [ ] Poin lomba disetujui dihitung menurut aturan berversi; ranking tahunan dan riwayat keseluruhan; data publik minimum.
+Gate 4: unggah/unduh terotorisasi, revisi, dua pengajuan serentak, perhitungan poin, dan koreksi keputusan lulus.
+
+## Stage 5 — Operasi admin, kualitas, dan keamanan
+- [ ] Super admin mengelola peran staf, konfigurasi, bobot poin, audit, dashboard kesehatan dan operasi; validator mengelola data domain.
+- [ ] Dashboard mahasiswa/validator/super admin dengan definisi metrik, filter periode, empty state, dan ekspor yang terotorisasi bila disepakati.
+- [ ] Uji aksesibilitas, performa, keamanan, backup/restore, retensi data, dan kebijakan publikasi ranking.
+Gate 5: semua kriteria docs/18 lulus; tidak ada temuan kritis terbuka.
+
+## Stage 6 — CI, staging, dan deployment produksi
+- [ ] GitHub Actions menguji dan membangun dua image lalu push GHCR public dengan SHA dan tag rilis.
+- [ ] Compose hanya menarik image aplikasi; root .env mengatur koneksi MySQL/RustFS, domain, rahasia dan tag image.
+- [ ] Reverse proxy melalui Cloudflare Tunnel yang ada; health check, migration job satu kali, backup, rollback, serta observabilitas diuji di staging.
+Gate 6: dari checkout server + .env, docker compose pull dan docker compose up -d membawa rilis sehat; rollback diuji.
+
+## Stage 7 — Pilot kampus dan alih operasi
+- [ ] Uji bersama mahasiswa, validator, dan super admin pada data yang disetujui; perbaiki temuan usability.
+- [ ] Dapatkan persetujuan kampus untuk klaim institusi, publikasi nama di ranking, retensi dan pengelolaan data.
+- [ ] Serahkan runbook, akun operasional, prosedur insiden, backup/restore, dan jadwal pembaruan konten.
+Gate 7: pemilik produk menerima pilot; sistem dapat dipakai lintas tahun akademik tanpa reset data.
+
+## Setelah rilis awal
+- [ ] Integrasi SSO kampus ketika sumber identitas dan kontrak integrasi tersedia.
+- [ ] AI, notifikasi/pengingat otomatis, multi-kampus, beasiswa dan integrasi lain hanya melalui keputusan produk baru.

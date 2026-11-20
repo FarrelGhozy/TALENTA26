@@ -1,88 +1,48 @@
-# 15 — Strategi ENV & Data Source (FIX: DEPLOYMENT vs PRODUCTION + Mock true/false)
+# 15 — Konfigurasi, mock, CI dan image
 
-> Dokumen ini FIX untuk menjawab permintaanmu: app env + mock switch. Wajib diikuti sejak init Vite.
-> Nilai ENV kapital: `DEPLOYMENT` | `PRODUCTION`.
+Nama file dipertahankan agar tautan lama tidak putus. Rancangan ini menggantikan matriks DEPLOYMENT/PRODUCTION + VITE_USE_MOCK lama untuk rilis produksi.
 
-## 1. Dua ENV yang dipakai (Vite)
+Stage 1 telah memisahkan adapter melalui alias `@talenta/services`: `dev` dan `build:demo` memakai `factory.mock.ts`, sedangkan `build` mode production memakai `factory.api.ts`. Pemeriksaan bundle production tidak menemukan fixture/data mock yang diuji. Backend dan konfigurasi runtime production tetap belum ada.
 
-```bash
-# .env.example (wajib ada di repo FE nanti)
-VITE_APP_ENV=DEPLOYMENT       # DEPLOYMENT | PRODUCTION
-VITE_USE_MOCK=true           # true | false
-VITE_API_BASE_URL=http://localhost:3000/api  # dipakai hanya jika USE_MOCK=false
-```
-
-| ENV | Nilai | Arti |
-|---|---|---|
-| `VITE_APP_ENV` | `DEPLOYMENT` | Mode demo: login + ganti role pakai **Card** (klik peran). Tanpa password real. Ada badge `Demo` di navbar |
-| `VITE_APP_ENV` | `PRODUCTION` | Mode real: login pakai **form email+password** (nanti JWT). Tidak ada card ganti role sembarangan |
-| `VITE_USE_MOCK` | `true` | FE ambil data dari `src/mocks/*.json` + localStorage via `mockAdapter`. Tanpa delay buatan (langsung instan) |
-| `VITE_USE_MOCK` | `false` | FE ambil data dari BE via `apiAdapter` (`VITE_API_BASE_URL`). Wajib ada token jika PRODUCTION |
-
-## 2. Matriks Kombinasi Resmi
-
-| Kombinasi | Kapan dipakai | Login UI | Data dari |
+## Lingkungan
+| Lingkungan | Frontend | Data | Operasi |
 |---|---|---|---|
-| `DEPLOYMENT` + `true` | **Default Tahap 1.** Demo ke kamu/dosen | Card peran (Mahasiswa/Admin/Verifikator) di `/masuk` | Mock JSON |
-| `PRODUCTION` + `true` | Uji UI production tapi BE belum siap | Form login mock (email bebas + password `demo123`, cek lokal) | Mock JSON |
-| `PRODUCTION` + `false` | **Tahap 2 Final.** BE sudah ada | Form login real → JWT | BE real |
-| `DEPLOYMENT` + `false` | Dilarang (tidak dipakai) | — | — |
+| development | Vite lokal | mock atau MySQL/RustFS dev | Bun |
+| CI | build dan tes | database/storage test terisolasi | GitHub Actions |
+| staging | image GHCR | MySQL dan bucket staging | Compose seperti produksi |
+| production | image GHCR | MySQL dan RustFS existing | root .env + Compose |
 
-Aturan: jika `USE_MOCK=false` tapi BE tidak reachable → tampilkan `EmptyState error BE` + tombol `Kembali ke mock` (hanya di DEPLOYMENT).
+Mock hanya untuk demo/tes, tidak ada toggle mock pada image produksi. Vite mengganti VITE_* saat build; alamat server dan rahasia tidak boleh bergantung pada variabel itu. Browser meminta /api pada origin yang sama sehingga domain dapat berubah tanpa rebuild. Rujukan: https://vite.dev/guide/env-and-mode
 
-## 3. Arsitektur Kode (pecah, rapi)
+## Root .env server
+Kontrak variabel yang direncanakan:
+- IMAGE_TAG: commit SHA atau tag rilis immutable, dipakai kedua image.
+- PUBLIC_ORIGIN: URL HTTPS domain aktif.
+- DATABASE_URL: user MySQL aplikasi khusus.
+- SESSION_SECRET dan COOKIE_SECRET: rahasia acak kuat.
+- S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_FORCE_PATH_STYLE=true: service account RustFS dan bucket privat.
+- SUPER_ADMIN_BOOTSTRAP_*: hanya untuk bootstrap satu kali; dihapus/diputar setelahnya.
+- SMTP_*: untuk verifikasi email/reset jika tersedia.
+- LOG_LEVEL, UPLOAD_MAX_BYTES, TIMEZONE_DISPLAY=Asia/Jakarta.
 
-```
-src/
-  config/env.ts              # baca import.meta.env, export APP_ENV, USE_MOCK, API_URL, isMock()
-  services/
-    types.ts                 # interface CompetitionService, PartnerService, dst (kontrak BE)
-    factory.ts               # if USE_MOCK → mockAdapter else apiAdapter
-    mock/
-      competitionMock.ts     # baca mocks/*.json
-      partnerMock.ts         # pakai lib/matchScore.ts
-      achievementMock.ts     # localStorage
-    api/
-      competitionApi.ts      # fetch VITE_API_BASE_URL (stub Tahap 1, real Tahap 2)
-      authApi.ts
-  features/*/hooks/          # hanya panggil factory, tidak tahu mock/api
-  mocks/*.json               # copy dari /mocks di root repo ini
-```
+.env.example hanya placeholder. .env di server permission 0600, tidak di-commit dan tidak masuk image. Compose meneruskan variabel eksplisit ke container; .env Compose sendiri terutama untuk interpolasi. Rujukan: https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/
 
-Contoh `config/env.ts`:
-```ts
-export const APP_ENV: 'DEPLOYMENT' | 'PRODUCTION' =
-  (import.meta.env.VITE_APP_ENV as string) ?? 'DEPLOYMENT';
-export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false';
-export const API_URL = import.meta.env.VITE_API_BASE_URL ?? '';
-export const isDemoLogin = APP_ENV === 'DEPLOYMENT';
-// Normalisasi: jika ada yang isi lowercase, paksa ke kapital saat validasi awal
-// if (!['DEPLOYMENT','PRODUCTION'].includes(APP_ENV)) throw new Error('VITE_APP_ENV harus DEPLOYMENT|PRODUCTION');
-```
+## Bentuk Compose
+compose.yaml root berisi web, api, dan migration job satu kali, menggunakan ghcr.io/<owner>/<repo>-frontend:<IMAGE_TAG> dan -backend:<IMAGE_TAG>. MySQL/RustFS existing tidak dibuat ulang oleh Compose produksi. Web/proxy menuju Cloudflare Tunnel; api, DB, storage tidak membuka port publik. Health check dan restart policy membedakan layanan panjang dengan migration job. Tidak ada data persisten pada filesystem image.
 
-Contoh `services/factory.ts`:
-```ts
-import * as mock from './mock/competitionMock';
-import * as api from './api/competitionApi';
-import { USE_MOCK } from '../config/env';
-export const competitionService = USE_MOCK ? mock : api; // keduanya penuhi interface sama
-```
+Operator dari root checkout dengan .env:
+~~~
+docker compose pull
+docker compose up -d
+docker compose ps
+~~~
+Rilis yang mengubah schema membutuhkan backup dan tinjau migrasi sebelum up. Migration job harus idempotent, hanya satu instance, dan selesai sebelum API ready.
 
-## 4. Login & Ganti Role
+## GitHub Actions
+Pull request: Bun frozen lockfile, typecheck, lint, unit/integration, build frontend/backend, scan dependency/image, dan cek rahasia. Push main membangun image SHA untuk staging. Tag rilis hanya setelah gate, memakai digest yang sudah diuji. Job publish memakai GITHUB_TOKEN dengan packages:write terbatas; metadata OCI menautkan repo. Pastikan package GHCR disetel public. Publish tidak otomatis deploy server. Rujukan: https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images
 
-### Mode `DEPLOYMENT` (card)
-- `/masuk` tampilkan 3 card: Mahasiswa (Rina mock), Admin Program (Budi), Verifikator (Sari). Klik → set `localStorage talenta-role + talenta-user-id` → redirect.
-- Navbar tidak ada ganti peran cepat. Ganti peran = logout (tombol Keluar) → pilih card lain di `/masuk`. Ada badge kuning `Demo — data mock`.
-- Tidak ada password. Dilarang pakai di PRODUCTION build.
+Pin action ke versi/digest yang ditinjau, batasi permissions, dan jangan berikan secret server ke build. Simpan digest sebagai artefak rilis; rollback memakai tag/digest sebelumnya.
 
-### Mode `PRODUCTION`
-- `/masuk` tampilkan form email + password + tombol Masuk. Tahap 1 (mock true): terima `demo@kampus.ac.id / demo123` untuk tiap peran (pilih peran via dropdown, cek lokal). Tahap 2 (mock false): POST ke BE, simpan JWT httpOnly (cookie) / memory.
-- Tidak ada ganti peran cepat di navbar. Ganti peran = logout + login ulang via `/masuk`.
-- Guard `RequireRole` baca dari auth context (mock: localStorage, real: JWT payload).
-
-## 5. Checklist Implementasi
-- [ ] `.env.example` + `.env` (`DEPLOYMENT+true`) + `.env.production` (`PRODUCTION+false`).
-- [ ] `src/config/env.ts` + banner Demo jika DEPLOYMENT + validasi kapital (tolak lowercase).
-- [ ] Semua hooks pakai factory, tidak import `mocks/` langsung dari page.
-- [ ] `api/` stub dengan TODO + error jelas jika dipanggil saat mock true.
-- [ ] Build demo: `VITE_APP_ENV=DEPLOYMENT VITE_USE_MOCK=true bun run build`. Build prod: `VITE_APP_ENV=PRODUCTION VITE_USE_MOCK=false bun run build`.
+## Kompatibilitas
+Dokumentasi Prisma terbaru menandai MySQL pada ORM 8 sebagai early preview dan ORM 7 sebagai jalur stabil; Stage 2 mengunci versi 7 kompatibel Bun/MySQL dan perintah migrasinya. Jangan campur prosedur versi 7/8. Rujukan: https://www.prisma.io/docs/orm/supported-databases
+RustFS mendukung API S3 compatible dengan endpoint dan path-style; uji PUT, GET, presigned URL, delete, dan izin service account pada instalasi nyata. Rujukan: https://docs.rustfs.com/en/administration/protocols/s3
