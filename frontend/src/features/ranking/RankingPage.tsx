@@ -43,7 +43,7 @@ export const RankingPage: React.FC = () => {
   }, [activeTab]);
 
   const ranking = rankingData?.ranking || [];
-  const periodName = rankingData?.period?.name || 'Periode Akademik Aktif';
+  const periodName = loading ? 'Memuat periode' : error ? 'Periode tidak tersedia' : (rankingData?.period?.name || 'Periode Akademik Aktif');
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
