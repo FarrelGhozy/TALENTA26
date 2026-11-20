@@ -4,7 +4,9 @@ TALENTA ditujukan untuk membantu mahasiswa menemukan lomba, membentuk tim, mengi
 
 ## Status repo saat ini
 
-Repo yang dapat dijalankan sekarang adalah **frontend React/Vite Stage 1**. Mode demo memakai data JSON/localStorage dan menyediakan prototipe publik, mahasiswa, validator, super admin, ranking, serta referensi design system. Build production sudah dipisahkan ke adapter API dan tidak membawa fixture mock, tetapi belum dapat berfungsi penuh karena backend Elysia, Prisma/MySQL, RustFS, autentikasi produksi, image GHCR, dan Compose baru dikerjakan mulai Stage 2. Workflow yang ada masih menerbitkan build demo ke GitHub Pages; itu bukan deployment produksi.
+Repo memuat frontend React/Vite serta backend Bun/Elysia dengan Prisma/MySQL, autentikasi, domain pembinaan dan prestasi, integrasi storage S3 compatible, serta uji integrasi. Ini merupakan implementasi yang masih perlu perbaikan dan verifikasi, bukan rilis siap produksi. Audit dan tindak lanjutnya tercatat di `docs/24-audit-stage-d0-5.md` dan `TODO.md`; khususnya pemulihan password belum mengirim email dan sejumlah alur validator belum tersedia di UI. Gate yang terdampak sedang ditinjau ulang.
+
+Mode demo memakai JSON/localStorage; build production memakai adapter API. Workflow yang ada menerbitkan build demo ke GitHub Pages, bukan deployment produksi. Image GHCR, Compose produksi dan deployment staging masih direncanakan.
 
 Stack demo: React 19, TypeScript, Vite 8, React Router 7, Tailwind CSS 4, Lucide React, Bun. Gunakan Bun dan bun.lock; jangan mengganti package manager tanpa keputusan proyek.
 
@@ -18,7 +20,7 @@ bun run dev
 
 Buka http://localhost:5173/. Mode development dan build:demo memakai data mock; build produksi hanya memuat adapter API. GitHub Pages memakai base /TALENTA26/ melalui konfigurasi workflow. Jangan memakai mode mock atau password demo untuk data mahasiswa nyata.
 
-Script utama: `bun run dev`, `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo`, dan `bun run preview`. Hasil gate Stage 1 dicatat di docs/19-validasi-stage-1.md.
+Script utama: `bun run dev`, `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo`, dan `bun run preview`. Bukti historis Stage 1–5 ada di docs/19–23; tinjauan ulang ada di docs/24.
 
 ## Akun demo
 
@@ -26,14 +28,14 @@ Halaman `/masuk` menyediakan kartu instan untuk role final `mahasiswa`, `validat
 
 ## Peta repo sekarang dan target
 
-Sekarang: `frontend/` berisi aplikasi, aset, konfigurasi Vite/TypeScript, adapter `factory.mock.ts` dan `factory.api.ts`; `backend/` dan `infra/` masih placeholder; `docs/` berisi kontrak target; `.github/workflows/deploy.yml` khusus build demo Pages.
+Sekarang: `frontend/` berisi aplikasi dan adapter mock/API; `backend/` berisi layanan, skema, migrasi dan tes; `infra/` memuat skrip backup database; `docs/` berisi kontrak dan bukti. `.github/workflows/deploy.yml` khusus build demo Pages.
 
 Target saat stage implementasi: frontend/ aplikasi React; backend/ Bun/Elysia/Prisma; infra/ konfigurasi proxy; compose.yaml root; root .env.example; dua image GHCR public. MySQL dan RustFS existing tetap layanan luar Compose aplikasi. Struktur rinci docs/04-sitemap.md.
 
 ## Dokumen kerja
 
 - PRD_TALENTA.md: keputusan produk, aktor, alur dan penerimaan.
-- docs/README.md: indeks spesifikasi dan bukti 00–19.
+- docs/README.md: indeks spesifikasi, bukti, dan audit.
 - docs/14-keputusan-terbuka.md: keputusan pemilik produk, rekomendasi dan gate yang belum disahkan.
 - TODO.md: stage, urutan dan status.
 - AGENTS.md: aturan agen yang berlaku untuk pekerjaan berikutnya.

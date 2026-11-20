@@ -2,7 +2,7 @@
 
 Nama file dipertahankan agar tautan lama tidak putus. Rancangan ini menggantikan matriks DEPLOYMENT/PRODUCTION + VITE_USE_MOCK lama untuk rilis produksi.
 
-Stage 1 telah memisahkan adapter melalui alias `@talenta/services`: `dev` dan `build:demo` memakai `factory.mock.ts`, sedangkan `build` mode production memakai `factory.api.ts`. Pemeriksaan bundle production tidak menemukan fixture/data mock yang diuji. Backend dan konfigurasi runtime production tetap belum ada.
+Stage 1 telah memisahkan adapter melalui alias `@talenta/services`: `dev` dan `build:demo` memakai `factory.mock.ts`, sedangkan `build` mode production memakai `factory.api.ts`. Pemeriksaan bundle production tidak menemukan fixture/data mock yang diuji. Backend telah tersedia sebagian; konfigurasi runtime dan deployment produksi belum terverifikasi. Status dan kekurangannya ada di TODO.md dan docs/24.
 
 ## Lingkungan
 | Lingkungan | Frontend | Data | Operasi |

@@ -27,6 +27,8 @@ Dokumen ini menggambarkan target produk dan implementasi bertahap. Status aplika
 | 20-validasi-stage-2.md | hasil pemeriksaan dan bukti penutupan Stage 2 |
 | 21-validasi-stage-3.md | hasil pemeriksaan dan bukti penutupan Stage 3 |
 | 22-validasi-stage-4.md | hasil pemeriksaan dan bukti penutupan Stage 4 |
+| 23-validasi-stage-5.md | hasil pemeriksaan dan bukti penutupan Stage 5 |
+| 24-audit-stage-d0-5.md | temuan audit kode dan UI Stage D0–5 serta batas verifikasi |
 
 Baca PRD_TALENTA.md → 14 → 01 → 02 → 03 → 05. Untuk implementasi baca spesifikasi modul, 10, 16, 12, 18, lalu 13. Untuk operasi baca 15 dan 17.
 

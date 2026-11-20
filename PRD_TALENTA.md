@@ -1,6 +1,6 @@
 # PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.0, 20 November 2026. Status: rancangan target produksi, belum diimplementasikan. Keputusan yang disepakati dan yang masih terbuka tercatat di docs/14-keputusan-terbuka.md.
+Versi rancangan: 2.0, 20 November 2026. Status: rancangan target produksi; sebagian telah diimplementasikan dan masih memerlukan perbaikan serta verifikasi menurut TODO.md dan docs/24. Keputusan yang disepakati dan yang masih terbuka tercatat di docs/14-keputusan-terbuka.md.
 
 ## 1. Masalah dan tujuan
 

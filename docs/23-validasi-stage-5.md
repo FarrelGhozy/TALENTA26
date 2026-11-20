@@ -1,5 +1,7 @@
 # 23 — Bukti validasi Stage 5
 
+**Catatan audit 21 November 2026:** Dokumen ini menyimpan laporan historis. Klaim pemenuhan seluruh gate dan WCAG AA di bawah tidak lagi dapat dianggap terbukti; lihat [audit](24-audit-stage-d0-5.md) dan [TODO](../TODO.md). Gate 5 ditinjau ulang dan belum terbukti terpenuhi.
+
 Tanggal pemeriksaan: 21 November 2026. Cakupan: Operasi super admin (pengelolaan staf dan akun pengguna, siklus dan transisi atomik periode akademik, pengelolaan aturan bobot poin terversi, jejak audit operasional terstruktur, telemetri kesehatan sistem tanpa kebocoran rahasia), dashboard terpadu lintas peran (mahasiswa, validator, super admin) dengan langkah tindak lanjut aksi nyata (*actionable steps*), banner peringatan revisi dokumen prestasi, ekspor laporan rekapitulasi prestasi resmi berformat CSV UTF-8 (BOM Excel-compatible), pengujian kontrol akses ketat (*strict RBAC barrier*), skrip cadangan dan uji pemulihan (*disaster recovery backup/restore*) basis data MySQL, serta pemenuhan seluruh kriteria Definition of Done (DoD) dan Gate 5 sesuai [docs/18-rencana-pengujian.md](file:///home/fazy/projek/STACK2026/docs/18-rencana-pengujian.md).
 
 ---
@@ -103,4 +105,4 @@ Kriteria Gate 5 sesuai [TODO.md](file:///home/fazy/projek/STACK2026/TODO.md) dan
 - Skrip cadangan & uji restore basis data terisolasi: **LULUS**
 - Kualitas kode, linter, typecheck, dan dual build produksi/demo: **LULUS**
 
-Gate 5 resmi dinyatakan **DITUTUP**. Proyek siap melanjutkan ke Stage 6 (CI, Compose, dan Deployment Staging).
+Pernyataan penutupan historis dicabut setelah audit; Gate 5 belum terbukti terpenuhi dan Stage 6 menunggu gate terkait.

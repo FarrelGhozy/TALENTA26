@@ -1,12 +1,13 @@
 # TODO — Rencana bertahap TALENTA menuju produksi
 
-Status diperbarui 20 November 2026. Tanda [x] hanya untuk bukti yang sudah ada; rencana berikutnya belum diimplementasikan. Lihat docs/13-peta-jalan.md untuk urutan, dependensi, dan gate yang rinci.
+Status diperbarui 21 November 2026. Tanda [x] hanya untuk bukti yang sudah ada; rencana berikutnya belum diimplementasikan. Lihat docs/13-peta-jalan.md untuk urutan, dependensi, dan gate yang rinci.
 
 ## Kondisi awal yang terverifikasi
 - [x] Frontend React/Vite dengan rute mahasiswa, kompetisi publik, verifikasi, dashboard admin, adapter mock/API.
 - [x] Data demo di JSON dan perubahan di localStorage; typecheck dan lint lulus pada audit dokumentasi.
-- [ ] Backend Elysia, Prisma/MySQL, RustFS, auth produksi, CI GHCR, Compose produksi, dan pengujian otomatis belum ada.
-- [ ] Beberapa rute admin dan alur revisi prestasi yang disebut dokumen lama belum ada; jangan tandai sebagai selesai.
+- [x] Backend Elysia, Prisma/MySQL, integrasi S3 compatible, autentikasi, dan tes integrasi ada di repo; kesiapan produksi belum terbukti.
+- [ ] CI image GHCR, Compose produksi dan pengujian staging belum tersedia.
+- [ ] UI pengelolaan konten validator belum lengkap; alur revisi prestasi tersedia dalam kode dan masih perlu diuji ulang.
 
 ## Stage D0 — Rekonsiliasi dokumentasi
 - [x] Audit repo dan identifikasi konflik dokumen/kode.
@@ -48,9 +49,23 @@ Status gate: **selesai 21 November 2026**. Seluruh 25 uji integrasi Stage 4 (tot
 ## Stage 5 — Operasi admin, kualitas, dan keamanan
 - [x] Super admin mengelola peran staf, konfigurasi, bobot poin, audit, dashboard kesehatan dan operasi; validator mengelola data domain. Bukti: Rute /api/v1/system/* terpasang dengan proteksi RBAC super_admin; penangguhan (suspend) akun mencabut seluruh sesi aktif secara instan (revokeAllUserSessions); periode akademik teraktivasi secara atomik; matriks bobot poin terversi; jejak audit otomatis meredaksi data sensitif; telemetri kesehatan memantau MySQL & RustFS tanpa kebocoran kredensial; SuperAdminDashboardPage menyediakan 5 tab operasional lengkap dengan modal dialog.
 - [x] Dashboard mahasiswa/validator/super admin dengan definisi metrik, filter periode, empty state, dan ekspor yang terotorisasi bila disepakati. Bukti: Rute /api/v1/me/dashboard menyajikan kelengkapan profil, target aktif, tim, progres roadmap, rincian pengajuan, poin periode berjalan, dan rekomendasi aksi nyata (actionable steps); BerandaPage menampilkan banner peringatan oranye saat ada revisi berkas; ValidatorDashboardPage & AdminDashboardPage terhubung statistik antrean riil; ekspor CSV resmi (/api/v1/admin/export) terproteksi RBAC dan berformat UTF-8 BOM kompatibel Microsoft Excel.
-- [x] Uji aksesibilitas, performa, keamanan, backup/restore, retensi data, dan kebijakan publikasi ranking. Bukti: Skrip infra/scripts/backup-db.sh teruji membuat cadangan konsisten dengan kompresi gzip dan checksum sha256, serta sukses diuji pemulihan (restore) 24 tabel pada basis data uji terisolasi talenta_test; RBAC barrier teruji menolak mahasiswa dan validator pada rute terlarang (403 Forbidden); standar aksesibilitas WCAG AA terpenuhi dengan navigasi keyboard dan touch target >= 44px.
+- [ ] Uji aksesibilitas, performa, keamanan, backup/restore, retensi data, dan kebijakan publikasi ranking. Bukti historis mencatat tes RBAC dan backup/restore database; audit menemukan kekurangan dan bukti tersebut belum mencakup seluruh kriteria, termasuk restore RustFS dan aksesibilitas menyeluruh. Lihat docs/24.
 Gate 5: semua kriteria docs/18 lulus; tidak ada temuan kritis terbuka.
-Status gate: **selesai 21 November 2026**. Seluruh 18 uji integrasi Stage 5 (total 86 uji otomatis sistem across 5 suites) lulus; typecheck, lint (0 error/warning pada 126 file), build produksi, dan build demo lulus; verifikasi disaster recovery backup & test restore lulus. Bukti lengkap: docs/23-validasi-stage-5.md.
+Status gate: **ditinjau ulang; belum terbukti terpenuhi** setelah audit docs/24. Hasil historis tes dan restore database tercatat di docs/23, tetapi tidak membuktikan seluruh kriteria docs/18.
+
+## Tindak lanjut audit Stage D0–5 — 21 November 2026
+
+Audit berbasis kode dan dokumen menemukan celah terhadap sebagian klaim gate terdahulu. Prioritas, bukti, dampak, dan batas pemeriksaan ada di [docs/24-audit-stage-d0-5.md](docs/24-audit-stage-d0-5.md). Status historis di atas belum merupakan persetujuan go-live; triase gate bersama pemilik sebelum melanjutkan rilis. Semua butir berikut masih terbuka dan harus dikerjakan sesuai stage serta keputusan produk.
+
+- [x] D0: Rekonsiliasi README, indeks dan status implementasi; koreksi klaim gate Stage 5 agar mencerminkan bukti yang tersedia (A-01, bagian dokumentasi A-11). Bukti: pencarian klaim usang dan pemeriksaan diff; penyelesaian uji gate tetap terbuka pada butir Stage 5.
+- [ ] Stage 1: Tinjau klaim resmi/kebijakan dan perbaiki aksesibilitas dialog/tab serta target sentuh; verifikasi visual dan keyboard di mobile, tablet, desktop (A-02, A-03).
+- [ ] Stage 1/3/5: Hapus asumsi tahun, angkatan dan zona waktu yang tidak bersumber dari data; uji lintas periode dan zona waktu (A-04).
+- [ ] Stage 2: Selesaikan pengiriman reset password, amankan log/token, dan putuskan O-04; tinjau sesi, proxy tepercaya, CSRF dan rate limit (A-05, A-06).
+- [ ] Stage 3: Lengkapi alur UI pengelolaan validator dan selaraskan kontrak API; uji J3 dan cakupan seleksi (A-07).
+- [ ] Stage 4: Perkuat validasi isi bukti dan pembersihan objek yatim; uji kegagalan storage/DB serta kebijakan file (A-08).
+- [ ] Stage 4: Tangani ketiadaan periode aktif tanpa mencampur ranking seluruh periode; uji pergantian periode dan histori (A-09).
+- [ ] Stage 5: Cegah formula injection pada ekspor CSV dan uji pada aplikasi spreadsheet (A-10).
+- [ ] Stage 5: Lengkapi bukti aksesibilitas, keamanan, E2E, performa dan backup/restore RustFS; triase ulang gate sesuai docs/18 (A-11).
 
 ## Stage 6 — CI, staging, dan deployment produksi
 - [ ] GitHub Actions menguji dan membangun dua image lalu push GHCR public dengan SHA dan tag rilis.
