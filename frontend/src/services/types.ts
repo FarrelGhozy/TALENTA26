@@ -23,6 +23,11 @@ export interface IUserService {
   updateProfile(userId: string, data: Partial<User>): Promise<User>;
   getProfile(userId: string): Promise<Profile | null>;
   setTargetCompetition(userId: string, slug: string): Promise<Profile>;
+  login?(email: string, pass: string): Promise<{ user: User; token: string }>;
+  register?(data: any): Promise<{ user: User; token: string }>;
+  logout?(): Promise<void>;
+  forgotPassword?(email: string): Promise<{ message: string }>;
+  resetPassword?(token: string, pass: string): Promise<{ message: string }>;
 }
 
 export interface IMatchingService {

@@ -25,10 +25,11 @@ Gate 1: frontend build/lint/typecheck bersih setelah pemindahan; rancangan UI di
 Status gate: **selesai 20 November 2026**. Route lazy-loading menurunkan bundle entry produksi menjadi sekitar 340 kB tanpa peringatan chunk 500 kB. Bukti lengkap: docs/19-validasi-stage-1.md.
 
 ## Stage 2 — Fondasi backend, data, dan autentikasi
-- [ ] Siapkan Elysia, Prisma versi stabil untuk MySQL, skema awal, migrations, seed super admin yang aman, dan health endpoints.
-- [ ] Implementasi daftar/login manual, hash password, sesi aman, reset password, NIM/email unik, rate limiting, RBAC backend, audit.
-- [ ] Hubungkan ke MySQL existing melalui variabel root .env; tidak ada data nyata dalam seed.
+- [x] Siapkan Elysia, Prisma versi stabil untuk MySQL, skema awal, migrations, seed super admin yang aman, dan health endpoints. Bukti: Prisma 7 + adapter MariaDB terhubung ke MySQL; migrasi awal diterapkan pada talenta_dev dan talenta_test; health live & ready merespons 200.
+- [x] Implementasi daftar/login manual, hash password, sesi aman, reset password, NIM/email unik, rate limiting, RBAC backend, audit. Bukti: Argon2id hash password; 21 uji integrasi & RBAC di Bun lulus; pencegahan 409 pada email/nim duplikat; anti-IDOR profil; halaman frontend /daftar, /lupa-password, /reset-password terhubung.
+- [x] Hubungkan ke MySQL existing melalui variabel root .env; tidak ada data nyata dalam seed. Bukti: seed hanya memuat institusi dan bootstrap super admin dari environment, bebas dari data mahasiswa nyata.
 Gate 2: uji migrasi ulang, akun duplikat, sesi, otorisasi lintas pengguna/peran, dan pemulihan akun lulus.
+Status gate: **selesai 20 November 2026**. Bukti lengkap: docs/20-validasi-stage-2.md.
 
 ## Stage 3 — Domain mahasiswa dan kompetisi
 - [ ] Profil, periode akademik, katalog kompetisi, aturan tim per kompetisi, target, matching transparan, undangan, tim, dan roadmap dengan data persisten.

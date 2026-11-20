@@ -20,6 +20,9 @@ export const router = createBrowserRouter(
     children: [
       { path: '/', lazy: lazyRoute(() => import('../features/landing/LandingPage'), 'LandingPage') },
       { path: '/masuk', lazy: lazyRoute(() => import('../features/auth/LoginPage'), 'LoginPage') },
+      { path: '/daftar', lazy: lazyRoute(() => import('../features/auth/RegisterPage'), 'RegisterPage') },
+      { path: '/lupa-password', lazy: lazyRoute(() => import('../features/auth/ForgotPasswordPage'), 'ForgotPasswordPage') },
+      { path: '/reset-password', lazy: lazyRoute(() => import('../features/auth/ResetPasswordPage'), 'ResetPasswordPage') },
       { path: '/ranking', lazy: lazyRoute(() => import('../features/ranking/RankingPage'), 'RankingPage') },
       { path: '/kompetisi', lazy: lazyRoute(() => import('../features/kompetisi/CompetitionListPage'), 'CompetitionListPage') },
       { path: '/kompetisi/:slug', lazy: lazyRoute(() => import('../features/kompetisi/CompetitionDetailPage'), 'CompetitionDetailPage') },

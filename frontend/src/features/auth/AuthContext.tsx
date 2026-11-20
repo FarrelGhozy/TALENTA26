@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   loginAsRole: (role: Role, userId?: string) => Promise<void>;
   loginWithCredentials: (email: string, pass: string) => Promise<void>;
+  registerMahasiswa: (payload: any) => Promise<User>;
   logout: () => void;
 }
 
@@ -56,23 +57,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithCredentials = async (email: string, _pass: string) => {
+  const loginWithCredentials = async (email: string, pass: string) => {
     setIsLoading(true);
     try {
-      const users = await userService.getAll();
-      const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-      if (!found) throw new Error('Email tidak terdaftar');
-      const role = found.role[0] || 'mahasiswa';
-      setItem('talenta-role', role);
-      setItem('talenta-user-id', found.id);
-      setCurrentRole(role);
-      setCurrentUser(found);
+      if ((userService as any).login) {
+        const res = await (userService as any).login(email, pass);
+        const user = res.user;
+        const role = user.role[0] || 'mahasiswa';
+        setItem('talenta-role', role);
+        setItem('talenta-user-id', user.id);
+        setCurrentRole(role);
+        setCurrentUser(user);
+      } else {
+        const users = await userService.getAll();
+        const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        if (!found) throw new Error('Email tidak terdaftar');
+        const role = found.role[0] || 'mahasiswa';
+        setItem('talenta-role', role);
+        setItem('talenta-user-id', found.id);
+        setCurrentRole(role);
+        setCurrentUser(found);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerMahasiswa = async (payload: any) => {
+    setIsLoading(true);
+    try {
+      if ((userService as any).register) {
+        const res = await (userService as any).register(payload);
+        const user = res.user;
+        const role = user.role[0] || 'mahasiswa';
+        setItem('talenta-role', role);
+        setItem('talenta-user-id', user.id);
+        setCurrentRole(role);
+        setCurrentUser(user);
+        return user;
+      }
+      throw new Error('Fitur registrasi tidak tersedia pada adapter ini');
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
+    try {
+      if ((userService as any).logout) {
+        (userService as any).logout();
+      }
+    } catch {
+      // Ignore network error on logout
+    }
+    localStorage.removeItem('talenta-token');
     localStorage.removeItem('talenta-user-id');
     localStorage.removeItem('talenta-role');
     setCurrentUser(null);
@@ -88,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         loginAsRole,
         loginWithCredentials,
+        registerMahasiswa,
         logout,
       }}
     >

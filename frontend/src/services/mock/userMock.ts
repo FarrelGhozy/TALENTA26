@@ -71,4 +71,43 @@ export const userMockService: IUserService = {
     setItem(PROFILES_KEY, list);
     return updated;
   },
+
+  async login(email: string, _pass: string) {
+    const list = getUsers();
+    const found = list.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!found) throw new Error('Email tidak terdaftar');
+    return { user: found, token: 'mock-session-token' };
+  },
+
+  async register(data: any) {
+    const list = getUsers();
+    const newUser: User = {
+      id: `u-${Date.now()}`,
+      institutionId: 'inst-01',
+      nama: data.fullName || 'Mahasiswa Baru',
+      email: data.email,
+      prodi: data.studyProgram || 'Teknik Informatika',
+      angkatan: 2026,
+      role: ['mahasiswa'],
+      skill: [],
+      minat: [],
+      ketersediaan: { hari: ['Senin'], jam: 4 },
+      peranBisa: ['Anggota'],
+    };
+    list.push(newUser);
+    setItem(USERS_KEY, list);
+    return { user: newUser, token: 'mock-session-token' };
+  },
+
+  async logout() {
+    // No-op for mock
+  },
+
+  async forgotPassword(_email: string) {
+    return { message: 'Jika email terdaftar, instruksi reset kata sandi telah dikirim.' };
+  },
+
+  async resetPassword(_token: string, _pass: string) {
+    return { message: 'Kata sandi berhasil diatur ulang.' };
+  },
 };

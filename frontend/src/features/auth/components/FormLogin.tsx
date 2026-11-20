@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { LogIn } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { LogIn, UserPlus } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 
@@ -53,17 +54,41 @@ export const FormLogin: React.FC<FormLoginProps> = ({ onSubmit, isLoading }) => 
           placeholder="nama@kampus.ac.id"
         />
 
-        <Input
-          label="Kata Sandi"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="login-password" className="block text-sm font-bold text-slate-700">
+              Kata Sandi
+            </label>
+            <Link
+              to="/lupa-password"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+            >
+              Lupa kata sandi?
+            </Link>
+          </div>
+          <Input
+            id="login-password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         <Button type="submit" className="w-full mt-2" isLoading={isLoading} rightIcon={<LogIn className="w-4 h-4" />}>
           Masuk ke Portal
         </Button>
+
+        <div className="pt-2 text-center text-xs text-slate-500">
+          Belum memiliki akun mahasiswa?{' '}
+          <Link
+            to="/daftar"
+            className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Daftar Sekarang
+          </Link>
+        </div>
       </form>
     </div>
   );

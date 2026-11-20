@@ -1,0 +1,123 @@
+// Prisma Schema untuk TALENTA — Tahap 2: Fondasi Data, User & Auth
+// Menyesuaikan docs/10-model-data-mock.md dan docs/02-pengguna-akses.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  mahasiswa
+  validator
+  super_admin
+}
+
+enum UserStatus {
+  active
+  suspended
+  pending_verification
+}
+
+model Institution {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  auditEvents AuditEvent[]
+
+  @@map("institutions")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  institutionId String
+  email         String     @unique
+  passwordHash  String
+  role          Role       @default(mahasiswa)
+  status        UserStatus @default(active)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  institution         Institution          @relation(fields: [institutionId], references: [id])
+  studentProfile      StudentProfile?
+  sessions            AuthSession[]
+  passwordResetTokens PasswordResetToken[]
+  auditEvents         AuditEvent[]
+
+  @@index([institutionId, role, status])
+  @@map("users")
+}
+
+model StudentProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  nim          String   @unique
+  fullName     String
+  studyProgram String
+  faculty      String
+  phone        String?
+  bio          String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nim])
+  @@map("student_profiles")
+}
+
+model AuthSession {
+  id           String    @id @default(cuid())
+  userId       String
+  sessionToken String    @unique
+  ipAddress    String?
+  userAgent    String?   @db.Text
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt, revokedAt])
+  @@map("auth_sessions")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model AuditEvent {
+  id            String   @id @default(cuid())
+  institutionId String
+  actorId       String?
+  action        String
+  targetType    String
+  targetId      String?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+  actor       User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([institutionId, createdAt])
+  @@index([actorId, action])
+  @@map("audit_events")
+}
