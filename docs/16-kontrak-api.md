@@ -14,14 +14,14 @@ Sukses: HTTP sesuai aksi dan body {data, meta?}. Gagal: {error:{code,message,fie
 | GET /auth/me | login | user, role, status, periode |
 | POST /auth/forgot-password | publik | reset tanpa enumerasi |
 | POST /auth/reset-password | token | ganti password |
-| GET/PATCH /me/profile | mahasiswa | profil sendiri |
+| GET/PATCH /me/profile | mahasiswa | profil sendiri, termasuk `enrollmentYear` opsional dari data pengguna |
 | GET/POST /me/targets | mahasiswa | target/riwayat |
 | GET /me/dashboard | mahasiswa | ringkasan diri |
 
 ## Kompetisi dan pembinaan
 Prefix /admin pada API adalah ruang kelola konten yang dapat diakses validator dan super admin; prefix /system khusus super admin. Nama prefix tidak memberikan izin otomatis.
 
-GET /competitions, GET /competitions/:slug, GET /periods/current hanya menampilkan konten terbit ke publik. Validator: POST/PATCH /admin/competitions, POST /admin/competitions/:id/publish, POST /admin/competitions/:id/archive, serta subresource /schedules, /team-rules, /roadmaps, /consultants, /selections. Perubahan terbit memakai version.
+GET /competitions, GET /competitions/:slug, GET /periods/current hanya menampilkan konten terbit ke publik. Validator: POST/PATCH /admin/competitions, POST /admin/competitions/:id/publish, POST /admin/competitions/:id/archive, serta pengelolaan `/admin/roadmaps`, `/admin/consultants`, dan `/admin/selections`. Hasil seleksi menyimpan tim, kompetisi, status, catatan, waktu konfirmasi, dan validator; status lolos yang sudah dikonfirmasi mengunci tim terkait.
 
 Mahasiswa: GET /matching/candidates, GET /me/invites, POST /teams, POST /teams/:id/invites, POST /invites/:id/respond, POST /teams/:id/leave; GET /roadmaps/:editionId dan PUT /me/roadmap-progress/:taskId. Backend menyimpulkan owner dari sesi.
 
@@ -31,7 +31,7 @@ GET/POST /me/achievements; GET /me/achievements/:id; PATCH /me/achievements/:id/
 Validator: GET /admin/achievements dengan filter; GET /admin/achievements/:id; POST /admin/achievements/:id/decisions dengan action approve/request_changes/reject dan alasan; POST /admin/achievements/:id/corrections dengan alasan/version. Keputusan memiliki idempotency key dan audit.
 
 ## Ranking dan sistem
-GET /ranking?periodId=... memberi nama tampilan, poin, posisi, metadata periode/aturan; GET /ranking/lifetime terpisah. Super admin: /system/users, /system/staff, /system/roles, /system/periods, /system/point-rules, /system/audit, /system/health-summary. Internal: /health/live dan /health/ready tanpa data sensitif.
+GET /ranking?periodId=... memberi nama tampilan, poin, posisi, metadata periode/aturan; tanpa `periodId` dan tanpa periode aktif, respons periode berjalan wajib kosong. GET /ranking/lifetime tetap terpisah dan histori tidak dihapus saat periode berganti. Super admin: /system/users, /system/staff, /system/roles, /system/periods, /system/point-rules, /system/audit, /system/health-summary. Internal: /health/live dan /health/ready tanpa data sensitif.
 
 ## Batas data
 Achievement response tidak berisi URL bukti permanen. Objek mutable mempunyai version/updatedAt. Setiap list punya limit dan cursor/page yang jelas. Otorisasi objek dijalankan sebelum serialisasi. OpenAPI Elysia dicocokkan dengan contoh tiap role dan uji kontrak.

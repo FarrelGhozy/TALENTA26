@@ -1,5 +1,13 @@
 # 22 — Bukti validasi Stage 4
 
+## Validasi ulang perbaikan audit — 21 November 2026
+
+- Validasi bukti sekarang memeriksa signature PDF, JPEG, dan PNG, bukan hanya ekstensi/MIME dari klien. File palsu, ukuran di atas batas, jumlah di luar 1–3, dan tipe tak didukung ditolak.
+- Upload dan revisi mencatat object key yang telah dibuat. Jika upload berikutnya atau transaksi database gagal, seluruh objek yang sudah terunggah dicoba dihapus dengan `Promise.allSettled`, sehingga satu kegagalan delete tidak menghentikan pembersihan lainnya.
+- Pengajuan baru tanpa periode akademik aktif ditolak. Ranking periode berjalan tanpa periode aktif mengembalikan periode `null` dan ranking kosong; histori eksplisit serta lifetime tetap terpisah.
+- Suite Stage 4 berisi 26 uji integrasi dan lulus, termasuk transisi tanpa periode aktif, histori periode lama, signature file, serta anti-IDOR. Unit test tambahan membuktikan file palsu ditolak dan kompensasi mencoba seluruh objek.
+- Pemindaian malware dan sanitasi metadata gambar tetap bergantung pada keputusan O-06/fasilitas operator dan memblokir penggunaan file nyata bila penilaian risiko mewajibkannya.
+
 Tanggal pemeriksaan: 21 November 2026. Cakupan: pengajuan prestasi mandiri mahasiswa, penyimpanan berkas bukti privat di RustFS S3-compatible, validasi berkas (1–3 file, maksimal 8 MB per berkas, PDF/JPG/PNG), perlindungan Anti-IDOR pada pengunduhan bukti, alur verifikasi validator dengan kontrol konkurensi (*optimistic locking*), pengiriman revisi berkas berriwayat, koreksi keputusan dengan pembalikan poin buku besar (*point ledger*), kalkulasi bobot poin berversi (`PointRule`), serta ranking publik periode aktif & *lifetime* dengan jaminan bebas PII (UU PDP / UU 27/2022).
 
 ---

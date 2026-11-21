@@ -408,7 +408,7 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
                 name: 'sertifikat2.pdf',
                 type: 'application/pdf',
                 size: 100,
-                buffer: Buffer.from('test').toString('base64'),
+                buffer: Buffer.from('%PDF-1.4 duplicate test').toString('base64'),
               },
             ],
           }),
@@ -625,7 +625,7 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
                 name: 'best_paper_certificate.pdf',
                 type: 'application/pdf',
                 size: 200,
-                buffer: Buffer.from('cert').toString('base64'),
+                buffer: Buffer.from('%PDF-1.4 conference certificate').toString('base64'),
               },
             ],
           }),
@@ -736,6 +736,24 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
           }),
         })
       );
+    });
+
+    it('Ranking periode berjalan kosong saat tidak ada periode aktif dan tidak mencampur histori', async () => {
+      await prisma.academicPeriod.updateMany({ where: { institutionId }, data: { isActive: false } });
+      try {
+        const res = await app.handle(new Request('http://localhost/api/v1/ranking'));
+        expect(res.status).toBe(200);
+        const json = (await res.json()) as any;
+        expect(json.data.period).toBeNull();
+        expect(json.data.ranking).toEqual([]);
+
+        const historical = await app.handle(new Request(`http://localhost/api/v1/ranking?periodId=${periodId}`));
+        expect(historical.status).toBe(200);
+        const historicalJson = (await historical.json()) as any;
+        expect(historicalJson.data.period.id).toBe(periodId);
+      } finally {
+        await prisma.academicPeriod.update({ where: { id: periodId }, data: { isActive: true } });
+      }
     });
 
     it('GET /api/v1/ranking mengembalikan daftar ranking aktif berdasar akumulasi poin (200 OK)', async () => {

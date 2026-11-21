@@ -115,6 +115,26 @@ export function validateFileItem(file: UploadedFileItem) {
       { file: 'Tipe MIME berkas tidak valid' }
     );
   }
+
+  const signatures: Record<string, (buffer: Buffer) => boolean> = {
+    'application/pdf': (buffer) => buffer.subarray(0, 5).toString('ascii') === '%PDF-',
+    'image/jpeg': (buffer) =>
+      buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff,
+    'image/png': (buffer) =>
+      buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  };
+  if (!signatures[file.type]?.(file.buffer)) {
+    throw new ValidationError(`Isi berkas '${file.name}' tidak sesuai dengan formatnya`, {
+      file: 'Isi berkas tidak sesuai dengan PDF, JPG, atau PNG yang dipilih',
+    });
+  }
+}
+
+export async function cleanupUploadedFiles(
+  storage: { deleteFile(key: string): Promise<void> },
+  keys: string[]
+): Promise<void> {
+  await Promise.allSettled(keys.map((key) => storage.deleteFile(key)));
 }
 
 // 1. Ambil daftar prestasi milik mahasiswa login
@@ -249,6 +269,9 @@ export async function createAchievement(
   const activePeriod = await prisma.academicPeriod.findFirst({
     where: { institutionId, isActive: true },
   });
+  if (!activePeriod) {
+    throw new ConflictError('Belum ada periode akademik aktif untuk pengajuan prestasi');
+  }
 
   // Hubungkan dengan kompetisi jika ada slug / ID
   let competitionId = input.competitionId;
@@ -260,14 +283,16 @@ export async function createAchievement(
   }
 
   const storage = getStorageService();
+  const uploadedKeys: string[] = [];
 
-  // Eksekusi transaksi database
-  const created = await prisma.$transaction(async (tx) => {
+  let created;
+  try {
+    created = await prisma.$transaction(async (tx) => {
     const ach = await tx.achievement.create({
       data: {
         institutionId,
         userId,
-        academicPeriodId: activePeriod?.id,
+        academicPeriodId: activePeriod.id,
         competitionId,
         name: input.name.trim(),
         organizer: input.organizer.trim(),
@@ -287,6 +312,7 @@ export async function createAchievement(
       const ext = path.extname(file.name).toLowerCase();
       const randomKey = `institutions/${institutionId}/achievements/${ach.id}/${crypto.randomUUID()}${ext}`;
       await storage.uploadFile(randomKey, file.buffer, file.type);
+      uploadedKeys.push(randomKey);
 
       await tx.achievementEvidence.create({
         data: {
@@ -301,7 +327,11 @@ export async function createAchievement(
     }
 
     return ach;
-  });
+    });
+  } catch (error) {
+    await cleanupUploadedFiles(storage, uploadedKeys);
+    throw error;
+  }
 
   await recordAuditEvent({
     institutionId,
@@ -360,8 +390,11 @@ export async function submitRevision(
   }
 
   const storage = getStorageService();
+  const uploadedKeys: string[] = [];
 
-  const updated = await prisma.$transaction(async (tx) => {
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (tx) => {
     // 1. Simpan snapshot versi lama ke achievement_revisions
     await tx.achievementRevision.create({
       data: {
@@ -386,6 +419,7 @@ export async function submitRevision(
       const ext = path.extname(file.name).toLowerCase();
       const randomKey = `institutions/${current.institutionId}/achievements/${current.id}/${crypto.randomUUID()}${ext}`;
       await storage.uploadFile(randomKey, file.buffer, file.type);
+      uploadedKeys.push(randomKey);
 
       await tx.achievementEvidence.create({
         data: {
@@ -421,7 +455,11 @@ export async function submitRevision(
     });
 
     return achUpdated;
-  });
+    });
+  } catch (error) {
+    await cleanupUploadedFiles(storage, uploadedKeys);
+    throw error;
+  }
 
   await recordAuditEvent({
     institutionId: current.institutionId,
@@ -719,15 +757,18 @@ export async function getPublicRanking(periodId?: string) {
     activePeriodId = activePeriod?.id;
   }
 
+  if (!activePeriodId) {
+    return { period: null, ranking: [] };
+  }
+
   const periodData = activePeriodId
     ? await prisma.academicPeriod.findUnique({ where: { id: activePeriodId } })
     : null;
 
   // Query mutasi buku besar poin untuk periode ini
-  const ledgerWhere: Prisma.PointLedgerWhereInput = {};
-  if (activePeriodId) {
-    ledgerWhere.academicPeriodId = activePeriodId;
-  }
+  const ledgerWhere: Prisma.PointLedgerWhereInput = {
+    academicPeriodId: activePeriodId,
+  };
 
   const ledgerEntries = await prisma.pointLedger.findMany({
     where: ledgerWhere,
