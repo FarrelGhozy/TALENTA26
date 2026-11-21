@@ -399,7 +399,10 @@ export async function getAdminDashboardStats(institutionId: string) {
 
 export function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) return '""';
-  const str = String(val);
+  let str = String(val);
+  if (/^[\s]*[=+\-@]/.test(str)) {
+    str = `'${str}`;
+  }
   return `"${str.replace(/"/g, '""')}"`;
 }
 

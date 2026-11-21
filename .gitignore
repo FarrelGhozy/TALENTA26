@@ -63,6 +63,7 @@ desktop.ini
 .storage/
 storage/
 backups/
+storage-backups/
 *.sql.gz
 *.sql.gz.sha256
 

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "test": "bun test",
+    "test": "bun test tests/unit && bun tests/run-integration.ts",
+    "test:integration": "bun tests/run-integration.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

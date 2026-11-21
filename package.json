@@ -12,7 +12,8 @@
     "typecheck:frontend": "tsc -p frontend --noEmit",
     "typecheck:backend": "tsc -p backend --noEmit",
     "typecheck": "tsc -p frontend --noEmit && tsc -p backend --noEmit",
-    "test": "bun test backend/tests",
+    "test": "bun test backend/tests/unit && bun backend/tests/run-integration.ts",
+    "test:integration": "bun backend/tests/run-integration.ts",
     "lint": "oxlint frontend/src backend/src"
   },
   "dependencies": {

@@ -25,5 +25,9 @@ Jika schema kompatibel, set IMAGE_TAG lama, pull, up, lalu smoke test. Jika sche
 ## Backup dan restore
 Backup MySQL secara konsisten, objek RustFS dan konfigurasi penting; enkripsi dan simpan salinan di luar host bila tersedia. Uji restore berkala di lingkungan terisolasi, cek jumlah objek/record dan kemampuan membuka bukti. Jangan campur staging/produksi. Retensi dan RTO/RPO final ada di docs/14.
 
+Cadangan objek dapat dibuat dengan `bun infra/scripts/backup-storage.ts backup --output storage-backups/<waktu>`. Manifest menyimpan key, tipe konten, ukuran, dan checksum SHA-256; isi objek disimpan dengan nama hasil hash agar key tidak dapat melakukan path traversal. Simpan direktori hasil di media terenkripsi di luar host aplikasi.
+
+Uji pemulihan wajib memakai bucket terisolasi yang sudah dibuat operator, misalnya `bun infra/scripts/backup-storage.ts restore --input storage-backups/<waktu> --target-bucket talenta-restore-test`. Skrip menolak bucket sumber sebagai target dan memverifikasi checksum sebelum mengunggah. Setelah restore, operator membandingkan jumlah objek, membuka sampel bukti melalui API berotorisasi, lalu menghapus bucket uji sesuai retensi yang disahkan. Jangan menjalankan prosedur ini pada RustFS produksi tanpa jendela operasi dan persetujuan operator.
+
 ## Insiden dan pindah server
 Jika API gagal, cek health, log requestId, DB/storage dan ruang disk. Jika diduga bocor, batasi akses, simpan bukti, rotasi kunci, pulihkan, serta ikuti prosedur pemberitahuan yang disahkan. Jangan menempelkan .env/data pribadi di issue publik. Migrasi ke server kampus memakai backup/restore teruji; SSO adalah proyek terpisah dengan pemadanan identitas.

@@ -2,6 +2,16 @@
 
 **Catatan audit 21 November 2026:** Dokumen ini menyimpan laporan historis. Klaim pemenuhan seluruh gate dan WCAG AA di bawah tidak lagi dapat dianggap terbukti; lihat [audit](24-audit-stage-d0-5.md) dan [TODO](../TODO.md). Gate 5 ditinjau ulang dan belum terbukti terpenuhi.
 
+## Validasi ulang perbaikan audit — 21 November 2026
+
+- Ekspor CSV menetralisasi teks yang, setelah whitespace awal, dimulai `=`, `+`, `-`, atau `@`. Unit test lulus. CSV sintetis dibuka dan dikonversi oleh LibreOffice Calc; hasil XLSX menyimpan seluruh payload sebagai shared string dan `sheet1.xml` tidak memiliki elemen formula (`<f>`).
+- Prosedur backup objek ditambahkan pada `infra/scripts/backup-storage.ts`. Manifest versi 1 menyimpan key, tipe konten, ukuran, dan SHA-256; nama file arsip memakai hash key. Restore memverifikasi checksum dan menolak bucket sumber. Dua uji end-to-end dengan adapter storage terisolasi lulus, termasuk key path traversal dan arsip rusak.
+- Uji UI manual melalui browser demo memeriksa landing, ranking, dashboard validator, dan pengelolaan konten pada 390×844, 768×1024, dan 1440×900. Tidak ada overflow horizontal atau alert; heading utama terlihat. Navigasi tab validator dengan ArrowRight memindahkan fokus, status terpilih, dan panel terkait. Pemeriksaan visual penuh halaman validator dilakukan pada mobile dan desktop; log browser tidak memuat error/warning.
+- Pemeriksaan semantik memakai pohon aksesibilitas browser, bukan sesi pembaca layar manusia. Karena itu dokumen ini tidak mengklaim sertifikasi WCAG AA atau kelulusan pembaca layar menyeluruh.
+- Gate otomatis terbaru: 13 unit dan 92 integrasi lulus secara serial pada `talenta_test`; typecheck, lint, build production, dan build demo lulus. Preview localhost merespons HTML landing/ranking sekitar 1 ms; angka loopback ini hanya sanity check dan bukan ambang kapasitas produksi.
+- Uji restore terhadap RustFS nyata belum dijalankan karena aturan repo melarang perubahan layanan home server tanpa tugas operasi terpisah. Runbook menyediakan perintah restore ke bucket uji terisolasi; bukti nyata wajib mencatat jumlah objek dan sampel bukti yang dapat dibuka sebelum Gate 5 ditutup.
+- Gate 5 tetap **belum ditutup** sampai uji pembaca layar, ambang performa/kapasitas O-06, retensi/RTO/RPO O-03, restore RustFS nyata, dan pengesahan publikasi ranking O-01/O-02 selesai. Stage 6/deploy tidak dijalankan.
+
 Tanggal pemeriksaan: 21 November 2026. Cakupan: Operasi super admin (pengelolaan staf dan akun pengguna, siklus dan transisi atomik periode akademik, pengelolaan aturan bobot poin terversi, jejak audit operasional terstruktur, telemetri kesehatan sistem tanpa kebocoran rahasia), dashboard terpadu lintas peran (mahasiswa, validator, super admin) dengan langkah tindak lanjut aksi nyata (*actionable steps*), banner peringatan revisi dokumen prestasi, ekspor laporan rekapitulasi prestasi resmi berformat CSV UTF-8 (BOM Excel-compatible), pengujian kontrol akses ketat (*strict RBAC barrier*), skrip cadangan dan uji pemulihan (*disaster recovery backup/restore*) basis data MySQL, serta pemenuhan seluruh kriteria Definition of Done (DoD) dan Gate 5 sesuai [docs/18-rencana-pengujian.md](file:///home/fazy/projek/STACK2026/docs/18-rencana-pengujian.md).
 
 ---
