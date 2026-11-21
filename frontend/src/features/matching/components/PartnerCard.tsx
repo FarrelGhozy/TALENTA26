@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Send, X, RotateCcw, Clock } from 'lucide-react';
-import { MatchCandidate } from '../../../types';
+import { Invite, MatchCandidate } from '../../../types';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -9,7 +9,7 @@ import { assetUrl } from '../../../lib/asset';
 
 interface PartnerCardProps {
   candidate: MatchCandidate;
-  inviteStatus?: 'diajukan' | 'diterima' | 'ditolak' | 'kedaluwarsa';
+  inviteStatus?: Invite['status'];
   onInvite: (userId: string) => Promise<void>;
   onCancel?: (userId: string) => Promise<void>;
 }

@@ -174,7 +174,7 @@ function mapBackendTeamToFrontend(raw: any): Team | null {
       status: m.status === 'active' || m.status === 'diterima' ? 'diterima' : 'diajukan',
     })),
     isFormed: raw.status === 'terbentuk' || raw.status === 'terkunci_seleksi',
-    status: raw.status === 'terkunci_seleksi' ? 'terbentuk' : raw.status,
+    status: raw.status,
   };
 }
 
@@ -222,24 +222,7 @@ export const userApiService: IUserService & {
       const res = await apiFetch<any>(`/users/${id}`);
       return mapBackendUserToFrontend(res);
     } catch {
-      try {
-        const me = await apiFetch<any>('/auth/me');
-        if (me && me.id === id) {
-          return mapBackendUserToFrontend(me);
-        }
-      } catch {}
-      return {
-        id,
-        institutionId: 'unida-gontor',
-        nama: 'Pengguna',
-        email: '',
-        prodi: 'Teknik Informatika',
-        role: ['mahasiswa'],
-        skill: [],
-        minat: [],
-        ketersediaan: { hari: ['Senin'], jam: 4 },
-        peranBisa: ['Anggota'],
-      };
+      return null;
     }
   },
   getCurrentUser: async () => {
@@ -333,12 +316,12 @@ export const userApiService: IUserService & {
 };
 
 export const matchingApiService: IMatchingService = {
-  getMatchCandidates: async (userId: string): Promise<MatchCandidate[]> => {
-    const res = await apiFetch<any[]>(`/matching/candidates?userId=${userId}`);
+  getMatchCandidates: async (): Promise<MatchCandidate[]> => {
+    const res = await apiFetch<any[]>('/matching/candidates');
     return Array.isArray(res) ? res.map(mapBackendCandidateToFrontend) : [];
   },
-  getInvites: async (userId: string): Promise<Invite[]> => {
-    const res = await apiFetch<any>(`/matching/invites?userId=${userId}`);
+  getInvites: async (): Promise<Invite[]> => {
+    const res = await apiFetch<any>('/me/invites');
     if (Array.isArray(res)) {
       return res.map(mapBackendInviteToFrontend);
     }
@@ -346,36 +329,40 @@ export const matchingApiService: IMatchingService = {
     const outgoing = Array.isArray(res?.outgoing) ? res.outgoing : [];
     return [...incoming, ...outgoing].map(mapBackendInviteToFrontend);
   },
-  sendInvite: async (dari: string, ke: string, teamId: string): Promise<Invite> => {
-    const res = await apiFetch<any>('/matching/invites', {
+  sendInvite: async (_dari: string, ke: string, teamId: string): Promise<Invite> => {
+    const res = await apiFetch<any>(`/teams/${teamId}/invites`, {
       method: 'POST',
-      body: JSON.stringify({ dari, ke, teamId }),
+      body: JSON.stringify({ receiverId: ke }),
     });
     return mapBackendInviteToFrontend(res);
   },
   respondInvite: async (inviteId: string, status: 'diterima' | 'ditolak'): Promise<void> => {
-    await apiFetch(`/matching/invites/${inviteId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
+    await apiFetch(`/invites/${inviteId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action: status }),
+    });
+  },
+  cancelInvite: async (inviteId: string): Promise<void> => {
+    await apiFetch(`/invites/${inviteId}/cancel`, {
+      method: 'POST',
     });
   },
 };
 
 export const teamApiService: ITeamService = {
-  getTeamByUserId: async (userId: string): Promise<Team | null> => {
-    const raw = await apiFetch<any>(`/teams/my?userId=${userId}`);
+  getTeamByUserId: async (): Promise<Team | null> => {
+    const raw = await apiFetch<any>('/teams/my');
     return mapBackendTeamToFrontend(raw);
   },
-  leaveTeam: async (userId: string, teamId: string): Promise<void> => {
+  leaveTeam: async (_userId: string, teamId: string): Promise<void> => {
     await apiFetch(`/teams/${teamId}/leave`, {
       method: 'POST',
-      body: JSON.stringify({ userId }),
     });
   },
-  createTeam: async (competitionSlug: string, creatorId: string, teamName: string): Promise<Team> => {
+  createTeam: async (competitionSlug: string, _creatorId: string, teamName: string): Promise<Team> => {
     const raw = await apiFetch<any>('/teams', {
       method: 'POST',
-      body: JSON.stringify({ competitionSlug, creatorId, teamName }),
+      body: JSON.stringify({ competitionSlug, teamName }),
     });
     return mapBackendTeamToFrontend(raw)!;
   },
@@ -391,9 +378,9 @@ export const roadmapApiService: IRoadmapService = {
       fase: raw.fase || [],
     };
   },
-  getChecklist: (userId, slug) => apiFetch(`/roadmaps/${slug}/checklist?userId=${userId}`),
-  toggleChecklist: (userId, slug, taskId) =>
-    apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ userId, taskId }) }),
+  getChecklist: (_userId, slug) => apiFetch(`/roadmaps/${slug}/checklist`),
+  toggleChecklist: (_userId, slug, taskId) =>
+    apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ taskId }) }),
 };
 
 function mapBackendAchievementToFrontend(raw: any): Achievement {
@@ -434,22 +421,20 @@ export const achievementApiService: IAchievementService = {
     const endpoint = userId
       ? `/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`
       : `/admin/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`;
-    try {
-      const res = await apiFetch<any[]>(endpoint);
-      return Array.isArray(res) ? res.map(mapBackendAchievementToFrontend) : [];
-    } catch {
-      const fallback = await apiFetch<any[]>(`/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`);
-      return Array.isArray(fallback) ? fallback.map(mapBackendAchievementToFrontend) : [];
-    }
+    const res = await apiFetch<any[]>(endpoint);
+    return Array.isArray(res) ? res.map(mapBackendAchievementToFrontend) : [];
   },
 
   getById: async (id: string): Promise<Achievement | null> => {
     try {
       const res = await apiFetch<any>(`/admin/achievements/${id}`);
       return mapBackendAchievementToFrontend(res);
-    } catch {
-      const res = await apiFetch<any>(`/me/achievements/${id}`);
-      return mapBackendAchievementToFrontend(res);
+    } catch (err: any) {
+      if (err?.status === 403 || err?.status === 401) {
+        const res = await apiFetch<any>(`/me/achievements/${id}`);
+        return mapBackendAchievementToFrontend(res);
+      }
+      throw err;
     }
   },
 
@@ -506,6 +491,13 @@ export const achievementApiService: IAchievementService = {
     const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  cancel: async (id: string): Promise<Achievement> => {
+    const res = await apiFetch<any>(`/me/achievements/${id}/cancel`, {
+      method: 'POST',
     });
     return mapBackendAchievementToFrontend(res);
   },
@@ -579,7 +571,7 @@ export const statsApiService: IStatsService = {
 
     return {
       totalMahasiswa: users.totalStudents || 0,
-      pesertaPerKompetisi: raw?.distribution?.byCategory || {},
+      pesertaPerKompetisi: raw?.distribution?.participantsByCompetition || {},
       totalTimTerbentuk: teams.terbentuk || 0,
       pengajuanPrestasi: {
         total: totalPengajuan,
@@ -588,7 +580,7 @@ export const statsApiService: IStatsService = {
         disetujui: queue.approvedCount || 0,
         ditolak: queue.rejectedCount || 0,
       },
-      delegasiTerkonfirmasi: teams.terbentuk || 0,
+      delegasiTerkonfirmasi: raw?.selections?.confirmedPassed ?? 0,
     };
   },
 };

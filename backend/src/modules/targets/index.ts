@@ -31,34 +31,4 @@ export const targetRoutes = new Elysia({ prefix: '/api/v1' })
         slug: t.String(),
       }),
     }
-  )
-  .get('/users/:userId/target', async ({ auth, params }) => {
-    assertAuthenticated(auth);
-    assertRole(auth, ['mahasiswa']);
-
-    const target = await targetService.getMyActiveTarget(params.userId);
-    return { data: target };
-  })
-  .post(
-    '/users/:userId/target',
-    async ({ auth, params, body }) => {
-      assertAuthenticated(auth);
-      assertRole(auth, ['mahasiswa']);
-
-      const target = await targetService.setTargetCompetition(
-        params.userId,
-        body.slug,
-        auth.user.institutionId
-      );
-
-      return { data: target };
-    },
-    {
-      params: t.Object({
-        userId: t.String(),
-      }),
-      body: t.Object({
-        slug: t.String(),
-      }),
-    }
   );

@@ -36,6 +36,7 @@ export interface IMatchingService {
   getInvites(userId: string): Promise<Invite[]>;
   sendInvite(dari: string, ke: string, teamId: string): Promise<Invite>;
   respondInvite(inviteId: string, status: 'diterima' | 'ditolak'): Promise<void>;
+  cancelInvite?(inviteId: string): Promise<void>;
 }
 
 export interface ITeamService {
@@ -55,6 +56,7 @@ export interface IAchievementService {
   getById(id: string): Promise<Achievement | null>;
   create(data: any, files?: File[]): Promise<Achievement>;
   submitRevision?(id: string, data: any, files?: File[]): Promise<Achievement>;
+  cancel?(id: string): Promise<Achievement>;
   verify(id: string, statusOrAction: any, catatan?: string, version?: number): Promise<Achievement>;
   correct?(id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement>;
   getEvidenceDownloadUrl?(evidenceId: string): string;

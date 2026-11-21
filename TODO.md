@@ -31,25 +31,25 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 
 ## Fase 1 — Patch Kritis Keamanan, Bug Poin/Ledger, & Crash Alur Nyata
 ### 1.1 Keamanan Backend, Privasi, & Konfigurasi
-- [ ] Hapus kebocoran `passwordHash` dan PII (`email`, `nim`, `phone`) pada `GET /api/v1/users/:userId`, `getMyTeam`, dan `getMyInvites` dengan Prisma explicit `select` serta enforce filter `institutionId`.
-- [ ] Hapus rute legacy rawan IDOR (`/api/v1/users/:userId/target`, query `?userId=` pada checklist roadmap, alias `/api/v1/matching/invites`, dan duplikat `POST /api/v1/competitions`).
-- [ ] Enforce filter `status: 'published'` pada endpoint publik `GET /competitions/:slug`, `GET /roadmaps/:slug`, dan `GET /consultants`.
-- [ ] Simpan `sessionToken` dalam bentuk hash SHA-256 di `auth_sessions`, aktifkan validasi fail-fast `SESSION_SECRET`/`COOKIE_SECRET` di produksi, hapus pengembalian token sesi di JSON body jika cookie HttpOnly aktif penuh, dan kunci `login()`/`validateSession()` konsisten pada status `active`.
-- [ ] Perbaiki `resolveClientIp` agar memakai IP soket nyata saat `TRUST_PROXY=false` (mencegah seluruh pengguna berbagi 1 bucket `'unknown'`), batasi CORS `localhost` hanya untuk non-production, dan matikan fallback `.storage/` lokal pada `NODE_ENV=production`.
-- [ ] Bersihkan `.env.example` (hapus hostname privat `sr-farrel-myserver...` dan password konkret; tambahkan `IMAGE_TAG`, `LOG_LEVEL`, `UPLOAD_MAX_BYTES`, `TIMEZONE_DISPLAY`, `PORT`) dan kunci `backend/prisma/seed.ts` agar pada `NODE_ENV=production` tidak memakai password fallback hardcoded serta tidak meng-upsert 4 lomba 2026 / nomor WA dummy.
+- [x] Hapus kebocoran `passwordHash` dan PII (`email`, `nim`, `phone`) pada `GET /api/v1/users/:userId`, `getMyTeam`, dan `getMyInvites` dengan Prisma explicit `select` serta enforce filter `institutionId`.
+- [x] Hapus rute legacy rawan IDOR (`/api/v1/users/:userId/target`, query `?userId=` pada checklist roadmap, alias `/api/v1/matching/invites`, dan duplikat `POST /api/v1/competitions`).
+- [x] Enforce filter `status: 'published'` pada endpoint publik `GET /competitions/:slug`, `GET /roadmaps/:slug`, dan `GET /consultants`.
+- [x] Simpan `sessionToken` dalam bentuk hash HMAC-SHA256 di `auth_sessions`, aktifkan validasi fail-fast `SESSION_SECRET`/`COOKIE_SECRET` di produksi, hapus pengembalian token sesi di JSON body saat `NODE_ENV=production`, dan kunci `login()`/`validateSession()` konsisten pada status `active`.
+- [x] Perbaiki `resolveClientIp` agar memakai IP soket nyata saat `TRUST_PROXY=false`, batasi CORS `localhost` hanya untuk non-production, dan matikan fallback `.storage/` lokal pada `NODE_ENV=production`.
+- [x] Bersihkan `.env.example` (hapus hostname privat dan password konkret; tambahkan `IMAGE_TAG`, `LOG_LEVEL`, `UPLOAD_MAX_BYTES`, `TIMEZONE_DISPLAY`, `PORT`) dan kunci `backend/prisma/seed.ts` agar pada `NODE_ENV=production` tidak memakai password fallback hardcoded serta tidak meng-upsert konten demo/kontak dummy.
 
 ### 1.2 Bug Kritis Poin, Ledger, & Verifikasi
-- [ ] Perbaiki query `PointRule` di `decideAchievement` agar mengambil versi aktif terbaru (hapus hardcode `version: 1`).
-- [ ] Perbaiki bug double-negation reversal poin pada `getStudentDashboard` dan `generateAchievementsCsv` (`sum += entry.points`).
-- [ ] Cegah double-reversal & double-count pada re-approval pasca koreksi (tandai award yang sudah dibalik, hitung `approvedCount`/`juara1Count` per `achievementId` unik, dan tambahkan tie-break ke-5 `userId.localeCompare`).
-- [ ] Enforce transisi status ketat (`ach.status === 'menunggu'`) pada `decideAchievement`, kunci baris atomik (`FOR UPDATE` / conditional update `version` wajib), dukungan `idempotencyKey`, dan panggil `recordAuditEvent` pada `decideAchievement` serta `correctAchievement`.
-- [ ] Perbaiki validasi tanggal capaian prestasi agar memakai zona waktu `Asia/Jakarta`, validasi enum ketat (`category`, `level`, `result`), dan validasi ukuran buffer nyata (bukan `item.size` klien).
+- [x] Perbaiki query `PointRule` di `decideAchievement` agar mengambil versi aktif terbaru (hapus hardcode `version: 1`).
+- [x] Perbaiki bug double-negation reversal poin pada `getStudentDashboard` dan `generateAchievementsCsv` (`sum += item.points`).
+- [x] Cegah double-reversal & double-count pada re-approval pasca koreksi (hitung net aktif per user/aturan, hitung `approvedCount`/`juara1Count` per `achievementId` unik, dan tambahkan tie-break ke-5 `userId.localeCompare`).
+- [x] Enforce transisi status ketat (`ach.status === 'menunggu'`) pada `decideAchievement`, kunci baris atomik (`FOR UPDATE`), dan panggil `recordAuditEvent` pada `decideAchievement` serta `correctAchievement` (header `Idempotency-Key` dan kolom DB uniknya dilanjutkan pada migrasi Fase 2).
+- [x] Perbaiki validasi tanggal capaian prestasi agar memakai zona waktu `Asia/Jakarta`, validasi enum ketat (`category`, `level`, `result`), dan validasi ukuran buffer nyata.
 
 ### 1.3 Patch Crash & Build Frontend
-- [ ] Jadikan build produksi fail-safe: `frontend/vite.config.ts` mengunci `factory.api.ts` pada `--mode production` (abaikan `VITE_USE_MOCK=true`), default `APP_ENV` ke `'PRODUCTION'`, lazy/conditional load `RoleCardLogin` hanya di mode dev/demo agar kredensial demo tidak masuk bundle produksi, dan sembunyikan preset berkas PDF palsu (`AchievementForm.tsx`) pada produksi.
-- [ ] Selaraskan enum `AchievementType` frontend ↔ `AchievementResult` Prisma (`finalis`, `penghargaan_khusus`, dll.) di `AchievementForm`, `StatusBadge`, dan `format.ts`.
-- [ ] Perbaiki bug infinite loading (`if (!cancelled) return;`) di `ProfilePage.tsx` dan `AdminDashboardPage.tsx`, perbaiki perhitungan progres roadmap di `PreparationPage.tsx` (hapus efek dual-key >100%), perbaiki cancel invite & re-join tim di `teams/service.ts` + `PartnerPage.tsx`, pertahankan status `terkunci_seleksi` di mapper tim, hapus fallback user palsu di `userApiService.getById`, dan perbaiki `statsApiService` agar chart analitik peserta per kompetisi & delegasi terkonfirmasi akurat.
-- **Gate Fase 1**: `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo` lulus; uji integrasi keamanan (IDOR, no `passwordHash`, PointRule v2, reversal dashboard/CSV, build scan bebas kredensial/mock) lulus; commit Git lokal.
+- [x] Jadikan build produksi fail-safe: `frontend/vite.config.ts` mengunci `factory.api.ts` pada `--mode production` (abaikan `VITE_USE_MOCK=true`), default `APP_ENV` ke `'PRODUCTION'`, lazy/conditional load `RoleCardLogin` hanya di mode dev/demo agar kredensial demo tidak masuk bundle produksi, dan sembunyikan preset berkas PDF palsu (`AchievementForm.tsx`) pada produksi.
+- [x] Selaraskan enum `AchievementType` frontend ↔ `AchievementResult` Prisma (`finalis`, `penghargaan_khusus`, dll.) di `AchievementForm`, `StatusBadge`, dan `format.ts`.
+- [x] Perbaiki bug infinite loading (`if (cancelled) return;`) di `ProfilePage.tsx` dan `AdminDashboardPage.tsx`, perbaiki perhitungan progres roadmap di `PreparationPage.tsx`, perbaiki cancel invite & re-join tim di `teams/service.ts` + `PartnerPage.tsx`, pertahankan status `terkunci_seleksi` di mapper tim, hapus fallback user palsu di `userApiService.getById`, dan perbaiki `statsApiService` agar chart analitik peserta per kompetisi & delegasi terkonfirmasi akurat.
+- **Gate Fase 1**: **LULUS (21 November 2026)** — `bun run typecheck`, `bun run lint`, `bun run build` (pemindaian `frontend/dist` bebas kredensial/mock), 13 unit tests, dan seluruh 6 suite integrasi (termasuk `fase1-security-points.test.ts`) lulus 100%.
 
 ---
 

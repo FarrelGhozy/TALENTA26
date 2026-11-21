@@ -94,7 +94,11 @@ export const PartnerPage: React.FC = () => {
     const inv = invites.find((i) => i.dari === currentUser?.id && i.ke === targetUserId && i.status === 'diajukan');
     if (!inv) return;
     try {
-      await matchingService.respondInvite(inv.id, 'ditolak');
+      if (matchingService.cancelInvite) {
+        await matchingService.cancelInvite(inv.id);
+      } else {
+        await matchingService.respondInvite(inv.id, 'ditolak');
+      }
       notify('Undangan dibatalkan. Kamu bisa mengundang ulang nanti.', 'info');
       await loadData();
     } catch {

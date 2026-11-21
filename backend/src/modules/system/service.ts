@@ -2,8 +2,8 @@ import { prisma } from '../../lib/prisma';
 import { recordAuditEvent } from '../../lib/audit';
 import { hashPassword } from '../../lib/password';
 import { revokeAllUserSessions } from '../../lib/session';
-import { getStorageService } from '../../lib/storage';
-import { ConflictError, NotFoundError, ValidationError } from '../../app/middleware/error';
+import { getStorageDriverName, getStorageService } from '../../lib/storage';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../app/middleware/error';
 import type { Role, UserStatus, AchievementLevel, AchievementResult, Prisma } from '@prisma/client';
 
 export interface UserFilterParams {
@@ -95,6 +95,10 @@ export async function updateUserStatus(
 
   if (!target || target.institutionId !== institutionId) {
     throw new NotFoundError('Pengguna tidak ditemukan');
+  }
+
+  if (userId === actorId && status === 'suspended') {
+    throw new ForbiddenError('Anda tidak dapat menangguhkan akun Anda sendiri');
   }
 
   const updated = await prisma.user.update({
@@ -219,6 +223,18 @@ export async function updateStaffRole(
     throw new NotFoundError('Pengguna tidak ditemukan');
   }
 
+  if (target.role === 'super_admin' && role !== 'super_admin') {
+    if (userId === actorId) {
+      throw new ForbiddenError('Anda tidak dapat menurunkan peran super admin milik Anda sendiri');
+    }
+    const activeSuperAdminCount = await prisma.user.count({
+      where: { institutionId, role: 'super_admin', status: 'active' },
+    });
+    if (activeSuperAdminCount <= 1) {
+      throw new ConflictError('Harus ada minimal satu super admin aktif di institusi');
+    }
+  }
+
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { role },
@@ -232,6 +248,10 @@ export async function updateStaffRole(
       updatedAt: true,
     },
   });
+
+  if (target.role !== role) {
+    await revokeAllUserSessions(userId);
+  }
 
   await recordAuditEvent({
     institutionId,
@@ -547,7 +567,7 @@ export async function getHealthSummary(institutionId: string) {
     },
     storage: {
       status: storageStatus,
-      type: 'RustFS (S3-Compatible)',
+      type: getStorageDriverName(),
     },
     system: {
       uptimeSeconds,

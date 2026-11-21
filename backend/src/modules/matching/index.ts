@@ -9,6 +9,9 @@ export const matchingRoutes = new Elysia({ prefix: '/api/v1/matching' })
     assertAuthenticated(auth);
     assertRole(auth, ['mahasiswa']);
 
-    const candidates = await matchingService.getMatchCandidates(auth.user.id);
+    const candidates = await matchingService.getMatchCandidates(
+      auth.user.id,
+      auth.user.institutionId
+    );
     return { data: candidates };
   });

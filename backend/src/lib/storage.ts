@@ -147,27 +147,51 @@ export class LocalStorageService implements IStorageService {
 }
 
 let storageInstance: IStorageService | null = null;
+let storageDriverLabel: string | null = null;
+
+export function getStorageDriverName(): string {
+  if (storageDriverLabel) return storageDriverLabel;
+  const conf = loadConfig();
+  const hasS3 =
+    Boolean(conf.s3.endpoint) &&
+    Boolean(conf.s3.accessKey) &&
+    Boolean(conf.s3.secretKey) &&
+    Boolean(conf.s3.bucket) &&
+    !conf.s3.accessKey!.startsWith('change-with-') &&
+    !conf.s3.secretKey!.startsWith('change-with-');
+  return hasS3 ? 'RustFS (S3-Compatible)' : 'Local Filesystem (.storage)';
+}
 
 export function getStorageService(): IStorageService {
   if (storageInstance) return storageInstance;
 
   const conf = loadConfig();
-  if (
-    conf.s3.endpoint &&
-    conf.s3.accessKey &&
-    conf.s3.secretKey &&
-    conf.s3.bucket
-  ) {
+  const hasValidS3 =
+    Boolean(conf.s3.endpoint) &&
+    Boolean(conf.s3.accessKey) &&
+    Boolean(conf.s3.secretKey) &&
+    Boolean(conf.s3.bucket) &&
+    !conf.s3.accessKey!.startsWith('change-with-') &&
+    !conf.s3.secretKey!.startsWith('change-with-');
+
+  if (hasValidS3) {
     storageInstance = new S3StorageService(
-      conf.s3.endpoint,
+      conf.s3.endpoint!,
       conf.s3.region,
       conf.s3.bucket,
-      conf.s3.accessKey,
-      conf.s3.secretKey,
+      conf.s3.accessKey!,
+      conf.s3.secretKey!,
       conf.s3.forcePathStyle
     );
+    storageDriverLabel = 'RustFS (S3-Compatible)';
   } else {
+    if (conf.nodeEnv === 'production') {
+      throw new Error(
+        'Konfigurasi S3/RustFS wajib lengkap di lingkungan produksi. Fallback storage lokal dinonaktifkan.'
+      );
+    }
     storageInstance = new LocalStorageService();
+    storageDriverLabel = 'Local Filesystem (.storage)';
   }
 
   return storageInstance;

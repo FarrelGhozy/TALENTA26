@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UploadCloud, AlertCircle, Send, FileCheck, FileText, X } from 'lucide-react';
 import { AchievementCategory, AchievementLevel, AchievementType, Achievement } from '../../../types';
+import { APP_ENV, USE_MOCK } from '../../../config/env';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
@@ -16,20 +17,30 @@ const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB
 const PRESET_FILES = [
   { label: 'Sertifikat Juara 1 PKM (PDF)', name: 'sertifikat-juara-1-pkm.pdf', size: 245000 },
   { label: 'SK Pemenang Rektorat (PDF)', name: 'sk-rektorat-pemenang-belmawa.pdf', size: 310000 },
-  { label: 'Piagam Best Delegate (PNG)', name: 'piagam-best-delegate-mun.png', size: 180000 },
+  { label: 'Piagam Best Delegate (PDF)', name: 'piagam-best-delegate-mun.pdf', size: 180000 },
 ];
+
+function getTodayJakarta(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
 export const AchievementForm: React.FC<AchievementFormProps> = ({
   userId,
   onSubmit,
   isLoading,
 }) => {
+  const allowDemoPresets = APP_ENV === 'DEPLOYMENT' || USE_MOCK;
   const [nama, setNama] = useState('');
   const [penyelenggara, setPenyelenggara] = useState('');
   const [kategori, setKategori] = useState<AchievementCategory>('kompetisi');
   const [tingkat, setTingkat] = useState<AchievementLevel>('nasional');
   const [jenisCapaian, setJenisCapaian] = useState<AchievementType>('juara_1');
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
+  const [tanggal, setTanggal] = useState(getTodayJakarta());
   const [selectedRealFiles, setSelectedRealFiles] = useState<File[]>([]);
   const [presetFileName, setPresetFileName] = useState('');
   const [presetFileSize, setPresetFileSize] = useState(150000);
@@ -70,17 +81,17 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
       setFormError('Penyelenggara kegiatan minimal 2 karakter.');
       return;
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayJakarta();
     if (!tanggal || tanggal > today) {
       setFormError('Tanggal kegiatan tidak boleh berada di masa depan.');
       return;
     }
 
     const hasRealFiles = selectedRealFiles.length > 0;
-    const hasPreset = Boolean(presetFileName.trim());
+    const hasPreset = allowDemoPresets && Boolean(presetFileName.trim());
 
     if (!hasRealFiles && !hasPreset) {
-      setFormError('Wajib mengunggah minimal 1 berkas bukti (pilih berkas dari perangkat atau gunakan contoh cepat).');
+      setFormError('Wajib mengunggah minimal 1 berkas bukti (PDF, JPG, atau PNG).');
       return;
     }
 
@@ -195,10 +206,9 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
               { value: 'juara_1', label: 'Juara 1 / Medali Emas' },
               { value: 'juara_2', label: 'Juara 2 / Medali Perak' },
               { value: 'juara_3', label: 'Juara 3 / Medali Perunggu' },
-              { value: 'best_delegate', label: 'Best Delegate / Terbaik' },
-              { value: 'nominasi', label: 'Finalis / Nominasi' },
-              { value: 'penghargaan', label: 'Penghargaan Khusus / Harapan' },
-              { value: 'partisipasi', label: 'Peserta Terpilih' },
+              { value: 'finalis', label: 'Finalis / Nominasi' },
+              { value: 'penghargaan_khusus', label: 'Penghargaan Khusus / Best Delegate' },
+              { value: 'partisipasi', label: 'Partisipasi / Peserta Terpilih' },
             ]}
           />
 
@@ -207,7 +217,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
             label="Tanggal Perolehan Capaian"
             type="date"
             value={tanggal}
-            max={new Date().toISOString().split('T')[0]}
+            max={getTodayJakarta()}
             onChange={(e) => setTanggal(e.target.value)}
             required
           />
@@ -252,29 +262,31 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
             />
           </div>
 
-          {/* Quick Preset Buttons for Demo */}
-          <div className="space-y-1.5 pt-2 border-t border-blue-100/80">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Atau Gunakan Berkas Contoh Demo Cepat:
+          {/* Quick Preset Buttons for Demo (dihilangkan di mode PRODUCTION) */}
+          {allowDemoPresets && (
+            <div className="space-y-1.5 pt-2 border-t border-blue-100/80">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                Atau Gunakan Berkas Contoh Demo Cepat:
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {PRESET_FILES.map((f) => (
+                  <button
+                    key={f.name}
+                    type="button"
+                    onClick={() => handleSelectPresetFile(f)}
+                    className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      presetFileName === f.name
+                        ? 'bg-blue-700 text-white border-blue-800 shadow-xs'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-white'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>{f.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {PRESET_FILES.map((f) => (
-                <button
-                  key={f.name}
-                  type="button"
-                  onClick={() => handleSelectPresetFile(f)}
-                  className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
-                    presetFileName === f.name
-                      ? 'bg-blue-700 text-white border-blue-800 shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-white'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>{f.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* Selected Real Files Indicator */}
           {selectedRealFiles.length > 0 && (

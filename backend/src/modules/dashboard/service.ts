@@ -142,16 +142,17 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     where: { institutionId, isActive: true },
   });
 
-  const ledgers = await prisma.pointLedger.findMany({
-    where: {
-      userId,
-      ...(currentPeriod ? { academicPeriodId: currentPeriod.id } : {}),
-    },
-  });
+  const ledgers = currentPeriod
+    ? await prisma.pointLedger.findMany({
+        where: {
+          userId,
+          academicPeriodId: currentPeriod.id,
+        },
+      })
+    : [];
 
-  const currentPeriodPoints = ledgers.reduce((sum, item) => {
-    return item.type === 'award' ? sum + item.points : sum - item.points;
-  }, 0);
+  // Reversal sudah disimpan bernilai negatif di PointLedger, sehingga selalu dijumlahkan langsung
+  const currentPeriodPoints = ledgers.reduce((sum, item) => sum + item.points, 0);
 
   // 7. Langkah tindak lanjut yang dapat dilakukan (actionable steps)
   const actionableSteps: Array<{
@@ -169,7 +170,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       id: 'complete-profile',
       title: 'Lengkapi Profil Mahasiswa',
       description: `Kelengkapan profil Anda baru ${profileCompletionPercentage}%. Lengkapi data agar mudah menemukan rekan kompetisi.`,
-      actionUrl: '/profil',
+      actionUrl: '/app/profil',
       isCompleted: false,
       priority: 'high',
     });
@@ -178,7 +179,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       id: 'complete-profile',
       title: 'Profil Mahasiswa Lengkap',
       description: 'Profil Anda telah terisi dengan baik.',
-      actionUrl: '/profil',
+      actionUrl: '/app/profil',
       isCompleted: true,
       priority: 'low',
     });
@@ -190,7 +191,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       id: 'revise-submission',
       title: 'Perbaiki Berkas Pengajuan Prestasi',
       description: `Ada ${revisionCount} pengajuan prestasi yang memerlukan revisi dokumen bukti sesuai catatan validator.`,
-      actionUrl: '/prestasi',
+      actionUrl: '/app/prestasi',
       isCompleted: false,
       priority: 'high',
     });
@@ -224,7 +225,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
         id: 'form-team',
         title: 'Bentuk atau Gabung Tim Kompetisi',
         description: 'Kompetisi target Anda berskala beregu. Cari rekan tim melalui fitur pencarian atau buat tim baru.',
-        actionUrl: '/tim',
+        actionUrl: '/app/partner',
         isCompleted: false,
         priority: 'medium',
       });
@@ -233,7 +234,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
         id: 'form-team',
         title: 'Tim Kompetisi Terbentuk',
         description: `Bergabung dalam ${teamMember.team.name} (${teamMember.team.status})`,
-        actionUrl: `/tim/${teamMember.team.id}`,
+        actionUrl: '/app/tim',
         isCompleted: true,
         priority: 'low',
       });
@@ -247,7 +248,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
         id: 'complete-roadmap',
         title: 'Lanjutkan Roadmap Pembinaan',
         description: `Anda telah menyelesaikan ${roadmapSummary.completedTasks} dari ${roadmapSummary.totalTasks} tugas pembinaan.`,
-        actionUrl: `/kompetisi/${target?.competition?.slug}/roadmap`,
+        actionUrl: `/app/kompetisi/${target?.competition?.slug}/persiapan`,
         isCompleted: false,
         priority: 'medium',
       });
@@ -256,7 +257,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
         id: 'complete-roadmap',
         title: 'Roadmap Pembinaan Selesai',
         description: 'Seluruh tahapan persiapan lomba telah berhasil diselesaikan.',
-        actionUrl: `/kompetisi/${target?.competition?.slug}/roadmap`,
+        actionUrl: `/app/kompetisi/${target?.competition?.slug}/persiapan`,
         isCompleted: true,
         priority: 'low',
       });
@@ -269,7 +270,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       id: 'submit-achievement',
       title: 'Ajukan Prestasi Perdana',
       description: 'Punya capaian lomba atau karya ilmiah? Ajukan untuk diverifikasi dan peroleh poin prestasi resmi.',
-      actionUrl: '/prestasi/baru',
+      actionUrl: '/app/prestasi/baru',
       isCompleted: false,
       priority: 'medium',
     });
@@ -295,7 +296,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       draft: draftCount,
     },
     points: {
-      currentPeriod: currentPeriod ? currentPeriod.name : 'Semua Periode',
+      currentPeriod: currentPeriod ? currentPeriod.name : 'Belum ada periode aktif',
       totalPoints: currentPeriodPoints,
     },
     actionableSteps,
@@ -311,12 +312,15 @@ export async function getAdminDashboardStats(institutionId: string) {
     totalCompetitions,
     draftCompetitions,
     teamsFormed,
+    teamsLockedSelection,
     teamsSearching,
     totalStudents,
     totalStaff,
     approvedConsultants,
     categoryRaw,
     levelRaw,
+    targetsByCompetition,
+    confirmedSelectionsCount,
     upcomingDeadlines,
   ] = await Promise.all([
     prisma.achievement.count({ where: { institutionId, status: 'menunggu' } }),
@@ -326,6 +330,7 @@ export async function getAdminDashboardStats(institutionId: string) {
     prisma.competition.count({ where: { institutionId, status: 'published' } }),
     prisma.competition.count({ where: { institutionId, status: 'draft' } }),
     prisma.team.count({ where: { competition: { institutionId }, status: 'terbentuk' } }),
+    prisma.team.count({ where: { competition: { institutionId }, status: 'terkunci_seleksi' } }),
     prisma.team.count({ where: { competition: { institutionId }, status: 'mencari' } }),
     prisma.user.count({ where: { institutionId, role: 'mahasiswa', status: 'active' } }),
     prisma.user.count({ where: { institutionId, role: { in: ['validator', 'super_admin'] } } }),
@@ -339,6 +344,20 @@ export async function getAdminDashboardStats(institutionId: string) {
       by: ['level'],
       where: { institutionId, status: 'disetujui' },
       _count: { id: true },
+    }),
+    prisma.competition.findMany({
+      where: { institutionId, status: 'published' },
+      select: {
+        slug: true,
+        _count: {
+          select: {
+            studentTargets: { where: { status: 'active' } },
+          },
+        },
+      },
+    }),
+    prisma.internalSelection.count({
+      where: { institutionId, result: 'lolos', organizerVerified: true },
     }),
     prisma.competition.findMany({
       where: {
@@ -369,6 +388,11 @@ export async function getAdminDashboardStats(institutionId: string) {
     levelBreakdown[item.level] = item._count.id;
   }
 
+  const participantsByCompetition: Record<string, number> = {};
+  for (const c of targetsByCompetition) {
+    participantsByCompetition[c.slug] = c._count.studentTargets;
+  }
+
   return {
     queue: {
       pendingVerifications,
@@ -381,8 +405,12 @@ export async function getAdminDashboardStats(institutionId: string) {
       draft: draftCompetitions,
     },
     teams: {
-      terbentuk: teamsFormed,
+      terbentuk: teamsFormed + teamsLockedSelection,
+      terkunciSeleksi: teamsLockedSelection,
       mencari: teamsSearching,
+    },
+    selections: {
+      confirmedPassed: confirmedSelectionsCount,
     },
     users: {
       totalStudents,
@@ -392,6 +420,7 @@ export async function getAdminDashboardStats(institutionId: string) {
     distribution: {
       byCategory: categoryBreakdown,
       byLevel: levelBreakdown,
+      participantsByCompetition,
     },
     upcomingDeadlines,
   };
@@ -462,11 +491,16 @@ export async function generateAchievementsCsv(
   ];
 
   const rows = achievements.map((a) => {
-    const totalPoints = a.pointLedgers.reduce((sum, ledger) => {
-      return ledger.type === 'award' ? sum + ledger.points : sum - ledger.points;
-    }, 0);
+    const totalPoints = a.pointLedgers.reduce((sum, ledger) => sum + ledger.points, 0);
 
-    const eventDateStr = a.eventDate ? a.eventDate.toISOString().split('T')[0] : '';
+    const eventDateStr = a.eventDate
+      ? new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Jakarta',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(a.eventDate)
+      : '';
 
     return [
       escapeCsvField(a.id),

@@ -17,11 +17,12 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
   })
   .patch(
     '/',
-    async ({ auth, body, headers }) => {
+    async ({ auth, body, headers, request, server }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
 
-      const clientIp = resolveClientIp(headers);
+      const remoteAddress = server?.requestIP?.(request)?.address;
+      const clientIp = resolveClientIp(headers, remoteAddress);
       const userAgent = headers['user-agent'] || '';
 
       const updated = await profileService.updateStudentProfile(
@@ -57,11 +58,43 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
     assertAuthenticated(auth);
     const user = await prisma.user.findUnique({
       where: { id: params.userId },
-      include: { studentProfile: true },
+      select: {
+        id: true,
+        institutionId: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        studentProfile: {
+          select: {
+            id: true,
+            userId: true,
+            nim: true,
+            fullName: true,
+            studyProgram: true,
+            faculty: true,
+            enrollmentYear: true,
+            avatarUrl: true,
+            phone: true,
+            bio: true,
+            skills: true,
+            interests: true,
+            availability: true,
+            rolesCapable: true,
+            experience: true,
+          },
+        },
+      },
     });
-    if (!user) throw new NotFoundError('Pengguna tidak ditemukan');
+    if (!user || user.institutionId !== auth.user.institutionId) {
+      throw new NotFoundError('Pengguna tidak ditemukan');
+    }
 
-    if (auth.user.role === 'mahasiswa' && auth.user.id !== params.userId) {
+    const isSelf = auth.user.id === params.userId;
+    const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
+
+    if (!isSelf && !isStaff) {
       return {
         data: {
           id: user.id,
@@ -74,7 +107,6 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
                 studyProgram: user.studentProfile.studyProgram,
                 faculty: user.studentProfile.faculty,
                 enrollmentYear: user.studentProfile.enrollmentYear,
-                avatarUrl: user.studentProfile.avatarUrl,
                 skills: user.studentProfile.skills,
                 interests: user.studentProfile.interests,
                 availability: user.studentProfile.availability,
@@ -84,6 +116,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
         },
       };
     }
+
     return { data: user };
   })
   .get('/', async ({ auth }) => {
@@ -94,28 +127,34 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
         role: 'mahasiswa',
         status: 'active',
       },
-      include: { studentProfile: true },
-      take: 50,
+      select: {
+        id: true,
+        institutionId: true,
+        email: true,
+        role: true,
+        studentProfile: {
+          select: {
+            fullName: true,
+            studyProgram: true,
+            faculty: true,
+            enrollmentYear: true,
+            skills: true,
+            interests: true,
+            availability: true,
+            rolesCapable: true,
+          },
+        },
+      },
+      take: 100,
     });
+    const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
     return {
       data: users.map((u) => ({
         id: u.id,
         institutionId: u.institutionId,
         role: u.role,
-        email: auth.user.role === 'mahasiswa' && auth.user.id !== u.id ? '' : u.email,
-        studentProfile: u.studentProfile
-          ? {
-              fullName: u.studentProfile.fullName,
-              studyProgram: u.studentProfile.studyProgram,
-              faculty: u.studentProfile.faculty,
-              enrollmentYear: u.studentProfile.enrollmentYear,
-              avatarUrl: u.studentProfile.avatarUrl,
-              skills: u.studentProfile.skills,
-              interests: u.studentProfile.interests,
-              availability: u.studentProfile.availability,
-              rolesCapable: u.studentProfile.rolesCapable,
-            }
-          : null,
+        email: isStaff || auth.user.id === u.id ? u.email : '',
+        studentProfile: u.studentProfile,
       })),
     };
   });

@@ -5,6 +5,7 @@ export interface MatchCandidateResult {
   nama: string;
   prodi: string;
   fakultas: string;
+  angkatan?: number | null;
   bio?: string | null;
   targetKompetisiSlug: string;
   targetKompetisiNama: string;
@@ -12,19 +13,23 @@ export interface MatchCandidateResult {
   skill: Array<{ nama: string; level: number }>;
   minat: string[];
   ketersediaan: { hari: string[]; jam: number };
+  isOverlapTime: boolean;
   skorKecocokan: number;
   labelKesesuaian: string;
   alasanKecocokan: string[];
 }
 
-export async function getMatchCandidates(userId: string): Promise<MatchCandidateResult[]> {
+export async function getMatchCandidates(
+  userId: string,
+  institutionId: string
+): Promise<MatchCandidateResult[]> {
   // 1. Ambil target aktif pengguna saat ini
   const activeTarget = await prisma.studentTarget.findFirst({
     where: { userId, status: 'active' },
     include: { competition: true },
   });
 
-  if (!activeTarget) {
+  if (!activeTarget || activeTarget.competition.format === 'individu') {
     return [];
   }
 
@@ -39,6 +44,8 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
   const myRoles = Array.isArray(myProfile?.rolesCapable)
     ? (myProfile.rolesCapable as string[])
     : [];
+  const myAvail = (myProfile?.availability as { hari?: string[]; jam?: number } | null) || null;
+  const myDays = Array.isArray(myAvail?.hari) ? myAvail!.hari : [];
 
   // 3. Cari mahasiswa lain pada institusi yang sama dengan target lomba yang sama
   const candidates = await prisma.studentTarget.findMany({
@@ -47,22 +54,38 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
       status: 'active',
       userId: { not: userId },
       user: {
+        institutionId,
+        role: 'mahasiswa',
         status: 'active',
       },
     },
     include: {
       competition: true,
       user: {
-        include: {
-          studentProfile: true,
+        select: {
+          id: true,
+          studentProfile: {
+            select: {
+              fullName: true,
+              studyProgram: true,
+              faculty: true,
+              enrollmentYear: true,
+              bio: true,
+              skills: true,
+              interests: true,
+              rolesCapable: true,
+              availability: true,
+            },
+          },
           teamMemberships: {
             where: {
               status: 'active',
               team: {
                 competitionId: activeTarget.competitionId,
+                status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
               },
             },
-            include: { team: true },
+            include: { team: { select: { status: true } } },
           },
         },
       },
@@ -72,11 +95,8 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
   const results: MatchCandidateResult[] = [];
 
   for (const item of candidates) {
-    // Saring kandidat yang sudah berada dalam tim yang statusnya 'terkunci_seleksi'
-    const isLockedInTeam = item.user.teamMemberships.some(
-      (tm) => tm.team.status === 'terkunci_seleksi'
-    );
-    if (isLockedInTeam) continue;
+    // Saring kandidat yang sudah berada dalam tim aktif pada kompetisi ini
+    if (item.user.teamMemberships.length > 0) continue;
 
     const profile = item.user.studentProfile;
     if (!profile) continue;
@@ -90,10 +110,9 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
     const candRoles = Array.isArray(profile.rolesCapable)
       ? (profile.rolesCapable as string[])
       : [];
-    const candAvail = (profile.availability as { hari?: string[]; jam?: number }) || {
-      hari: ['Senin', 'Rabu'],
-      jam: 4,
-    };
+    const rawAvail = (profile.availability as { hari?: string[]; jam?: number } | null) || null;
+    const candDays = Array.isArray(rawAvail?.hari) ? rawAvail!.hari : [];
+    const candHours = typeof rawAvail?.jam === 'number' ? rawAvail.jam : 0;
 
     // Hitung skor kesesuaian transparan
     let score = 50; // Baseline target kompetisi sama
@@ -113,10 +132,16 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
       reasons.push(`Memiliki minat bidang serupa (${sharedInterests.slice(0, 2).join(', ')})`);
     }
 
-    // Cek ketersediaan waktu
-    if (candAvail.jam && candAvail.jam >= 3) {
+    // Cek overlap ketersediaan waktu
+    const hasDayOverlap =
+      myDays.length > 0 && candDays.length > 0
+        ? candDays.some((d) => myDays.includes(d))
+        : false;
+    const isOverlapTime = hasDayOverlap || (candHours >= 3 && myDays.length === 0);
+
+    if (candHours >= 3 && (hasDayOverlap || myDays.length === 0)) {
       score += 10;
-      reasons.push(`Komitmen ketersediaan waktu memadai (${candAvail.jam} jam/minggu)`);
+      reasons.push(`Komitmen ketersediaan waktu memadai (${candHours} jam/minggu)`);
     }
 
     score = Math.min(score, 98);
@@ -131,6 +156,7 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
       nama: profile.fullName,
       prodi: profile.studyProgram,
       fakultas: profile.faculty,
+      angkatan: profile.enrollmentYear,
       bio: profile.bio,
       targetKompetisiSlug: item.competition.slug,
       targetKompetisiNama: item.competition.name,
@@ -138,15 +164,15 @@ export async function getMatchCandidates(userId: string): Promise<MatchCandidate
       skill: candSkills,
       minat: candInterests,
       ketersediaan: {
-        hari: Array.isArray(candAvail.hari) ? candAvail.hari : ['Fleksibel'],
-        jam: candAvail.jam || 4,
+        hari: candDays,
+        jam: candHours,
       },
+      isOverlapTime,
       skorKecocokan: score,
       labelKesesuaian: label,
       alasanKecocokan: reasons,
     });
   }
 
-  // Urutkan dari skor kecocokan tertinggi
   return results.sort((a, b) => b.skorKecocokan - a.skorKecocokan);
 }

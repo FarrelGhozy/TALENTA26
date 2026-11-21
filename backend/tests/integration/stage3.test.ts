@@ -623,7 +623,7 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
   describe('9. Otorisasi Validator pada Admin Endpoints', () => {
     it('Mahasiswa dilarang membuat kompetisi admin (403 Forbidden)', async () => {
       const res = await app.handle(
-        new Request('http://localhost/api/v1/competitions', {
+        new Request('http://localhost/api/v1/admin/competitions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

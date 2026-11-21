@@ -12,11 +12,10 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
   })
   .get(
     '/roadmaps/:competitionSlug/checklist',
-    async ({ auth, params, query }) => {
+    async ({ auth, params }) => {
       assertAuthenticated(auth);
-      // Mendukung pengecekan untuk user login sendiri
-      const targetUserId = (query as any)?.userId || auth.user.id;
-      const checklist = await roadmapService.getChecklistProgress(targetUserId, params.competitionSlug);
+      assertRole(auth, ['mahasiswa']);
+      const checklist = await roadmapService.getChecklistProgress(auth.user.id, params.competitionSlug);
       return { data: checklist };
     }
   )
@@ -38,8 +37,28 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
     {
       body: t.Object({
         taskId: t.String(),
-        userId: t.Optional(t.String()),
       }),
+    }
+  )
+  .put(
+    '/me/roadmap-progress/:taskId',
+    async ({ auth, params, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['mahasiswa']);
+      const result = await roadmapService.setRoadmapTaskProgress(
+        auth.user.id,
+        params.taskId,
+        body?.completed,
+        auth.user.institutionId
+      );
+      return { data: result };
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          completed: t.Optional(t.Boolean()),
+        })
+      ),
     }
   )
   // Consultants

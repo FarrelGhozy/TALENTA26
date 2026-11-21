@@ -86,8 +86,13 @@ export const PreparationPage: React.FC = () => {
   }
 
   const totalTasks = roadmap?.fase.reduce((acc, f) => acc + f.latihan.length, 0) || 0;
-  const completedTasks = Object.values(checklist).filter(Boolean).length;
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const completedTasks =
+    roadmap?.fase.reduce(
+      (acc, f, pIdx) =>
+        acc + f.latihan.filter((_, lIdx) => Boolean(checklist[`p${pIdx}-l${lIdx}`])).length,
+      0
+    ) || 0;
+  const progressPercent = totalTasks > 0 ? Math.min(100, Math.round((completedTasks / totalTasks) * 100)) : 0;
 
   return (
     <div className="space-y-6">

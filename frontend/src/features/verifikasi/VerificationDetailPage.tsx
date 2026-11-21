@@ -336,7 +336,7 @@ export const VerificationDetailPage: React.FC = () => {
         </Card>
       </div>
 
-      {!isApproved && (
+      {achievement.status === 'menunggu' && (
         <DecisionPanel onDecision={handleDecision} isLoading={processing} />
       )}
 

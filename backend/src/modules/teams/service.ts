@@ -8,13 +8,30 @@ import {
 import { recordAuditEvent } from '../../lib/audit';
 import type { Team, TeamInvite } from '@prisma/client';
 
+const SAFE_MEMBER_USER_SELECT = {
+  id: true,
+  role: true,
+  studentProfile: {
+    select: {
+      fullName: true,
+      studyProgram: true,
+      faculty: true,
+      enrollmentYear: true,
+      rolesCapable: true,
+      skills: true,
+      interests: true,
+      availability: true,
+    },
+  },
+} as const;
+
 export interface CreateTeamDto {
   competitionSlug: string;
   teamName: string;
   roleInTeam?: string;
 }
 
-export async function getMyTeam(userId: string): Promise<Team | null> {
+export async function getMyTeam(userId: string) {
   const membership = await prisma.teamMember.findFirst({
     where: {
       userId,
@@ -31,19 +48,15 @@ export async function getMyTeam(userId: string): Promise<Team | null> {
             where: { status: 'active' },
             include: {
               user: {
-                include: {
-                  studentProfile: true,
-                },
+                select: SAFE_MEMBER_USER_SELECT,
               },
             },
           },
           invites: {
-            where: { status: 'diajukan' },
+            where: { status: 'diajukan', expiresAt: { gt: new Date() } },
             include: {
               receiver: {
-                include: {
-                  studentProfile: true,
-                },
+                select: SAFE_MEMBER_USER_SELECT,
               },
             },
           },
@@ -64,8 +77,8 @@ export async function createTeam(
     throw new ValidationError('Nama tim minimal 3 karakter');
   }
 
-  const comp = await prisma.competition.findUnique({
-    where: { slug: dto.competitionSlug },
+  const comp = await prisma.competition.findFirst({
+    where: { slug: dto.competitionSlug, institutionId, status: 'published' },
   });
 
   if (!comp) {
@@ -76,7 +89,6 @@ export async function createTeam(
     throw new ValidationError('Kompetisi format individu tidak memerlukan pembentukan tim');
   }
 
-  // Cek apakah mahasiswa sudah memiliki tim aktif pada kompetisi ini
   const existingMembership = await prisma.teamMember.findFirst({
     where: {
       userId,
@@ -135,7 +147,7 @@ export async function leaveTeam(
     include: { team: { include: { members: true, competition: true } } },
   });
 
-  if (!membership) {
+  if (!membership || membership.team.competition.institutionId !== institutionId) {
     throw new NotFoundError('Keanggotaan tim tidak ditemukan');
   }
 
@@ -159,7 +171,6 @@ export async function leaveTeam(
         data: { status: 'arsip', version: { increment: 1 } },
       });
     } else {
-      // Jika anggota kurang dari batas minimum, status tim kembali menjadi 'mencari'
       const newStatus =
         remainingActive.length >= membership.team.competition.minTeamMembers
           ? 'terbentuk'
@@ -202,11 +213,10 @@ export async function sendInvite(
     },
   });
 
-  if (!team) {
+  if (!team || team.competition.institutionId !== institutionId) {
     throw new NotFoundError('Tim tidak ditemukan');
   }
 
-  // Cek otorisasi pengirim: harus anggota aktif tim
   const isMember = team.members.some((m) => m.userId === senderId);
   if (!isMember) {
     throw new ForbiddenError('Hanya anggota tim yang dapat mengirimkan undangan');
@@ -220,7 +230,29 @@ export async function sendInvite(
     throw new ConflictError('Kapasitas anggota tim telah penuh');
   }
 
-  // Cek batas maksimal 5 undangan aktif yang belum direspon
+  const receiver = await prisma.user.findUnique({
+    where: { id: receiverId },
+    select: { id: true, institutionId: true, role: true, status: true },
+  });
+  if (!receiver || receiver.institutionId !== institutionId || receiver.role !== 'mahasiswa' || receiver.status !== 'active') {
+    throw new NotFoundError('Mahasiswa calon rekan tidak ditemukan atau tidak aktif');
+  }
+
+  const receiverActiveMember = await prisma.teamMember.findFirst({
+    where: {
+      userId: receiverId,
+      status: 'active',
+      team: {
+        competitionId: team.competitionId,
+        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+      },
+    },
+  });
+  if (receiverActiveMember) {
+    throw new ConflictError('Mahasiswa tersebut sudah berada dalam tim aktif pada kompetisi ini');
+  }
+
+  // Batas global default rilis pertama (K-19): 5 undangan aktif
   const activeInvitesCount = await prisma.teamInvite.count({
     where: {
       teamId,
@@ -233,7 +265,6 @@ export async function sendInvite(
     throw new ConflictError('Batas maksimal 5 undangan aktif untuk tim ini telah tercapai');
   }
 
-  // Cek apakah calon penerima sudah memiliki undangan aktif dari tim ini
   const existingInvite = await prisma.teamInvite.findFirst({
     where: {
       teamId,
@@ -247,7 +278,7 @@ export async function sendInvite(
     throw new ConflictError('Undangan untuk mahasiswa ini masih aktif menunggu respon');
   }
 
-  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 hari
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 hari (K-19)
 
   const invite = await prisma.teamInvite.create({
     data: {
@@ -284,12 +315,12 @@ export async function getMyInvites(userId: string) {
           competition: true,
           members: {
             where: { status: 'active' },
-            include: { user: { include: { studentProfile: true } } },
+            include: { user: { select: SAFE_MEMBER_USER_SELECT } },
           },
         },
       },
       sender: {
-        include: { studentProfile: true },
+        select: SAFE_MEMBER_USER_SELECT,
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -298,19 +329,60 @@ export async function getMyInvites(userId: string) {
   const outgoing = await prisma.teamInvite.findMany({
     where: {
       senderId: userId,
+      status: { in: ['diajukan', 'diterima', 'ditolak', 'dibatalkan'] },
     },
     include: {
       team: {
         include: { competition: true },
       },
       receiver: {
-        include: { studentProfile: true },
+        select: SAFE_MEMBER_USER_SELECT,
       },
     },
     orderBy: { createdAt: 'desc' },
   });
 
   return { incoming, outgoing };
+}
+
+export async function cancelInvite(
+  senderId: string,
+  inviteId: string,
+  institutionId: string
+): Promise<{ message: string }> {
+  const invite = await prisma.teamInvite.findFirst({
+    where: {
+      id: inviteId,
+      senderId,
+    },
+    include: {
+      team: { include: { competition: true } },
+    },
+  });
+
+  if (!invite || invite.team.competition.institutionId !== institutionId) {
+    throw new NotFoundError('Undangan tidak ditemukan atau Anda tidak berwenang membatalkannya');
+  }
+
+  if (invite.status !== 'diajukan') {
+    throw new ConflictError('Hanya undangan berstatus diajukan yang dapat dibatalkan');
+  }
+
+  await prisma.teamInvite.update({
+    where: { id: invite.id },
+    data: { status: 'dibatalkan', respondedAt: new Date() },
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: senderId,
+    action: 'TEAM_INVITE_CANCELLED',
+    targetType: 'TeamInvite',
+    targetId: invite.id,
+    metadata: { teamId: invite.teamId, receiverId: invite.receiverId },
+  });
+
+  return { message: 'Undangan berhasil dibatalkan' };
 }
 
 export async function respondInvite(
@@ -322,9 +394,9 @@ export async function respondInvite(
   let attempts = 0;
   while (attempts < 3) {
     attempts++;
+    let markExpiredOutsideTx = false;
     try {
       return await prisma.$transaction(async (tx) => {
-        // 1. Ambil undangan dengan verifikasi penerima (Anti-IDOR)
         const invite = await tx.teamInvite.findFirst({
           where: {
             id: inviteId,
@@ -339,7 +411,7 @@ export async function respondInvite(
           },
         });
 
-        if (!invite) {
+        if (!invite || invite.team.competition.institutionId !== institutionId) {
           throw new NotFoundError('Undangan tidak ditemukan atau Anda tidak berwenang meresponnya');
         }
 
@@ -364,24 +436,23 @@ export async function respondInvite(
           return { message: 'Undangan telah ditolak' };
         }
 
-        // 2. Kunci baris tim terlebih dahulu (FOR UPDATE) untuk serialisasi konkurensi kapasitas
+        if (invite.team.status === 'terkunci_seleksi' || invite.team.status === 'arsip') {
+          throw new ForbiddenError('Tim tidak dapat menerima anggota baru karena sudah terkunci atau diarsipkan');
+        }
+
+        // Kunci baris tim terlebih dahulu (FOR UPDATE)
         await tx.$executeRaw`SELECT id FROM teams WHERE id = ${invite.teamId} FOR UPDATE`;
 
-        // 3. Hitung jumlah anggota aktif secara locking read (FOR UPDATE) agar tidak membaca snapshot basi REPEATABLE READ
         const countRes = await tx.$queryRaw<Array<{ total: bigint | number }>>`
           SELECT COUNT(*) as total FROM team_members WHERE teamId = ${invite.teamId} AND status = 'active' FOR UPDATE
         `;
         const activeMembersCount = Number(countRes[0]?.total ?? 0);
 
         if (activeMembersCount >= invite.team.competition.maxTeamMembers) {
-          await tx.teamInvite.update({
-            where: { id: invite.id },
-            data: { status: 'kedaluwarsa', respondedAt: new Date() },
-          });
+          markExpiredOutsideTx = true;
           throw new ConflictError('Kapasitas anggota tim telah penuh oleh rekan lain');
         }
 
-        // Cek apakah mahasiswa sudah berada dalam tim aktif lain di kompetisi ini
         const existingMembership = await tx.teamMember.findFirst({
           where: {
             userId,
@@ -397,22 +468,37 @@ export async function respondInvite(
           throw new ConflictError('Anda sudah berada dalam tim aktif lain untuk kompetisi ini');
         }
 
-        // Tambahkan mahasiswa ke dalam tim
-        await tx.teamMember.create({
-          data: {
-            teamId: invite.teamId,
-            userId,
-            roleInTeam: 'Anggota',
-            status: 'active',
+        // Aktifkan kembali bila sebelumnya pernah keluar ('left'), atau buat baru
+        const previousMemberRecord = await tx.teamMember.findUnique({
+          where: {
+            teamId_userId: {
+              teamId: invite.teamId,
+              userId,
+            },
           },
         });
+
+        if (previousMemberRecord) {
+          await tx.teamMember.update({
+            where: { id: previousMemberRecord.id },
+            data: { status: 'active', roleInTeam: 'Anggota', joinedAt: new Date() },
+          });
+        } else {
+          await tx.teamMember.create({
+            data: {
+              teamId: invite.teamId,
+              userId,
+              roleInTeam: 'Anggota',
+              status: 'active',
+            },
+          });
+        }
 
         await tx.teamInvite.update({
           where: { id: invite.id },
           data: { status: 'diterima', respondedAt: new Date() },
         });
 
-        // Perbarui status tim jika sudah memenuhi batas minimum
         const newTotalMembers = activeMembersCount + 1;
         const newStatus =
           newTotalMembers >= invite.team.competition.minTeamMembers ? 'terbentuk' : 'mencari';
@@ -434,6 +520,12 @@ export async function respondInvite(
         return { message: 'Berhasil bergabung dengan tim' };
       });
     } catch (err: any) {
+      if (markExpiredOutsideTx) {
+        await prisma.teamInvite.updateMany({
+          where: { id: inviteId, status: 'diajukan' },
+          data: { status: 'kedaluwarsa', respondedAt: new Date() },
+        });
+      }
       if (
         (err?.code === 'P2034' ||
           err?.cause?.originalCode === '1213' ||

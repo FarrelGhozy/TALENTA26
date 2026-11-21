@@ -20,6 +20,19 @@ async function main() {
   console.log(`[SEED] Institusi terverifikasi: ${institution.name} (${institution.code})`);
 
   // 2. Super Admin Bootstrap
+  const isProd = currentConfig.nodeEnv === 'production';
+  if (isProd) {
+    if (
+      !currentConfig.superAdminBootstrapEmail ||
+      !currentConfig.superAdminBootstrapPassword ||
+      currentConfig.superAdminBootstrapPassword.startsWith('change-with-')
+    ) {
+      throw new Error(
+        '[SEED_ERROR] Pada mode production, SUPER_ADMIN_BOOTSTRAP_EMAIL dan SUPER_ADMIN_BOOTSTRAP_PASSWORD wajib diset di environment.'
+      );
+    }
+  }
+
   const superAdminEmail = (
     currentConfig.superAdminBootstrapEmail || 'admin@unida.gontor.ac.id'
   ).toLowerCase();
@@ -160,11 +173,11 @@ async function main() {
     }
   }
 
-  // 4. Periode Akademik Aktif
+  // 4. Periode Akademik Aktif (hanya dibuat bila belum ada satu pun di institusi)
   let activePeriod = await prisma.academicPeriod.findFirst({
     where: { institutionId: institution.id, isActive: true },
   });
-  if (!activePeriod) {
+  if (!activePeriod && !isProd) {
     activePeriod = await prisma.academicPeriod.create({
       data: {
         institutionId: institution.id,
@@ -177,8 +190,10 @@ async function main() {
     console.log(`[SEED] Periode akademik aktif dibuat: ${activePeriod.name}`);
   }
 
-  // 5. Kurikulum Kompetisi Resmi
-  const officialCompetitions = [
+  // 5. Kurikulum Kompetisi Demo/Pengembangan (hanya non-production)
+  const officialCompetitions = isProd
+    ? []
+    : [
     {
       slug: 'gemastik-2026',
       name: 'Gemastik XIX 2026',
@@ -283,7 +298,7 @@ async function main() {
       },
       create: {
         institutionId: institution.id,
-        academicPeriodId: activePeriod.id,
+        academicPeriodId: activePeriod?.id || null,
         slug: compData.slug,
         name: compData.name,
         organizer: compData.organizer,
@@ -401,59 +416,52 @@ async function main() {
     }
   }
 
-  // 8. Aturan Poin Berversi (PointRule Versi 1 sesuai docs/09)
-  const defaultRules: Array<{
-    level: 'lokal' | 'nasional' | 'internasional';
-    result: 'partisipasi' | 'finalis' | 'juara_3' | 'juara_2' | 'juara_1' | 'penghargaan_khusus';
-    points: number;
-  }> = [
-    { level: 'lokal', result: 'partisipasi', points: 1 },
-    { level: 'lokal', result: 'finalis', points: 2 },
-    { level: 'lokal', result: 'juara_3', points: 4 },
-    { level: 'lokal', result: 'juara_2', points: 6 },
-    { level: 'lokal', result: 'juara_1', points: 8 },
-    { level: 'lokal', result: 'penghargaan_khusus', points: 2 },
+  // 8. Aturan Poin Berversi (PointRule Versi 1 sesuai docs/09 — hanya dipasang bila belum ada aturan poin sama sekali)
+  const existingPointRuleCount = await prisma.pointRule.count({
+    where: { institutionId: institution.id },
+  });
+  if (existingPointRuleCount === 0) {
+    const defaultRules: Array<{
+      level: 'lokal' | 'nasional' | 'internasional';
+      result: 'partisipasi' | 'finalis' | 'juara_3' | 'juara_2' | 'juara_1' | 'penghargaan_khusus';
+      points: number;
+    }> = [
+      { level: 'lokal', result: 'partisipasi', points: 1 },
+      { level: 'lokal', result: 'finalis', points: 2 },
+      { level: 'lokal', result: 'juara_3', points: 4 },
+      { level: 'lokal', result: 'juara_2', points: 6 },
+      { level: 'lokal', result: 'juara_1', points: 8 },
+      { level: 'lokal', result: 'penghargaan_khusus', points: 2 },
 
-    { level: 'nasional', result: 'partisipasi', points: 2 },
-    { level: 'nasional', result: 'finalis', points: 5 },
-    { level: 'nasional', result: 'juara_3', points: 10 },
-    { level: 'nasional', result: 'juara_2', points: 14 },
-    { level: 'nasional', result: 'juara_1', points: 18 },
-    { level: 'nasional', result: 'penghargaan_khusus', points: 5 },
+      { level: 'nasional', result: 'partisipasi', points: 2 },
+      { level: 'nasional', result: 'finalis', points: 5 },
+      { level: 'nasional', result: 'juara_3', points: 10 },
+      { level: 'nasional', result: 'juara_2', points: 14 },
+      { level: 'nasional', result: 'juara_1', points: 18 },
+      { level: 'nasional', result: 'penghargaan_khusus', points: 5 },
 
-    { level: 'internasional', result: 'partisipasi', points: 3 },
-    { level: 'internasional', result: 'finalis', points: 8 },
-    { level: 'internasional', result: 'juara_3', points: 16 },
-    { level: 'internasional', result: 'juara_2', points: 22 },
-    { level: 'internasional', result: 'juara_1', points: 30 },
-    { level: 'internasional', result: 'penghargaan_khusus', points: 8 },
-  ];
+      { level: 'internasional', result: 'partisipasi', points: 3 },
+      { level: 'internasional', result: 'finalis', points: 8 },
+      { level: 'internasional', result: 'juara_3', points: 16 },
+      { level: 'internasional', result: 'juara_2', points: 22 },
+      { level: 'internasional', result: 'juara_1', points: 30 },
+      { level: 'internasional', result: 'penghargaan_khusus', points: 8 },
+    ];
 
-  for (const r of defaultRules) {
-    await prisma.pointRule.upsert({
-      where: {
-        institutionId_version_level_result: {
-          institutionId: institution.id,
-          version: 1,
-          level: r.level,
-          result: r.result,
-        },
-      },
-      update: {
-        points: r.points,
-        isActive: true,
-      },
-      create: {
+    await prisma.pointRule.createMany({
+      data: defaultRules.map((r) => ({
         institutionId: institution.id,
         version: 1,
         level: r.level,
         result: r.result,
         points: r.points,
         isActive: true,
-      },
+      })),
     });
+    console.log('[SEED] Aturan bobot poin prestasi versi 1 berhasil dipasang.');
+  } else {
+    console.log('[SEED] Aturan bobot poin sudah ada, seed tidak menimpa aturan berjalan.');
   }
-  console.log('[SEED] Aturan bobot poin prestasi versi 1 berhasil dipasang.');
 
   console.log('[SEED] Inisialisasi basis data Stage 4 selesai dengan aman.');
 }

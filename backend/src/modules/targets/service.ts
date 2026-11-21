@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { NotFoundError } from '../../app/middleware/error';
+import { ForbiddenError, NotFoundError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 import type { StudentTarget } from '@prisma/client';
 
@@ -25,7 +25,7 @@ export async function setTargetCompetition(
     where: { slug: competitionSlug },
   });
 
-  if (!comp || comp.status !== 'published') {
+  if (!comp || comp.status !== 'published' || comp.institutionId !== institutionId) {
     throw new NotFoundError('Kompetisi terbit tidak ditemukan.');
   }
 
@@ -41,12 +41,6 @@ export async function setTargetCompetition(
         return currentTarget;
       }
 
-      // Arsipkan target lama
-      await tx.studentTarget.update({
-        where: { id: currentTarget.id },
-        data: { status: 'archived' },
-      });
-
       // 2. Tangani tim pada kompetisi lama (jika ada)
       const currentMembership = await tx.teamMember.findFirst({
         where: {
@@ -54,13 +48,19 @@ export async function setTargetCompetition(
           status: 'active',
           team: {
             competitionId: currentTarget.competitionId,
-            status: { in: ['mencari', 'terbentuk'] },
+            status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
           },
         },
-        include: { team: { include: { members: true } } },
+        include: { team: { include: { members: true, competition: true } } },
       });
 
       if (currentMembership) {
+        if (currentMembership.team.status === 'terkunci_seleksi') {
+          throw new ForbiddenError(
+            'Anda tergabung dalam tim yang sudah terkunci untuk seleksi internal dan tidak dapat mengganti target lomba secara mandiri.'
+          );
+        }
+
         // Tandai status anggota 'left'
         await tx.teamMember.update({
           where: { id: currentMembership.id },
@@ -72,19 +72,27 @@ export async function setTargetCompetition(
         );
 
         if (remainingActiveMembers.length === 0) {
-          // Jika tim kosong, arsipkan tim
           await tx.team.update({
             where: { id: currentMembership.teamId },
             data: { status: 'arsip', version: { increment: 1 } },
           });
         } else {
-          // Jika anggota berkurang di bawah batas min, status tim kembali 'mencari'
+          const nextTeamStatus =
+            remainingActiveMembers.length >= currentMembership.team.competition.minTeamMembers
+              ? 'terbentuk'
+              : 'mencari';
           await tx.team.update({
             where: { id: currentMembership.teamId },
-            data: { status: 'mencari', version: { increment: 1 } },
+            data: { status: nextTeamStatus, version: { increment: 1 } },
           });
         }
       }
+
+      // Arsipkan target lama setelah pengecekan tim aman
+      await tx.studentTarget.update({
+        where: { id: currentTarget.id },
+        data: { status: 'archived' },
+      });
     }
 
     // 3. Buat target aktif baru

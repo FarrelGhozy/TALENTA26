@@ -88,7 +88,7 @@ export interface Team {
   nama: string;
   anggota: TeamMember[];
   isFormed: boolean;
-  status: 'mencari' | 'menunggu_1_lagi' | 'terbentuk' | 'arsip';
+  status: 'mencari' | 'menunggu_1_lagi' | 'terbentuk' | 'terkunci_seleksi' | 'arsip';
 }
 
 export interface Invite {
@@ -97,7 +97,7 @@ export interface Invite {
   dari: string;
   ke: string;
   teamId: string;
-  status: 'diajukan' | 'diterima' | 'ditolak' | 'kedaluwarsa';
+  status: 'diajukan' | 'diterima' | 'ditolak' | 'kedaluwarsa' | 'dibatalkan';
   createdAt: string;
 }
 
@@ -146,12 +146,11 @@ export type AchievementLevel = 'lokal' | 'nasional' | 'internasional';
 
 export type AchievementType =
   | 'partisipasi'
-  | 'nominasi'
-  | 'penghargaan'
-  | 'juara_1'
-  | 'juara_2'
+  | 'finalis'
   | 'juara_3'
-  | 'best_delegate';
+  | 'juara_2'
+  | 'juara_1'
+  | 'penghargaan_khusus';
 
 export type AchievementStatus = 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak' | 'draft' | 'dibatalkan';
 

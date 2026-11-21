@@ -63,8 +63,8 @@ export async function getPublishedCompetitions(filters: CompetitionFilterParams 
 }
 
 export async function getCompetitionBySlug(slug: string): Promise<Competition | null> {
-  return prisma.competition.findUnique({
-    where: { slug },
+  return prisma.competition.findFirst({
+    where: { slug, status: 'published' },
     include: {
       academicPeriod: true,
       consultantContacts: {

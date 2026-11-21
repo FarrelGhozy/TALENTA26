@@ -7,12 +7,20 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig(({ mode }) => {
   const envDir = fileURLToPath(new URL('..', import.meta.url));
   const env = loadEnv(mode, envDir, '');
-  const useMock = mode === 'demo' || env.VITE_USE_MOCK === 'true';
+  // Build --mode production wajib selalu memakai adapter API nyata, mengabaikan VITE_USE_MOCK lokal
+  const isProductionMode = mode === 'production';
+  const useMock = !isProductionMode && (mode === 'demo' || env.VITE_USE_MOCK === 'true');
   const source = useMock ? './src/services/factory.mock.ts' : './src/services/factory.api.ts';
 
   return {
     base: env.VITE_BASE_PATH || '/',
     envDir,
+    define: isProductionMode
+      ? {
+          'import.meta.env.VITE_APP_ENV': JSON.stringify('PRODUCTION'),
+          'import.meta.env.VITE_USE_MOCK': JSON.stringify('false'),
+        }
+      : undefined,
     resolve: {
       alias: {
         '@talenta/services': fileURLToPath(new URL(source, import.meta.url)),

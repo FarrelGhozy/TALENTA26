@@ -109,77 +109,15 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
       }),
     }
   )
-  // Aliases for compatibility
-  .get('/matching/invites', async ({ auth }) => {
-    assertAuthenticated(auth);
-    assertRole(auth, ['mahasiswa']);
-
-    const invites = await teamService.getMyInvites(auth.user.id);
-    const combined = [
-      ...invites.incoming.map((i) => ({
-        id: i.id,
-        institutionId: auth.user.institutionId,
-        dari: i.senderId,
-        ke: i.receiverId,
-        teamId: i.teamId,
-        status: i.status,
-        createdAt: i.createdAt.toISOString().split('T')[0],
-      })),
-      ...invites.outgoing.map((i) => ({
-        id: i.id,
-        institutionId: auth.user.institutionId,
-        dari: i.senderId,
-        ke: i.receiverId,
-        teamId: i.teamId,
-        status: i.status,
-        createdAt: i.createdAt.toISOString().split('T')[0],
-      })),
-    ];
-    return { data: combined };
-  })
   .post(
-    '/matching/invites',
-    async ({ auth, body }) => {
+    '/invites/:id/cancel',
+    async ({ auth, params }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
 
-      const invite = await teamService.sendInvite(
-        auth.user.id,
-        body.teamId,
-        body.ke,
-        auth.user.institutionId
-      );
-
-      return {
-        data: {
-          id: invite.id,
-          institutionId: auth.user.institutionId,
-          dari: invite.senderId,
-          ke: invite.receiverId,
-          teamId: invite.teamId,
-          status: invite.status,
-          createdAt: invite.createdAt.toISOString().split('T')[0],
-        },
-      };
-    },
-    {
-      body: t.Object({
-        dari: t.Optional(t.String()),
-        ke: t.String(),
-        teamId: t.String(),
-      }),
-    }
-  )
-  .patch(
-    '/matching/invites/:id',
-    async ({ auth, params, body }) => {
-      assertAuthenticated(auth);
-      assertRole(auth, ['mahasiswa']);
-
-      const result = await teamService.respondInvite(
+      const result = await teamService.cancelInvite(
         auth.user.id,
         params.id,
-        body.status,
         auth.user.institutionId
       );
 
@@ -188,9 +126,6 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
     {
       params: t.Object({
         id: t.String(),
-      }),
-      body: t.Object({
-        status: t.Union([t.Literal('diterima'), t.Literal('ditolak')]),
       }),
     }
   );

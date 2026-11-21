@@ -63,7 +63,11 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
       data: { isActive: false },
     });
 
-    // 3. Pasang PointRule versi 1 jika belum ada
+    // 3. Pastikan hanya PointRule versi 1 yang aktif untuk skenario uji Stage 4
+    await prisma.pointRule.updateMany({
+      where: { institutionId, version: { not: 1 } },
+      data: { isActive: false },
+    });
     const pointMatrix = [
       { level: 'lokal', result: 'juara_1', points: 8 },
       { level: 'nasional', result: 'juara_1', points: 18 },
@@ -719,11 +723,24 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
   // ==============================================================
   describe('7. Ranking Publik & Perlindungan Privasi PII', () => {
     beforeAll(async () => {
-      // Setujui kembali prestasi Mahasiswa 1 agar memiliki poin di ranking
+      // Mahasiswa mengirim revisi (perlu_perbaikan -> menunggu) lalu validator menyetujui kembali
+      await app.handle(
+        new Request(`http://localhost/api/v1/me/achievements/${createdAchievementId}/revisions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${student1Token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            note: 'Telah melampirkan surat keterangan resmi Juara 1 dari panitia.',
+          }),
+        })
+      );
+
       const ach = await prisma.achievement.findUnique({
         where: { id: createdAchievementId },
       });
-      await app.handle(
+      const reapproveRes = await app.handle(
         new Request(`http://localhost/api/v1/admin/achievements/${createdAchievementId}/decisions`, {
           method: 'POST',
           headers: {
@@ -736,6 +753,7 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
           }),
         })
       );
+      expect(reapproveRes.status).toBe(200);
     });
 
     it('Ranking periode berjalan kosong saat tidak ada periode aktif dan tidak mencampur histori', async () => {

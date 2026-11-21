@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap, KeyRound, Info, ShieldCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthContext';
-import { RoleCardLogin } from './components/RoleCardLogin';
 import { FormLogin } from './components/FormLogin';
 import { USE_MOCK, APP_ENV } from '../../config/env';
 import { Role } from '../../types';
+
+// Lazy-load kartu login demo agar di build produksi (MODE === 'production') tidak ikut masuk bundle utama
+const LazyRoleCardLogin =
+  import.meta.env.MODE !== 'production'
+    ? lazy(() => import('./components/RoleCardLogin').then((m) => ({ default: m.RoleCardLogin })))
+    : null;
 
 export const LoginPage: React.FC = () => {
   const { loginAsRole, loginWithCredentials, isLoading } = useAuth();
@@ -13,8 +18,8 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
 
-  // Mode development (VITE_APP_ENV=DEPLOYMENT) atau mock mengaktifkan login berbasis kartu secara default
-  const isDevelopment = APP_ENV === 'DEPLOYMENT' || USE_MOCK;
+  const isDevelopment =
+    import.meta.env.MODE !== 'production' && (APP_ENV === 'DEPLOYMENT' || USE_MOCK);
   const [authMode, setAuthMode] = useState<'demo' | 'manual'>(
     isDevelopment ? 'demo' : 'manual'
   );
@@ -98,7 +103,7 @@ export const LoginPage: React.FC = () => {
       {redirect && (
         <div className="p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
           <Info className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Kamu perlu memilih peran terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
+          <span>Kamu perlu masuk terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
         </div>
       )}
 
@@ -109,7 +114,7 @@ export const LoginPage: React.FC = () => {
       )}
 
       {/* Mode Switcher Tabs (Hanya ditampilkan pada mode development / demo) */}
-      {isDevelopment && (
+      {isDevelopment && LazyRoleCardLogin && (
         <div className="flex justify-center">
           <div className="inline-flex p-1 bg-slate-200/80 rounded-2xl border border-slate-200 shadow-inner">
             <button
@@ -140,8 +145,10 @@ export const LoginPage: React.FC = () => {
         </div>
       )}
 
-      {authMode === 'demo' ? (
-        <RoleCardLogin onSelectRole={handleSelectRole} isLoading={isLoading} />
+      {isDevelopment && LazyRoleCardLogin && authMode === 'demo' ? (
+        <Suspense fallback={<div className="text-center text-xs text-slate-500 py-8">Menyiapkan pilihan peran...</div>}>
+          <LazyRoleCardLogin onSelectRole={handleSelectRole} isLoading={isLoading} />
+        </Suspense>
       ) : (
         <FormLogin onSubmit={handleFormSubmit} isLoading={isLoading} />
       )}

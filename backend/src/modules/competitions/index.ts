@@ -76,37 +76,6 @@ export const competitionRoutes = new Elysia()
       }),
     }
   )
-  .post(
-    '/api/v1/competitions',
-    async ({ auth, body }) => {
-      assertAuthenticated(auth);
-      assertRole(auth, ['validator', 'super_admin']);
-
-      const created = await compService.createCompetition(
-        auth.user.institutionId,
-        auth.user.id,
-        body as compService.CreateCompetitionDto
-      );
-      return { data: created };
-    },
-    {
-      body: t.Object({
-        name: t.String(),
-        organizer: t.String(),
-        category: t.String(),
-        level: t.Optional(t.String()),
-        format: t.Union([t.Literal('individu'), t.Literal('beregu')]),
-        minTeamMembers: t.Optional(t.Number()),
-        maxTeamMembers: t.Optional(t.Number()),
-        requiredRoles: t.Optional(t.Array(t.String())),
-        description: t.String(),
-        registrationDeadline: t.Optional(t.String()),
-        competitionDate: t.Optional(t.String()),
-        requirements: t.Optional(t.Array(t.String())),
-        scheduleTimeline: t.Optional(t.Array(t.Object({ label: t.String(), tanggal: t.String() }))),
-      }),
-    }
-  )
   .patch(
     '/api/v1/admin/competitions/:id',
     async ({ auth, params, body }) => {

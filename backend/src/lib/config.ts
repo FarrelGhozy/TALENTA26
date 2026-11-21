@@ -10,6 +10,9 @@ export interface DatabaseConfig {
 export interface AppConfig {
   port: number;
   nodeEnv: 'development' | 'production' | 'test';
+  logLevel: string;
+  uploadMaxBytes: number;
+  timezoneDisplay: string;
   database: DatabaseConfig;
   sessionSecret: string;
   cookieSecret: string;
@@ -42,23 +45,14 @@ export function resolveDatabaseConfig(): DatabaseConfig {
   const password = process.env.DB_PASSWORD ? process.env.DB_PASSWORD : undefined;
   const name = process.env.DB_NAME;
 
-  // Prioritaskan variabel terpecah (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
   if (host && user && name) {
     const auth = password
       ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}`
       : encodeURIComponent(user);
     const url = `mysql://${auth}@${host}:${port}/${name}`;
-    return {
-      host,
-      port,
-      user,
-      password,
-      name,
-      url,
-    };
+    return { host, port, user, password, name, url };
   }
 
-  // Fallback ke DATABASE_URL bila ada atau default lokal dev
   const rawUrl =
     process.env.DATABASE_URL || 'mysql://root@127.0.0.1:3306/talenta_dev';
   try {
@@ -92,6 +86,9 @@ export function loadConfig(): AppConfig {
     | 'production'
     | 'test';
   const port = parseInt(process.env.PORT || '3001', 10);
+  const logLevel = process.env.LOG_LEVEL || (nodeEnv === 'production' ? 'info' : 'debug');
+  const uploadMaxBytes = parseInt(process.env.UPLOAD_MAX_BYTES || String(8 * 1024 * 1024), 10);
+  const timezoneDisplay = process.env.TIMEZONE_DISPLAY || 'Asia/Jakarta';
   const sessionSecret =
     process.env.SESSION_SECRET || 'dev-session-secret-min-32-chars-long-12345';
   const cookieSecret =
@@ -128,6 +125,9 @@ export function loadConfig(): AppConfig {
   return {
     port,
     nodeEnv,
+    logLevel,
+    uploadMaxBytes: Number.isFinite(uploadMaxBytes) && uploadMaxBytes > 0 ? uploadMaxBytes : 8 * 1024 * 1024,
+    timezoneDisplay,
     database,
     sessionSecret,
     cookieSecret,
@@ -138,6 +138,33 @@ export function loadConfig(): AppConfig {
     smtp,
     s3,
   };
+}
+
+export function assertProductionConfig(conf: AppConfig): void {
+  if (conf.nodeEnv !== 'production') return;
+
+  const isWeakSecret = (val?: string) =>
+    !val ||
+    val.length < 32 ||
+    val.startsWith('dev-') ||
+    val.startsWith('change-with-');
+
+  if (isWeakSecret(process.env.SESSION_SECRET)) {
+    throw new Error('SESSION_SECRET produksi wajib diset minimal 32 karakter acak yang aman.');
+  }
+  if (isWeakSecret(process.env.COOKIE_SECRET)) {
+    throw new Error('COOKIE_SECRET produksi wajib diset minimal 32 karakter acak yang aman.');
+  }
+  if (
+    !conf.s3.endpoint ||
+    !conf.s3.bucket ||
+    !conf.s3.accessKey ||
+    !conf.s3.secretKey ||
+    conf.s3.accessKey.startsWith('change-with-') ||
+    conf.s3.secretKey.startsWith('change-with-')
+  ) {
+    throw new Error('Konfigurasi S3/RustFS produksi wajib lengkap (S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY).');
+  }
 }
 
 export const config = loadConfig();

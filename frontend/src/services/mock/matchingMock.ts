@@ -94,4 +94,12 @@ export const matchingMockService: IMatchingService = {
       }
     }
   },
+
+  async cancelInvite(inviteId: string): Promise<void> {
+    const list = getInvitesList();
+    const inv = list.find((i) => i.id === inviteId);
+    if (!inv) return;
+    inv.status = 'dibatalkan';
+    setItem(INVITES_KEY, list);
+  },
 };

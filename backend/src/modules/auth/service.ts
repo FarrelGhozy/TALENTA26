@@ -25,6 +25,7 @@ export interface RegisterDto {
   fullName: string;
   studyProgram: string;
   faculty: string;
+  enrollmentYear?: number;
   phone?: string;
 }
 
@@ -130,6 +131,7 @@ export async function registerMahasiswa(
         fullName,
         studyProgram,
         faculty,
+        enrollmentYear: dto.enrollmentYear ?? null,
         phone: dto.phone?.trim() || null,
       },
     });
@@ -203,8 +205,8 @@ export async function login(
     throw new UnauthorizedError('Email atau password yang Anda masukkan salah');
   }
 
-  if (user.status === 'suspended') {
-    throw new ForbiddenError('Akun Anda dinonaktifkan. Silakan hubungi admin kampus.');
+  if (user.status !== 'active') {
+    throw new ForbiddenError('Akun Anda tidak aktif atau ditangguhkan. Silakan hubungi admin kampus.');
   }
 
   const { token, expiresAt } = await createSession(user.id, ipAddress, userAgent);
@@ -254,18 +256,35 @@ export async function logout(
   }
 }
 
-export async function getMe(userId: string): Promise<User & { studentProfile: StudentProfile | null }> {
+export async function getMe(userId: string): Promise<Omit<User, 'passwordHash'> & { studentProfile: StudentProfile | null }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
+    select: {
+      id: true,
+      institutionId: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
       studentProfile: true,
-      institution: true,
     },
   });
   if (!user) {
     throw new UnauthorizedError('Pengguna tidak ditemukan');
   }
   return user;
+}
+
+export async function getMeWithPeriod(userId: string, institutionId: string) {
+  const [user, activePeriod] = await Promise.all([
+    getMe(userId),
+    prisma.academicPeriod.findFirst({
+      where: { institutionId, isActive: true },
+      select: { id: true, name: true, year: true, semester: true },
+    }),
+  ]);
+  return { user, activePeriod };
 }
 
 export async function requestPasswordReset(
@@ -307,9 +326,16 @@ export async function requestPasswordReset(
   let mailResult;
   try {
     mailResult = await sendPasswordResetEmail(user.email, plainToken);
-  } catch {
+  } catch (err: any) {
     await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } });
     console.error('[MAILER] Pengiriman email pemulihan akun gagal');
+    if (process.env.NODE_ENV === 'production' && err?.message?.includes('SMTP')) {
+      throw new AppError(
+        503,
+        'MAILER_UNAVAILABLE',
+        'Layanan email pemulihan akun belum siap. Hubungi operator sistem.'
+      );
+    }
     return genericResponse;
   }
 

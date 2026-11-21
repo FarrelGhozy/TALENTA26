@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { loadConfig } from '../lib/config';
+import { assertProductionConfig, loadConfig } from '../lib/config';
 import { authPlugin } from './middleware/auth';
 import { formatErrorResponse } from './middleware/error';
 import { healthRoutes } from '../modules/health';
@@ -19,14 +19,20 @@ import { selectionRoutes } from '../modules/selections';
 
 export function createServer() {
   const currentConfig = loadConfig();
+  assertProductionConfig(currentConfig);
+
+  const allowedOrigins =
+    currentConfig.nodeEnv === 'production'
+      ? [currentConfig.publicOrigin]
+      : [currentConfig.publicOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'];
 
   const app = new Elysia()
     .use(
       cors({
-        origin: [currentConfig.publicOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+        origin: allowedOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'],
       })
     )
     .onError(({ error, set }) => {

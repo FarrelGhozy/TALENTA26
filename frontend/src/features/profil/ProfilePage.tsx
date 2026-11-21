@@ -44,7 +44,7 @@ export const ProfilePage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) return;
+        if (cancelled) return;
         setLoading(false);
         setFormError('Gagal memuat profil. Coba muat ulang halaman.');
       });

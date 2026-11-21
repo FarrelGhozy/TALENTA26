@@ -29,7 +29,7 @@ export const AdminDashboardPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) return;
+        if (cancelled) return;
         setError('Gagal memuat statistik admin.');
         setLoading(false);
       });

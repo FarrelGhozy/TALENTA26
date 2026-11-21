@@ -3,8 +3,8 @@ import { NotFoundError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 
 export async function getRoadmapByCompetitionSlug(slug: string) {
-  const comp = await prisma.competition.findUnique({
-    where: { slug },
+  const comp = await prisma.competition.findFirst({
+    where: { slug, status: 'published' },
   });
 
   if (!comp) {
@@ -60,8 +60,8 @@ export async function getRoadmapByCompetitionSlug(slug: string) {
 }
 
 export async function getChecklistProgress(userId: string, slug: string): Promise<Record<string, boolean>> {
-  const comp = await prisma.competition.findUnique({
-    where: { slug },
+  const comp = await prisma.competition.findFirst({
+    where: { slug, status: 'published' },
   });
 
   if (!comp) {
@@ -120,8 +120,8 @@ export async function toggleChecklistTask(
   taskIdOrKey: string,
   institutionId: string
 ): Promise<Record<string, boolean>> {
-  const comp = await prisma.competition.findUnique({
-    where: { slug },
+  const comp = await prisma.competition.findFirst({
+    where: { slug, status: 'published' },
   });
 
   if (!comp) {
@@ -208,9 +208,48 @@ export async function toggleChecklistTask(
   return getChecklistProgress(userId, slug);
 }
 
+export async function setRoadmapTaskProgress(
+  userId: string,
+  taskId: string,
+  completed?: boolean,
+  institutionId?: string
+) {
+  const task = await prisma.roadmapTask.findUnique({
+    where: { id: taskId },
+    include: { phase: { include: { roadmap: { include: { competition: true } } } } },
+  });
+  if (!task || task.phase.roadmap.status !== 'published' || task.phase.roadmap.competition.status !== 'published') {
+    throw new NotFoundError('Tugas roadmap tidak ditemukan');
+  }
+
+  const existing = await prisma.roadmapProgress.findUnique({
+    where: { userId_taskId: { userId, taskId } },
+  });
+  const nextCompleted = completed !== undefined ? completed : !(existing?.completed ?? false);
+
+  const progress = await prisma.roadmapProgress.upsert({
+    where: { userId_taskId: { userId, taskId } },
+    update: { completed: nextCompleted, completedAt: nextCompleted ? new Date() : null },
+    create: { userId, taskId, completed: nextCompleted, completedAt: nextCompleted ? new Date() : null },
+  });
+
+  if (institutionId) {
+    await recordAuditEvent({
+      institutionId,
+      actorId: userId,
+      action: 'ROADMAP_TASK_TOGGLED',
+      targetType: 'RoadmapTask',
+      targetId: taskId,
+      metadata: { completed: nextCompleted, competitionSlug: task.phase.roadmap.competition.slug },
+    });
+  }
+
+  return progress;
+}
+
 export async function getConsultantsByCompetitionSlug(slug: string) {
-  const comp = await prisma.competition.findUnique({
-    where: { slug },
+  const comp = await prisma.competition.findFirst({
+    where: { slug, status: 'published' },
   });
 
   if (!comp) {

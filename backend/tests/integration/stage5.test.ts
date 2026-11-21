@@ -168,6 +168,8 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
   });
 
   afterAll(async () => {
+    await prisma.pointRule.deleteMany({ where: { institutionId, version: { gt: 1 } } });
+    await prisma.pointRule.updateMany({ where: { institutionId, version: 1 }, data: { isActive: true } });
     await closeDatabase();
   });
 

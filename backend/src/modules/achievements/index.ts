@@ -9,6 +9,36 @@ import type {
   AchievementResult,
 } from '@prisma/client';
 
+function extractUploadedFiles(rawItems: any[]): Promise<achService.UploadedFileItem[]> {
+  return Promise.all(
+    rawItems
+      .filter(Boolean)
+      .map(async (item) => {
+        if (item instanceof File && item.size > 0) {
+          const buffer = Buffer.from(await item.arrayBuffer());
+          return {
+            name: item.name,
+            size: buffer.byteLength,
+            type: item.type,
+            buffer,
+          };
+        }
+        if (item && typeof item === 'object' && item.buffer) {
+          const buffer = Buffer.isBuffer(item.buffer)
+            ? item.buffer
+            : Buffer.from(item.buffer, 'base64');
+          return {
+            name: item.name || item.fileName || 'berkas.pdf',
+            size: buffer.byteLength,
+            type: item.type || item.mimeType || 'application/pdf',
+            buffer,
+          };
+        }
+        return null;
+      })
+  ).then((arr) => arr.filter((x): x is achService.UploadedFileItem => x !== null));
+}
+
 export const achievementRoutes = new Elysia()
   .use(authPlugin)
 
@@ -39,6 +69,7 @@ export const achievementRoutes = new Elysia()
     '/api/v1/me/achievements',
     async ({ auth, query }) => {
       assertAuthenticated(auth);
+      assertRole(auth, ['mahasiswa']);
       const data = await achService.getStudentAchievements(
         auth.user.id,
         query.status
@@ -54,19 +85,21 @@ export const achievementRoutes = new Elysia()
 
   .get('/api/v1/me/achievements/:id', async ({ auth, params }) => {
     assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
     const data = await achService.getAchievementById(
       params.id,
       auth.user.id,
-      auth.user.role
+      auth.user.role,
+      auth.user.institutionId
     );
     return { data };
   })
 
   .post('/api/v1/me/achievements', async ({ auth, request, body }) => {
     assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
 
     const contentType = request.headers.get('content-type') || '';
-    const filesToUpload: achService.UploadedFileItem[] = [];
     const b = (body || {}) as any;
 
     let rawFormData: any = null;
@@ -116,24 +149,7 @@ export const achievementRoutes = new Elysia()
       else rawItems.push(b.files);
     }
 
-    for (const item of rawItems) {
-      if (item instanceof File && item.size > 0) {
-        const buffer = Buffer.from(await item.arrayBuffer());
-        filesToUpload.push({
-          name: item.name,
-          size: item.size,
-          type: item.type,
-          buffer,
-        });
-      } else if (item && typeof item === 'object' && item.buffer) {
-        filesToUpload.push({
-          name: item.name || item.fileName || 'berkas.pdf',
-          size: item.size || item.fileSize || 1000,
-          type: item.type || item.mimeType || 'application/pdf',
-          buffer: Buffer.isBuffer(item.buffer) ? item.buffer : Buffer.from(item.buffer, 'base64'),
-        });
-      }
-    }
+    const filesToUpload = await extractUploadedFiles(rawItems);
 
     const created = await achService.createAchievement(
       auth.user.institutionId,
@@ -149,9 +165,9 @@ export const achievementRoutes = new Elysia()
     '/api/v1/me/achievements/:id/revisions',
     async ({ auth, params, request, body }) => {
       assertAuthenticated(auth);
+      assertRole(auth, ['mahasiswa']);
 
       const contentType = request.headers.get('content-type') || '';
-      const newFiles: achService.UploadedFileItem[] = [];
       const b = (body || {}) as any;
 
       let rawFormData: any = null;
@@ -185,24 +201,7 @@ export const achievementRoutes = new Elysia()
         else rawItems.push(b.files);
       }
 
-      for (const item of rawItems) {
-        if (item instanceof File && item.size > 0) {
-          const buffer = Buffer.from(await item.arrayBuffer());
-          newFiles.push({
-            name: item.name,
-            size: item.size,
-            type: item.type,
-            buffer,
-          });
-        } else if (item && typeof item === 'object' && item.buffer) {
-          newFiles.push({
-            name: item.name || item.fileName || 'berkas.pdf',
-            size: item.size || item.fileSize || 1000,
-            type: item.type || item.mimeType || 'application/pdf',
-            buffer: Buffer.isBuffer(item.buffer) ? item.buffer : Buffer.from(item.buffer, 'base64'),
-          });
-        }
-      }
+      const newFiles = await extractUploadedFiles(rawItems);
 
       const updated = await achService.submitRevision(
         params.id,
@@ -215,6 +214,17 @@ export const achievementRoutes = new Elysia()
     }
   )
 
+  .post('/api/v1/me/achievements/:id/cancel', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
+    const cancelled = await achService.cancelAchievement(
+      params.id,
+      auth.user.id,
+      auth.user.institutionId
+    );
+    return { data: cancelled };
+  })
+
   // ==========================================
   // Unduh Berkas Bukti Terotorisasi (Anti-IDOR)
   // ==========================================
@@ -223,7 +233,8 @@ export const achievementRoutes = new Elysia()
     const file = await achService.getEvidenceFile(
       params.id,
       auth.user.id,
-      auth.user.role
+      auth.user.role,
+      auth.user.institutionId
     );
 
     return new Response(file.buffer, {
@@ -245,6 +256,7 @@ export const achievementRoutes = new Elysia()
       assertRole(auth, ['validator', 'super_admin']);
 
       const data = await achService.getAdminAchievements({
+        institutionId: auth.user.institutionId,
         status: query.status,
         periodId: query.periodId,
         category: query.category,
@@ -272,7 +284,8 @@ export const achievementRoutes = new Elysia()
     const data = await achService.getAchievementById(
       params.id,
       auth.user.id,
-      auth.user.role
+      auth.user.role,
+      auth.user.institutionId
     );
     return { data };
   })
@@ -298,7 +311,8 @@ export const achievementRoutes = new Elysia()
         auth.user.id,
         b.action,
         b.reason,
-        b.version
+        b.version,
+        auth.user.institutionId
       );
 
       return { data: updated };
@@ -329,7 +343,8 @@ export const achievementRoutes = new Elysia()
         auth.user.id,
         b.reason,
         b.version,
-        b.targetStatus
+        b.targetStatus,
+        auth.user.institutionId
       );
 
       return { data: updated };
