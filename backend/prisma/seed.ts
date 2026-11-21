@@ -80,6 +80,34 @@ async function main() {
       });
       console.log(`[SEED:DEV] Validator uji coba dibuat: ${validatorEmail}`);
     }
+
+    const studentEmail = 'mhs@unida.gontor.ac.id';
+    const existingStudent = await prisma.user.findUnique({
+      where: { email: studentEmail },
+    });
+
+    if (!existingStudent) {
+      const studentHash = await hashPassword('Mahasiswa2026!');
+      await prisma.user.create({
+        data: {
+          institutionId: institution.id,
+          email: studentEmail,
+          passwordHash: studentHash,
+          role: 'mahasiswa',
+          status: 'active',
+          studentProfile: {
+            create: {
+              nim: '432026001',
+              fullName: 'Ahmad Fauzan',
+              studyProgram: 'Teknik Informatika',
+              faculty: 'Sains dan Teknologi',
+              enrollmentYear: 2024,
+            },
+          },
+        },
+      });
+      console.log(`[SEED:DEV] Mahasiswa uji coba dibuat: ${studentEmail}`);
+    }
   }
 
   // 4. Periode Akademik Aktif

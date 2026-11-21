@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Award, Medal, Trophy, Calendar, Sparkles } from 'lucide-react';
+import { Award, Medal, Trophy, Calendar } from 'lucide-react';
 import { achievementService } from '@talenta/services';
 import { RankingResponse } from '../../types';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -125,7 +125,7 @@ export const RankingPage: React.FC = () => {
                     <p className="font-extrabold text-slate-950 text-sm truncate">{item.fullName}</p>
                     {isTop1 && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
-                        <Sparkles className="w-3 h-3 text-amber-600" />
+                        <Trophy className="w-3 h-3 text-amber-600" aria-hidden="true" />
                         Juara Puncak
                       </span>
                     )}

@@ -5,7 +5,7 @@ import { authPlugin } from './middleware/auth';
 import { formatErrorResponse } from './middleware/error';
 import { healthRoutes } from '../modules/health';
 import { authRoutes } from '../modules/auth';
-import { profileRoutes } from '../modules/profile';
+import { profileRoutes, userRoutes } from '../modules/profile';
 import { competitionRoutes } from '../modules/competitions';
 import { targetRoutes } from '../modules/targets';
 import { matchingRoutes } from '../modules/matching';
@@ -39,6 +39,7 @@ export function createServer() {
     .use(healthRoutes)
     .use(authRoutes)
     .use(profileRoutes)
+    .use(userRoutes)
     .use(competitionRoutes)
     .use(targetRoutes)
     .use(matchingRoutes)

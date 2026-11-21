@@ -18,6 +18,22 @@ export default defineConfig(({ mode }) => {
         '@talenta/services': fileURLToPath(new URL(source, import.meta.url)),
       },
     },
+    server: {
+      port: 5173,
+      proxy:
+        !useMock && (env.VITE_API_BASE_URL || '/api/v1').startsWith('/')
+          ? {
+              '/api': {
+                target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+                changeOrigin: true,
+              },
+              '/health': {
+                target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001',
+                changeOrigin: true,
+              },
+            }
+          : undefined,
+    },
     plugins: [react(), tailwindcss()],
   };
 });

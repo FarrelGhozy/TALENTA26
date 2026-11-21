@@ -67,69 +67,71 @@ export const achievementRoutes = new Elysia()
 
     const contentType = request.headers.get('content-type') || '';
     const filesToUpload: achService.UploadedFileItem[] = [];
-    let payload: achService.CreateAchievementInput;
+    const b = (body || {}) as any;
 
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData();
-      const name = (formData.get('nama') || formData.get('name') || '') as string;
-      const organizer = (formData.get('penyelenggara') || formData.get('organizer') || '') as string;
-      const category = (formData.get('kategori') || formData.get('category') || 'kompetisi') as AchievementCategory;
-      const level = (formData.get('tingkat') || formData.get('level') || 'nasional') as AchievementLevel;
-      const result = (formData.get('jenisCapaian') || formData.get('result') || 'juara_1') as AchievementResult;
-      const eventDate = (formData.get('tanggal') || formData.get('eventDate') || '') as string;
-      const description = (formData.get('deskripsi') || formData.get('description') || '') as string;
-      const competitionSlug = (formData.get('competitionSlug') || '') as string;
-      const isFromInternalSelection = formData.get('dariSeleksiInternal') === 'true';
+    let rawFormData: any = null;
+    if (contentType.includes('multipart/form-data') && (!b || Object.keys(b).length === 0)) {
+      try {
+        rawFormData = await request.formData();
+      } catch {}
+    }
 
-      payload = {
-        name,
-        organizer,
-        category,
-        level,
-        result,
-        eventDate,
-        description,
-        competitionSlug: competitionSlug || undefined,
-        isFromInternalSelection,
-      };
+    const name = (b.name || b.nama || rawFormData?.get('nama') || rawFormData?.get('name') || '') as string;
+    const organizer = (b.organizer || b.penyelenggara || rawFormData?.get('penyelenggara') || rawFormData?.get('organizer') || '') as string;
+    const category = (b.category || b.kategori || rawFormData?.get('kategori') || rawFormData?.get('category') || 'kompetisi') as AchievementCategory;
+    const level = (b.level || b.tingkat || rawFormData?.get('tingkat') || rawFormData?.get('level') || 'nasional') as AchievementLevel;
+    const result = (b.result || b.jenisCapaian || rawFormData?.get('jenisCapaian') || rawFormData?.get('result') || 'juara_1') as AchievementResult;
+    const eventDate = (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || '') as string;
+    const description = (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || '') as string;
+    const competitionSlug = (b.competitionSlug || rawFormData?.get('competitionSlug') || '') as string;
+    const isFromInternalSelection =
+      b.isFromInternalSelection === true ||
+      b.isFromInternalSelection === 'true' ||
+      b.dariSeleksiInternal === true ||
+      b.dariSeleksiInternal === 'true' ||
+      rawFormData?.get('dariSeleksiInternal') === 'true';
 
-      const rawFiles = formData.getAll('evidence').concat(formData.getAll('files'));
-      for (const item of rawFiles) {
-        if (item instanceof File && item.size > 0) {
-          const buffer = Buffer.from(await item.arrayBuffer());
-          filesToUpload.push({
-            name: item.name,
-            size: item.size,
-            type: item.type,
-            buffer,
-          });
-        }
-      }
-    } else {
-      const b = body as any;
-      payload = {
-        name: b.name || b.nama,
-        organizer: b.organizer || b.penyelenggara,
-        category: (b.category || b.kategori || 'kompetisi') as AchievementCategory,
-        level: (b.level || b.tingkat || 'nasional') as AchievementLevel,
-        result: (b.result || b.jenisCapaian || 'juara_1') as AchievementResult,
-        eventDate: b.eventDate || b.tanggal,
-        description: b.description || b.deskripsi,
-        competitionSlug: b.competitionSlug,
-        isFromInternalSelection: Boolean(b.isFromInternalSelection || b.dariSeleksiInternal),
-      };
+    const payload: achService.CreateAchievementInput = {
+      name,
+      organizer,
+      category,
+      level,
+      result,
+      eventDate,
+      description,
+      competitionSlug: competitionSlug || undefined,
+      isFromInternalSelection,
+    };
 
-      if (Array.isArray(b.files)) {
-        for (const f of b.files) {
-          if (f.buffer) {
-            filesToUpload.push({
-              name: f.name || f.fileName,
-              size: f.size || f.fileSize || 1000,
-              type: f.type || f.mimeType || 'application/pdf',
-              buffer: Buffer.isBuffer(f.buffer) ? f.buffer : Buffer.from(f.buffer, 'base64'),
-            });
-          }
-        }
+    const rawItems: any[] = [];
+    if (rawFormData) {
+      rawItems.push(...rawFormData.getAll('evidence'), ...rawFormData.getAll('files'));
+    }
+    if (b.evidence) {
+      if (Array.isArray(b.evidence)) rawItems.push(...b.evidence);
+      else rawItems.push(b.evidence);
+    }
+    if (b.files) {
+      if (Array.isArray(b.files)) rawItems.push(...b.files);
+      else rawItems.push(b.files);
+    }
+
+    for (const item of rawItems) {
+      if (item instanceof File && item.size > 0) {
+        const buffer = Buffer.from(await item.arrayBuffer());
+        filesToUpload.push({
+          name: item.name,
+          size: item.size,
+          type: item.type,
+          buffer,
+        });
+      } else if (item && typeof item === 'object' && item.buffer) {
+        filesToUpload.push({
+          name: item.name || item.fileName || 'berkas.pdf',
+          size: item.size || item.fileSize || 1000,
+          type: item.type || item.mimeType || 'application/pdf',
+          buffer: Buffer.isBuffer(item.buffer) ? item.buffer : Buffer.from(item.buffer, 'base64'),
+        });
       }
     }
 
@@ -150,57 +152,55 @@ export const achievementRoutes = new Elysia()
 
       const contentType = request.headers.get('content-type') || '';
       const newFiles: achService.UploadedFileItem[] = [];
-      let payload: achService.RevisionInput;
+      const b = (body || {}) as any;
 
-      if (contentType.includes('multipart/form-data')) {
-        const formData = await request.formData();
-        payload = {
-          name: (formData.get('nama') || formData.get('name') || undefined) as string | undefined,
-          organizer: (formData.get('penyelenggara') || formData.get('organizer') || undefined) as string | undefined,
-          category: (formData.get('kategori') || formData.get('category') || undefined) as AchievementCategory | undefined,
-          level: (formData.get('tingkat') || formData.get('level') || undefined) as AchievementLevel | undefined,
-          result: (formData.get('jenisCapaian') || formData.get('result') || undefined) as AchievementResult | undefined,
-          eventDate: (formData.get('tanggal') || formData.get('eventDate') || undefined) as string | undefined,
-          description: (formData.get('deskripsi') || formData.get('description') || undefined) as string | undefined,
-          note: (formData.get('catatan') || formData.get('note') || undefined) as string | undefined,
-        };
+      let rawFormData: any = null;
+      if (contentType.includes('multipart/form-data') && (!b || Object.keys(b).length === 0)) {
+        try {
+          rawFormData = await request.formData();
+        } catch {}
+      }
 
-        const rawFiles = formData.getAll('evidence').concat(formData.getAll('files'));
-        for (const item of rawFiles) {
-          if (item instanceof File && item.size > 0) {
-            const buffer = Buffer.from(await item.arrayBuffer());
-            newFiles.push({
-              name: item.name,
-              size: item.size,
-              type: item.type,
-              buffer,
-            });
-          }
-        }
-      } else {
-        const b = body as any;
-        payload = {
-          name: b.name || b.nama,
-          organizer: b.organizer || b.penyelenggara,
-          category: b.category || b.kategori,
-          level: b.level || b.tingkat,
-          result: b.result || b.jenisCapaian,
-          eventDate: b.eventDate || b.tanggal,
-          description: b.description || b.deskripsi,
-          note: b.note || b.catatan,
-        };
+      const payload: achService.RevisionInput = {
+        name: (b.name || b.nama || rawFormData?.get('nama') || rawFormData?.get('name') || undefined) as string | undefined,
+        organizer: (b.organizer || b.penyelenggara || rawFormData?.get('penyelenggara') || rawFormData?.get('organizer') || undefined) as string | undefined,
+        category: (b.category || b.kategori || rawFormData?.get('kategori') || rawFormData?.get('category') || undefined) as AchievementCategory | undefined,
+        level: (b.level || b.tingkat || rawFormData?.get('tingkat') || rawFormData?.get('level') || undefined) as AchievementLevel | undefined,
+        result: (b.result || b.jenisCapaian || rawFormData?.get('jenisCapaian') || rawFormData?.get('result') || undefined) as AchievementResult | undefined,
+        eventDate: (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || undefined) as string | undefined,
+        description: (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || undefined) as string | undefined,
+        note: (b.note || b.catatan || rawFormData?.get('catatan') || rawFormData?.get('note') || undefined) as string | undefined,
+      };
 
-        if (Array.isArray(b.files)) {
-          for (const f of b.files) {
-            if (f.buffer) {
-              newFiles.push({
-                name: f.name || f.fileName,
-                size: f.size || f.fileSize || 1000,
-                type: f.type || f.mimeType || 'application/pdf',
-                buffer: Buffer.isBuffer(f.buffer) ? f.buffer : Buffer.from(f.buffer, 'base64'),
-              });
-            }
-          }
+      const rawItems: any[] = [];
+      if (rawFormData) {
+        rawItems.push(...rawFormData.getAll('evidence'), ...rawFormData.getAll('files'));
+      }
+      if (b.evidence) {
+        if (Array.isArray(b.evidence)) rawItems.push(...b.evidence);
+        else rawItems.push(b.evidence);
+      }
+      if (b.files) {
+        if (Array.isArray(b.files)) rawItems.push(...b.files);
+        else rawItems.push(b.files);
+      }
+
+      for (const item of rawItems) {
+        if (item instanceof File && item.size > 0) {
+          const buffer = Buffer.from(await item.arrayBuffer());
+          newFiles.push({
+            name: item.name,
+            size: item.size,
+            type: item.type,
+            buffer,
+          });
+        } else if (item && typeof item === 'object' && item.buffer) {
+          newFiles.push({
+            name: item.name || item.fileName || 'berkas.pdf',
+            size: item.size || item.fileSize || 1000,
+            type: item.type || item.mimeType || 'application/pdf',
+            buffer: Buffer.isBuffer(item.buffer) ? item.buffer : Buffer.from(item.buffer, 'base64'),
+          });
         }
       }
 

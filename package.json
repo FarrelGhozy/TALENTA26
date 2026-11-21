@@ -14,6 +14,7 @@
     "typecheck": "tsc -p frontend --noEmit && tsc -p backend --noEmit",
     "test": "bun test backend/tests/unit && bun backend/tests/run-integration.ts",
     "test:integration": "bun backend/tests/run-integration.ts",
+    "test:e2e": "bash run-e2e.sh",
     "lint": "oxlint frontend/src backend/src"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.90.0",
+    "playwright": "^1.65.1",
     "prisma": "7.10.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",

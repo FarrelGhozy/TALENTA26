@@ -16,8 +16,12 @@ export function assertSameOrigin(request: Request): void {
     }
     return;
   }
-  const expectedOrigin = new URL(loadConfig().publicOrigin).origin;
-  if (origin !== expectedOrigin) {
+  const currentConfig = loadConfig();
+  const expectedOrigin = new URL(currentConfig.publicOrigin).origin;
+  const isDevOrigin =
+    currentConfig.nodeEnv !== 'production' &&
+    (origin === 'http://localhost:5173' || origin === 'http://127.0.0.1:5173');
+  if (origin !== expectedOrigin && !isDevOrigin) {
     throw new ForbiddenError('Permintaan lintas situs ditolak');
   }
 }

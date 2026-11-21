@@ -88,6 +88,17 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
       ? selectedRealFiles.map((f) => ({ nama: f.name, size: f.size }))
       : [{ nama: presetFileName.trim(), size: presetFileSize }];
 
+    let filesToSubmit: File[] = selectedRealFiles;
+    if (!hasRealFiles && hasPreset) {
+      const validPdfHeader =
+        '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000108 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n182\n%%EOF';
+      const syntheticBlob = new Blob([validPdfHeader], { type: 'application/pdf' });
+      const syntheticFile = new File([syntheticBlob], presetFileName.trim(), {
+        type: 'application/pdf',
+      });
+      filesToSubmit = [syntheticFile];
+    }
+
     onSubmit(
       {
         userId,
@@ -100,7 +111,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
         bukti,
         dariSeleksiInternal,
       },
-      hasRealFiles ? selectedRealFiles : undefined
+      filesToSubmit.length > 0 ? filesToSubmit : undefined
     );
   };
 

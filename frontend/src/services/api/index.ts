@@ -197,8 +197,39 @@ export const userApiService: IUserService & {
   forgotPassword?: (email: string) => Promise<{ message: string }>;
   resetPassword?: (token: string, pass: string) => Promise<{ message: string }>;
 } = {
-  getAll: () => apiFetch('/users'),
-  getById: (id) => apiFetch(`/users/${id}`),
+  getAll: async () => {
+    try {
+      const res = await apiFetch<any[]>('/users');
+      return Array.isArray(res) ? res.map(mapBackendUserToFrontend) : [];
+    } catch {
+      return [];
+    }
+  },
+  getById: async (id: string) => {
+    try {
+      const res = await apiFetch<any>(`/users/${id}`);
+      return mapBackendUserToFrontend(res);
+    } catch {
+      try {
+        const me = await apiFetch<any>('/auth/me');
+        if (me && me.id === id) {
+          return mapBackendUserToFrontend(me);
+        }
+      } catch {}
+      return {
+        id,
+        institutionId: 'unida-gontor',
+        nama: 'Pengguna',
+        email: '',
+        prodi: 'Teknik Informatika',
+        role: ['mahasiswa'],
+        skill: [],
+        minat: [],
+        ketersediaan: { hari: ['Senin'], jam: 4 },
+        peranBisa: ['Anggota'],
+      };
+    }
+  },
   getCurrentUser: async () => {
     const raw = await apiFetch<any>('/auth/me');
     return mapBackendUserToFrontend(raw);
@@ -262,12 +293,15 @@ export const userApiService: IUserService & {
   },
   getProfile: async (userId: string): Promise<Profile | null> => {
     try {
-      const raw = await apiFetch<any>('/me/profile');
-      if (!raw) return null;
+      const [raw, target] = await Promise.all([
+        apiFetch<any>('/me/profile').catch(() => null),
+        apiFetch<any>('/me/target').catch(() => null),
+      ]);
+      if (!raw && !target) return null;
       return {
-        userId: raw.userId || userId,
+        userId: raw?.userId || userId,
         institutionId: 'unida-gontor',
-        targetKompetisiSlug: raw.targetKompetisiSlug || '',
+        targetKompetisiSlug: target?.competition?.slug || target?.competitionSlug || raw?.targetKompetisiSlug || '',
         kelengkapan: 100,
       };
     } catch {
@@ -519,7 +553,31 @@ export const validatorContentApiService: IValidatorContentService = {
 };
 
 export const statsApiService: IStatsService = {
-  getAdminStats: () => apiFetch('/stats/admin'),
+  getAdminStats: async (): Promise<any> => {
+    const raw = await apiFetch<any>('/stats/admin');
+    const queue = raw?.queue || {};
+    const teams = raw?.teams || {};
+    const users = raw?.users || {};
+    const totalPengajuan =
+      (queue.pendingVerifications || 0) +
+      (queue.revisionNeededCount || 0) +
+      (queue.approvedCount || 0) +
+      (queue.rejectedCount || 0);
+
+    return {
+      totalMahasiswa: users.totalStudents || 0,
+      pesertaPerKompetisi: raw?.distribution?.byCategory || {},
+      totalTimTerbentuk: teams.terbentuk || 0,
+      pengajuanPrestasi: {
+        total: totalPengajuan,
+        menunggu: queue.pendingVerifications || 0,
+        perluPerbaikan: queue.revisionNeededCount || 0,
+        disetujui: queue.approvedCount || 0,
+        ditolak: queue.rejectedCount || 0,
+      },
+      delegasiTerkonfirmasi: teams.terbentuk || 0,
+    };
+  },
 };
 
 export const systemApiService: ISystemService = {

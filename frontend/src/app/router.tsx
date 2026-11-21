@@ -92,6 +92,10 @@ export const router = createBrowserRouter(
 
   { path: '/admin', element: <Navigate to="/super-admin" replace /> },
   { path: '/verifikasi', element: <Navigate to="/validator/prestasi" replace /> },
+  { path: '/login', element: <Navigate to="/masuk" replace /> },
+  { path: '/auth/login', element: <Navigate to="/masuk" replace /> },
+  { path: '/register', element: <Navigate to="/daftar" replace /> },
+  { path: '/auth/register', element: <Navigate to="/daftar" replace /> },
   { path: '/404', element: <NotFoundPage /> },
   { path: '*', element: <NotFoundPage /> },
   ],

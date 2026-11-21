@@ -67,7 +67,7 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   // Find max count to scale visual progress bars
-  const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi));
+  const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi || {}));
 
   return (
     <div className="space-y-6">

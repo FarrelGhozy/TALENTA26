@@ -8,7 +8,7 @@ interface AuthContextType {
   currentRole: Role;
   isLoading: boolean;
   loginAsRole: (role: Role, userId?: string) => Promise<void>;
-  loginWithCredentials: (email: string, pass: string) => Promise<void>;
+  loginWithCredentials: (email: string, pass: string) => Promise<User>;
   registerMahasiswa: (payload: any) => Promise<User>;
   logout: () => void;
 }
@@ -23,7 +23,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUser = async () => {
     try {
       const user = await userService.getCurrentUser();
-      setCurrentUser(user);
+      if (user) {
+        setCurrentUser(user);
+        const role = user.role[0] || 'mahasiswa';
+        setCurrentRole(role);
+        setItem('talenta-role', role);
+        setItem('talenta-user-id', user.id);
+      } else {
+        setCurrentUser(null);
+      }
     } catch {
       setCurrentUser(null);
     } finally {
@@ -57,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithCredentials = async (email: string, pass: string) => {
+  const loginWithCredentials = async (email: string, pass: string): Promise<User> => {
     setIsLoading(true);
     try {
       if ((userService as any).login) {
@@ -68,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setItem('talenta-user-id', user.id);
         setCurrentRole(role);
         setCurrentUser(user);
+        return user;
       } else {
         const users = await userService.getAll();
         const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
@@ -77,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setItem('talenta-user-id', found.id);
         setCurrentRole(role);
         setCurrentUser(found);
+        return found;
       }
     } finally {
       setIsLoading(false);
