@@ -82,12 +82,23 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 function mapBackendUserToFrontend(raw: any): User {
   const role = (raw.role || 'mahasiswa') as Role;
   const profile = raw.studentProfile;
+  let nama = profile?.fullName || raw.fullName;
+  if (!nama) {
+    if (role === 'super_admin') {
+      nama = 'Super Administrator';
+    } else if (role === 'validator') {
+      nama = 'Tim Validator';
+    } else {
+      nama = raw.email?.split('@')[0] || 'Pengguna';
+    }
+  }
+
   return {
     id: raw.id,
     institutionId: raw.institutionId || 'unida-gontor',
-    nama: profile?.fullName || raw.fullName || raw.email?.split('@')[0] || 'Pengguna',
+    nama,
     email: raw.email || '',
-    prodi: profile?.studyProgram || 'Teknik Informatika',
+    prodi: profile?.studyProgram || (role === 'mahasiswa' ? 'Teknik Informatika' : '-'),
     angkatan: profile?.enrollmentYear,
     avatar: profile?.avatarUrl || raw?.avatarUrl || raw?.avatar || undefined,
     role: [role],

@@ -84,6 +84,7 @@ async function main() {
     const studentEmail = 'mhs@unida.gontor.ac.id';
     const existingStudent = await prisma.user.findUnique({
       where: { email: studentEmail },
+      include: { studentProfile: true },
     });
 
     if (!existingStudent) {
@@ -107,6 +108,55 @@ async function main() {
         },
       });
       console.log(`[SEED:DEV] Mahasiswa uji coba dibuat: ${studentEmail}`);
+    } else if (existingStudent.studentProfile) {
+      await prisma.studentProfile.update({
+        where: { id: existingStudent.studentProfile.id },
+        data: {
+          fullName: 'Ahmad Fauzan',
+          studyProgram: 'Teknik Informatika',
+          faculty: 'Sains dan Teknologi',
+          enrollmentYear: 2024,
+        },
+      });
+    }
+
+    const zaidanEmail = 'zaidan@unida.gontor.ac.id';
+    const existingZaidan = await prisma.user.findUnique({
+      where: { email: zaidanEmail },
+      include: { studentProfile: true },
+    });
+
+    if (!existingZaidan) {
+      const zaidanHash = await hashPassword('Mahasiswa2026!');
+      await prisma.user.create({
+        data: {
+          institutionId: institution.id,
+          email: zaidanEmail,
+          passwordHash: zaidanHash,
+          role: 'mahasiswa',
+          status: 'active',
+          studentProfile: {
+            create: {
+              nim: '442026777',
+              fullName: 'Zaidan Ali',
+              studyProgram: 'Teknik Informatika',
+              faculty: 'Sains dan Teknologi',
+              enrollmentYear: 2024,
+            },
+          },
+        },
+      });
+      console.log(`[SEED:DEV] Mahasiswa Zaidan dibuat: ${zaidanEmail}`);
+    } else if (existingZaidan.studentProfile) {
+      await prisma.studentProfile.update({
+        where: { id: existingZaidan.studentProfile.id },
+        data: {
+          fullName: 'Zaidan Ali',
+          studyProgram: 'Teknik Informatika',
+          faculty: 'Sains dan Teknologi',
+          enrollmentYear: 2024,
+        },
+      });
     }
   }
 
