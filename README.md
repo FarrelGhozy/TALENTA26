@@ -30,7 +30,7 @@ Halaman `/masuk` menyediakan kartu instan untuk role final `mahasiswa`, `validat
 
 Sekarang: `frontend/` berisi aplikasi dan adapter mock/API; `backend/` berisi layanan, skema, migrasi dan tes; `infra/` memuat skrip backup database; `docs/` berisi kontrak dan bukti. `.github/workflows/deploy.yml` khusus build demo Pages.
 
-Target saat stage implementasi: frontend/ aplikasi React; backend/ Bun/Elysia/Prisma; infra/ konfigurasi proxy; compose.yaml root; root .env.example; dua image GHCR public. MySQL dan RustFS existing tetap layanan luar Compose aplikasi. Struktur rinci docs/04-sitemap.md.
+Target produksi: `frontend/` aplikasi React; `backend/` Bun/Elysia/Prisma; `infra/` berisi `docker-compose.yaml` (khusus production, pull GHCR), `nginx/default.conf`, dan skrip backup; root `.env.example`; dua image GHCR (`talenta-frontend` dan `talenta-backend`) dibangun via `.github/workflows/ci-publish.yml`. MySQL dan RustFS existing tetap layanan luar Compose produksi. Struktur rinci di `docs/04-sitemap.md` dan panduan deployment di `infra/README.md`.
 
 ## Dokumen kerja
 

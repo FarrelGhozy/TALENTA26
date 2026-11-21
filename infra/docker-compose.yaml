@@ -1,0 +1,49 @@
+# ==============================================================================
+# TALENTA UNIDA Gontor — Docker Compose Khusus Production (GHCR)
+# ==============================================================================
+# Konsep:
+# - Docker Compose ini HANYA untuk runtime production di server (tidak melakukan build).
+# - Default menarik tag `:latest` dari GHCR; ubah `IMAGE_TAG` di `infra/.env` (atau via env)
+#   untuk menyematkan/rollback ke tag rilis tertentu (mis. `v1.0.0` atau `sha-<commit>`).
+# - Seluruh konfigurasi runtime production WAJIB diatur pada `infra/.env`
+#   (salin dari `../.env.example` lalu sesuaikan DB, RustFS, secret, SMTP, dan PUBLIC_ORIGIN).
+#
+# Perintah cepat (dari direktori `infra/`):
+#   cp ../.env.example .env && chmod 600 .env   # isi variabel produksi
+#   docker compose pull                         # tarik image terbaru dari GHCR
+#   docker compose up -d                        # jalankan migrasi, API, dan Nginx proxy
+# ==============================================================================
+
+services:
+  migrate:
+    image: ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-backend:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    command: ["bunx", "prisma", "migrate", "deploy"]
+    restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-backend:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-frontend:${IMAGE_TAG:-latest}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped

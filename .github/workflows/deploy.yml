@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
+# Arsip workflow demo GitHub Pages (hanya pemicu manual; rilis produksi memakai ci-publish.yml).
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

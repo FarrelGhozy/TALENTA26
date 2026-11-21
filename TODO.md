@@ -6,7 +6,7 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 - [x] Frontend React/Vite dengan rute publik, mahasiswa, validator, super admin, serta adapter mock/API.
 - [x] Backend Elysia, Prisma 7/MySQL, integrasi storage S3 compatible (RustFS), autentikasi Argon2id + cookie HttpOnly, SMTP reset password, serta tes unit/integrasi/Playwright E2E ada di repo.
 - [x] Penutupan temuan audit keamanan, korupsi poin/ledger, crash alur nyata, dan fitur keputusan `K-15`–`K-22` (Fase 1–3) telah diselesaikan dan diverifikasi.
-- [x] CI image GHCR public, `Dockerfile`, `compose.yaml` produksi, dan reverse proxy `infra/` telah disiapkan dan diverifikasi build lokal; uji push/pull GHCR serta staging di home server menunggu instruksi rilis terpisah.
+- [x] CI image GHCR (`ci-publish.yml`), `Dockerfile` produksi, `infra/docker-compose.yaml` (khusus production pull GHCR), dan reverse proxy `infra/` telah disiapkan dan diverifikasi lokal; uji push/pull GHCR serta staging di home server menunggu instruksi rilis terpisah.
 
 ---
 
@@ -99,8 +99,8 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 
 ## Fase 4 (Stage 6) — CI/CD GHCR Public, Container, Compose Produksi, & Staging
 - [x] Rapikan struktur monorepo & lockfile (`"workspaces": ["backend"]`, sinkronisasi penuh dependensi root/backend termasuk `@aws-sdk/client-s3: 3.1174.0` dengan versi tepat + `bun install --frozen-lockfile` terverifikasi; perbaiki `run-e2e.sh` agar tidak menjalankan `bun add`).
-- [x] Sediakan `frontend/Dockerfile` (multi-stage build produksi + Nginx alpine), `backend/Dockerfile` (Bun 1.4.4 + Prisma 7.10.1 client), `.dockerignore`, konfigurasi reverse proxy `infra/nginx/default.conf` (same-origin `/` dan `/api/`, `/health`, header keamanan, batas unggah `30m`), dan root `compose.yaml` (`migrate`, `api`, `web`; terhubung ke MySQL & RustFS existing via root `.env`).
-- [x] Tambahkan workflow `.github/workflows/ci-publish.yml` untuk CI (`typecheck`, `lint`, unit tests, build produksi, scan bundle & `.env`) + build & push image `talenta-frontend` dan `talenta-backend` ke GHCR public dengan tag commit SHA dan tag rilis (tanpa menyematkan secret server di build).
+- [x] Sediakan `frontend/Dockerfile` (multi-stage build produksi + Nginx alpine), `backend/Dockerfile` (Bun 1.4.4 + Prisma 7.10.1 client), `.dockerignore`, konfigurasi reverse proxy `infra/nginx/default.conf` (same-origin `/` dan `/api/`, `/health`, header keamanan, batas unggah `30m`), dan `infra/docker-compose.yaml` khusus production (`migrate`, `api`, `web` menarik image GHCR dengan default tag `latest` atau `IMAGE_TAG` tertentu, memakai `infra/.env`, terhubung ke MySQL & RustFS existing).
+- [x] Perbarui workflow `.github/workflows/ci-publish.yml` untuk push/merge ke `main` maupun push tag (`*`) agar menjalankan 2 job berurutan: Job 1 (`typecheck`, `lint`, unit + seluruh suite integrasi + coverage `bun run test:coverage`, Playwright E2E, `bun run build`, scan bundle/`.env`, dan validasi `infra/docker-compose.yaml`) + Job 2 (`publish` build & push `talenta-frontend` dan `talenta-backend` ke GHCR dengan tag `latest`/`<tag>`/`sha-<commit>`); serta matikan pemicu push otomatis di `.github/workflows/deploy.yml`.
 - [ ] Perbarui `docs/17-runbook-operasi.md`, `infra/README.md`, dan uji di staging: *(dokumentasi & verifikasi build container lokal `talenta-frontend` + `talenta-backend`, `docker compose config`, `nginx -t`, dan `prisma --version` di container sudah lulus; push ke GHCR, `docker compose pull` di home server, Cloudflare Tunnel HTTPS, serta uji rollback nyata menunggu instruksi deploy server terpisah sesuai `AGENTS.md`)*.
 - **Gate Stage 6**: artefak build, Compose, Nginx, dan workflow CI selesai dan terverifikasi lokal; aktivasi staging/produksi home server menunggu persetujuan deploy terpisah; commit Git lokal.
 

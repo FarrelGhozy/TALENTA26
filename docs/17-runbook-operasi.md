@@ -1,20 +1,26 @@
 # 17 — Runbook home server dan rilis
 
-Konfigurasi Compose (`compose.yaml`), `frontend/Dockerfile`, `backend/Dockerfile`, proxy `infra/nginx/default.conf`, serta workflow CI/GHCR (`.github/workflows/ci-publish.yml`) telah tersedia di repo. Home server mempunyai MySQL, RustFS, Cloudflare Tunnel, dan domain pribadi. Compose produksi hanya menjalankan aplikasi `web`, `api`, serta `migrate` job satu kali; hostname/port privat tidak disimpan di repo publik.
+Konfigurasi Compose produksi (`infra/docker-compose.yaml`), `frontend/Dockerfile`, `backend/Dockerfile`, proxy `infra/nginx/default.conf`, serta workflow CI/GHCR (`.github/workflows/ci-publish.yml`) telah tersedia di repo. Home server mempunyai MySQL, RustFS, Cloudflare Tunnel, dan domain pribadi. **Docker hanya dipakai untuk runtime production**; `infra/docker-compose.yaml` menarik image siap pakai dari GHCR (default `latest`, bisa diganti `IMAGE_TAG` tertentu) dan menjalankan aplikasi `web`, `api`, serta `migrate` job satu kali tanpa membuat MySQL/RustFS baru. Hostname/port privat tidak disimpan di repo publik.
 
 ## Persiapan sekali
 1. Buat database dan user MySQL dengan izin minimum; pisahkan akun DDL migrasi bila perlu. Batasi jaringan.
 2. Buat bucket privat RustFS dan service account aplikasi. Uji path-style endpoint, PUT/GET/delete.
 3. Atur HTTPS via Cloudflare Tunnel ke `http://127.0.0.1:${WEB_PORT:-8080}` (layanan `web` Nginx proxy satu origin; `/api` dan `/health` diteruskan ke `api:3001`). DB/storage tidak dibuka publik.
-4. Siapkan checkout repo, `.env` dari `.env.example` dengan `chmod 600` (isi `GHCR_OWNER`, `IMAGE_TAG`, `WEB_PORT=8080`, `TRUST_PROXY=true`, `PUBLIC_ORIGIN=https://domain-anda`, kredensial MySQL/RustFS, dan `SESSION_SECRET`/`COOKIE_SECRET` acak >= 32 karakter), ruang disk, rotasi log, monitoring dan backup terpisah.
-5. Bootstrap super admin sekali memakai rahasia sementara (`bun run backend/prisma/seed.ts` atau variabel `SUPER_ADMIN_BOOTSTRAP_*`), lalu putar/hapus rahasia.
+4. Masuk ke `infra/` dan **wajib siapkan `infra/.env`** dari `../.env.example` dengan `chmod 600 .env` (isi `GHCR_OWNER=farrelghozy`, `IMAGE_TAG=latest`, `WEB_PORT=8080`, `TRUST_PROXY=true`, `PUBLIC_ORIGIN=https://domain-anda`, kredensial MySQL/RustFS, SMTP, dan `SESSION_SECRET`/`COOKIE_SECRET` acak >= 32 karakter). Siapkan juga ruang disk, rotasi log, monitoring, dan backup terpisah.
+5. Bootstrap super admin sekali memakai rahasia sementara (`bun --env-file=infra/.env backend/prisma/seed.ts` dengan variabel `SUPER_ADMIN_BOOTSTRAP_*`), lalu putar/hapus rahasia bootstrap.
 
 ## Setiap rilis
-1. Pastikan tag/digest GHCR (`sha-<commit>` atau `vX.Y.Z`) berasal dari commit yang lulus `.github/workflows/ci-publish.yml` dan gate staging; catat `IMAGE_TAG` lama.
-2. Tinjau schema dan kompatibilitas rollback. Jalankan backup MySQL (`./infra/scripts/backup-db.sh`) serta RustFS (`bun infra/scripts/backup-storage.ts backup --output storage-backups/<waktu>`); pastikan backup dapat dibaca.
-3. Ubah `IMAGE_TAG` di root `.env`. Jalankan `docker compose pull`.
-4. Jalankan migration job sebelum atau bersamaan dengan up (`docker compose run --rm migrate` secara eksplisit jika ingin terpisah, atau via `depends_on: service_completed_successfully` pada `docker compose up -d`). Job memakai versi Prisma terkunci dan bersifat idempotent.
-5. Jalankan `docker compose up -d` dan `docker compose ps`. Cek `GET /health/live`, `GET /health/ready`, login, katalog, pengajuan, ranking, dan upload bukti.
+1. Pastikan tag/digest GHCR (`latest`, `vX.Y.Z`, atau `sha-<commit>`) berasal dari commit yang lulus `.github/workflows/ci-publish.yml` (dapat dipantau via `gh run list --workflow ci-publish.yml` / `gh run watch`); catat `IMAGE_TAG` lama.
+2. Tinjau schema dan kompatibilitas rollback. Jalankan backup MySQL (`./infra/scripts/backup-db.sh`) serta RustFS (`bun --env-file=infra/.env infra/scripts/backup-storage.ts backup --output storage-backups/<waktu>`); pastikan backup dapat dibaca.
+3. Masuk ke `infra/`. Secara default `infra/docker-compose.yaml` menarik `:latest`; untuk merilis tag tertentu, ubah `IMAGE_TAG` di `infra/.env` (atau kirim `IMAGE_TAG=<tag>`). Lalu jalankan:
+   ```bash
+   cd infra
+   docker compose pull
+   docker compose up -d
+   docker compose ps
+   ```
+4. Migration job berjalan otomatis sebelum `api` via `depends_on: service_completed_successfully` (atau dapat dijalankan eksplisit lebih dulu lewat `docker compose run --rm migrate`). Job memakai versi Prisma terkunci dan bersifat idempotent.
+5. Cek `GET /health/live`, `GET /health/ready`, login, katalog, pengajuan, ranking, dan upload bukti.
 6. Pantau error, latensi, disk, koneksi dan log. Catat operator, waktu, digest, migration ID dan hasil smoke test.
 
 Jalur normal tetap pull lalu up; backup/tinjau migrasi adalah langkah keselamatan di sekitarnya.

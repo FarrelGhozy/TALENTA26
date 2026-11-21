@@ -15,10 +15,10 @@
 - Jangan menaruh rahasia, kredensial, nomor pribadi, NIM, atau data mahasiswa nyata di repo, fixture, log, dan screenshot.
 
 ## Arsitektur tujuan
-- Monorepo: frontend/ (React, Vite, TypeScript), backend/ (Bun, Elysia, Prisma), infra/ (Compose, proxy dan contoh konfigurasi), docs/, compose.yaml, .env.example, bun.lock. Pisahkan domain, aplikasi HTTP, akses data, dan integrasi storage di backend.
+- Monorepo: frontend/ (React, Vite, TypeScript), backend/ (Bun, Elysia, Prisma), infra/ (docker-compose.yaml khusus production pull GHCR, nginx proxy, dan skrip operasional), docs/, .env.example, bun.lock. Pisahkan domain, aplikasi HTTP, akses data, dan integrasi storage di backend.
 - MySQL yang sudah ada di home server adalah database rilis pertama; RustFS yang sudah ada adalah storage S3 compatible. Aplikasi tidak menjalankan MySQL/RustFS baru secara otomatis di Compose produksi.
-- Semua permintaan browser menuju satu origin: frontend di / dan API di /api. Konfigurasi runtime di root .env; jangan menggantungkan alamat API produksi pada VITE_* saat build.
-- GitHub Actions: pemeriksaan kualitas, build image frontend dan backend, push ke GHCR public dengan tag commit SHA dan rilis. Server melakukan docker compose pull lalu docker compose up -d. Migrations, health check, backup, rollback, dan observabilitas wajib sesuai docs/15 dan docs/17.
+- Semua permintaan browser menuju satu origin: frontend di / dan API di /api. Konfigurasi runtime produksi di `infra/.env` (disalin dari `.env.example`); jangan menggantungkan alamat API produksi pada VITE_* saat build.
+- GitHub Actions (`.github/workflows/ci-publish.yml`): pada push/merge ke `main` atau push tag langsung menjalankan 2 job berurutan (semua test + coverage + E2E + build verification, lalu build & push image production frontend & backend ke GHCR dengan tag `latest`/tag rilis/`sha-<commit>`). Server masuk ke `infra/`, menyiapkan `infra/.env`, lalu menjalankan `docker compose pull` dan `docker compose up -d`. Migrations, health check, backup, rollback, dan observabilitas wajib sesuai docs/15 dan docs/17.
 - Gunakan versi dependensi terkunci. Pilih versi Prisma yang dukungan MySQL-nya stabil ketika implementasi; verifikasi Elysia + Bun + Prisma + MySQL dalam stage fondasi sebelum mengunci prosedur migrasi.
 
 ## Produk dan akses

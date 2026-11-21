@@ -10,12 +10,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-# Muat variabel dari .env jika ada
-if [ -f "${PROJECT_ROOT}/.env" ]; then
+# Muat variabel dari infra/.env (produksi) atau .env root jika ada
+ENV_CANDIDATE=""
+if [ -f "${PROJECT_ROOT}/infra/.env" ]; then
+  ENV_CANDIDATE="${PROJECT_ROOT}/infra/.env"
+elif [ -f "${PROJECT_ROOT}/.env" ]; then
+  ENV_CANDIDATE="${PROJECT_ROOT}/.env"
+fi
+
+if [ -n "${ENV_CANDIDATE}" ]; then
   # Ekspor variabel tanpa mengeksekusi perintah arbitrer
   set -a
   # shellcheck source=/dev/null
-  source <(grep -E '^(DB_|DATABASE_URL)' "${PROJECT_ROOT}/.env" | sed 's/\r$//')
+  source <(grep -E '^(DB_|DATABASE_URL)' "${ENV_CANDIDATE}" | sed 's/\r$//')
   set +a
 fi
 

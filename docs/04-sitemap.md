@@ -58,10 +58,9 @@ backend/
   prisma/                  schema dan migrations Prisma 7 + MariaDB adapter
   tests/                   unit & integration tests
   Dockerfile               (target Stage 6)
-infra/                     skrip backup/restore, konfigurasi reverse proxy (Stage 6)
+infra/                     skrip backup/restore, nginx proxy, docker-compose.yaml produksi (GHCR)
 docs/                      spesifikasi, keputusan, bukti validasi, audit
 tests/e2e/                 pengujian Playwright lintas peran
-compose.yaml               (target Stage 6)
 .env.example
 AGENTS.md
 TODO.md
