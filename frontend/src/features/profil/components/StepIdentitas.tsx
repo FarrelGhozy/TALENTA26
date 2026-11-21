@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Camera, Trash2, Upload } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
+import { Select, SelectOption } from '../../../components/ui/Select';
 import { User } from '../../../types';
 import { assetUrl } from '../../../lib/asset';
 
@@ -52,6 +53,24 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
       fileInputRef.current.value = '';
     }
   };
+
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = currentYear + 1; y >= currentYear - 10; y--) {
+    years.push(y);
+  }
+  if (user.angkatan && !years.includes(user.angkatan)) {
+    years.push(user.angkatan);
+    years.sort((a, b) => b - a);
+  }
+
+  const angkatanOptions: SelectOption[] = [
+    { value: '', label: 'Pilih Tahun Angkatan' },
+    ...years.map((y) => ({
+      value: String(y),
+      label: String(y),
+    })),
+  ];
 
   return (
     <div className="space-y-6">
@@ -144,11 +163,11 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
             placeholder="contoh: Informatika"
             required
           />
-          <Input
+          <Select
             label="Angkatan"
-            type="number"
-            value={user.angkatan || ''}
-            onChange={(e) => onChange('angkatan', Number(e.target.value))}
+            value={user.angkatan ? String(user.angkatan) : ''}
+            onChange={(e) => onChange('angkatan', e.target.value ? Number(e.target.value) : undefined)}
+            options={angkatanOptions}
             required
           />
         </div>
