@@ -149,7 +149,7 @@ export const PreparationPage: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-2 font-medium flex items-center justify-between">
             <span>{completedTasks} dari {totalTasks} tugas selesai</span>
             {progressPercent === 100 && (
-              <span className="text-emerald-600 font-bold">Lengkap! 🎉</span>
+              <span className="text-emerald-600 font-bold">Lengkap</span>
             )}
           </div>
         </div>

@@ -26,7 +26,7 @@ const heroSlides = [
     title1: 'Menembus',
     title2: 'Batas Potensi,',
     titleHighlight: 'Menginspirasi Dunia',
-    desc: 'Demo pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan mencatat proses mengikuti kompetisi.',
+    desc: 'Platform pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan mencatat capaian prestasi kompetisi.',
     tags: ['PKM BELMAWA', 'GEMASTIK & KRI', 'RISET & INOVASI', 'PRESTASI GLOBAL'],
   },
   {
@@ -34,8 +34,8 @@ const heroSlides = [
     title1: 'Satukan Visi,',
     title2: 'Bentuk Tim Tangguh,',
     titleHighlight: 'Raih Juara Bersama',
-    desc: 'Fitur rekomendasi demo membantu menemukan mahasiswa dengan variasi keahlian: koding, penulisan proposal, analisis data, hingga desain presentasi visual.',
-    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SIMULASI PITCH'],
+    desc: 'Fitur pencocokan partner membantu menemukan mahasiswa dengan variasi keahlian: pemrograman, penulisan proposal, analisis data, hingga desain presentasi.',
+    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SELEKSI INTERNAL'],
   },
   {
     kicker: 'PENCATATAN PRESTASI',
@@ -161,7 +161,7 @@ export const LandingPage: React.FC = () => {
                   <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border border-white/40 flex items-center justify-center bg-white/10 group-hover/demo:bg-white/25 transition-colors shrink-0">
                     <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" />
                   </span>
-                  <span className="truncate">Coba Demo</span>
+                  <span className="truncate">Masuk Portal</span>
                 </Link>
               </div>
             </div>
@@ -257,8 +257,8 @@ export const LandingPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xl font-black text-emerald-800 leading-tight">Demo</div>
-            <div className="text-[11px] font-bold text-slate-500">Simulasi verifikasi</div>
+            <div className="text-xl font-black text-emerald-800 leading-tight">Tervalidasi</div>
+            <div className="text-[11px] font-bold text-slate-500">Verifikasi berjenjang</div>
           </div>
         </div>
 
@@ -297,7 +297,7 @@ export const LandingPage: React.FC = () => {
             {
               step: '02',
               title: 'Cari Partner Tim',
-              desc: 'Fitur rekomendasi demo membantu mencari rekan dengan keahlian dan peran yang berbeda.',
+              desc: 'Fitur pencocokan partner membantu mencari rekan dengan keahlian dan peran yang saling melengkapi.',
               icon: Users,
               color: 'text-blue-800 bg-blue-50 border-blue-200/80',
             },
@@ -359,7 +359,7 @@ export const LandingPage: React.FC = () => {
               Temukan Partner Sesuai Kebutuhan Tim Tanpa Canggung
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-              Sering kesulitan mencari rekan yang bisa koding, riset data, desain, atau menulis proposal? Rekomendasi demo membandingkan target, minat, variasi keahlian, dan ketersediaan yang diisi mahasiswa.
+              Sering kesulitan mencari rekan yang bisa pemrograman, riset data, desain, atau menulis proposal? Sistem pencocokan membandingkan target lomba, minat, variasi keahlian, dan ketersediaan waktu mahasiswa.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
@@ -417,7 +417,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <div className="text-[10px] text-blue-300/80 text-center pt-1 italic">
-                *Hasil pada mode demo adalah simulasi dan bukan jaminan kecocokan atau prestasi.
+                *Ilustrasi kombinasi peran tim. Ketersediaan dan kesesuaian mengikuti profil masing-masing mahasiswa.
               </div>
             </div>
           </div>
@@ -518,7 +518,7 @@ export const LandingPage: React.FC = () => {
         <div className="flex flex-wrap justify-center gap-3 pt-3">
           <Link to="/masuk">
             <Button size="lg" variant="white">
-              Masuk dengan Akun Demo
+              Masuk ke Portal TALENTA
             </Button>
           </Link>
           <Link to="/kompetisi">

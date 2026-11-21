@@ -72,5 +72,23 @@ export async function runPublicFlows(page: Page): Promise<void> {
     throw new Error('Icon Sparkles terdeteksi di halaman ranking!');
   }
 
-  log.pass('Halaman ranking terverifikasi bersih dan responsif');
+  // 4. Verifikasi tata letak responsif (Mobile 390x844, Tablet 768x1024, Desktop 1440x900)
+  for (const vp of [
+    { width: 390, height: 844, label: 'Mobile' },
+    { width: 768, height: 1024, label: 'Tablet' },
+    { width: 1440, height: 900, label: 'Desktop' },
+  ]) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.goto(`${CONFIG.baseUrl}/kompetisi`);
+    await page.waitForLoadState('domcontentloaded');
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1
+    );
+    if (overflow) {
+      throw new Error(`Terdeteksi horizontal overflow pada viewport ${vp.label} (${vp.width}x${vp.height})`);
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  log.pass('Halaman ranking & tata letak responsif terverifikasi bersih');
 }

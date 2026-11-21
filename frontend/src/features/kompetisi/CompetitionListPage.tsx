@@ -12,6 +12,8 @@ export const CompetitionListPage: React.FC = () => {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('semua');
+  const [level, setLevel] = useState('semua');
+  const [format, setFormat] = useState('semua');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -41,7 +43,11 @@ export const CompetitionListPage: React.FC = () => {
     const matchSearch =
       c.namaResmi.toLowerCase().includes(q) || c.deskripsi.toLowerCase().includes(q);
     const matchCat = category === 'semua' || c.kategori === category;
-    return matchSearch && matchCat;
+    const matchLevel = level === 'semua' || c.tingkat.toLowerCase() === level;
+    const compFormat =
+      c.format || (c.komposisi.min === 1 && c.komposisi.max === 1 ? 'individu' : 'beregu');
+    const matchFormat = format === 'semua' || compFormat === format;
+    return matchSearch && matchCat && matchLevel && matchFormat;
   });
 
   return (
@@ -70,10 +76,16 @@ export const CompetitionListPage: React.FC = () => {
         category={category}
         onCategoryChange={setCategory}
         categories={categories}
+        level={level}
+        onLevelChange={setLevel}
+        format={format}
+        onFormatChange={setFormat}
         resultCount={filtered.length}
         onReset={() => {
           setSearch('');
           setCategory('semua');
+          setLevel('semua');
+          setFormat('semua');
         }}
       />
 

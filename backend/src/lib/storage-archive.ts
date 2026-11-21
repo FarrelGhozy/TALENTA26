@@ -1,5 +1,6 @@
 import {
   GetObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -59,13 +60,13 @@ export class S3ObjectArchiveClient implements ObjectArchiveClient {
 
       for (const object of result.Contents ?? []) {
         if (!object.Key) continue;
-        const response = await this.client.send(
-          new GetObjectCommand({ Bucket: bucket, Key: object.Key })
+        const head = await this.client.send(
+          new HeadObjectCommand({ Bucket: bucket, Key: object.Key })
         );
         objects.push({
           key: object.Key,
-          size: object.Size ?? 0,
-          contentType: response.ContentType ?? 'application/octet-stream',
+          size: head.ContentLength ?? object.Size ?? 0,
+          contentType: head.ContentType ?? 'application/octet-stream',
         });
       }
 

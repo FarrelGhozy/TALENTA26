@@ -47,7 +47,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       pass: 'Validator2026!',
       title: 'Validator Program',
       name: 'Tim Validator',
-      subtitle: 'validator@unida.gontor.ac.id • BAAK / Bagian Prestasi',
+      subtitle: 'validator@unida.gontor.ac.id • Tim Verifikasi & Pembinaan Prestasi',
       badge: 'Pengelola Prestasi',
       color: 'from-emerald-500 to-teal-800',
       bgColor: 'bg-emerald-50 border-emerald-200/80',

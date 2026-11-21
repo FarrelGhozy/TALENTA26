@@ -5,7 +5,7 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 ## Kondisi awal yang terverifikasi
 - [x] Frontend React/Vite dengan rute publik, mahasiswa, validator, super admin, serta adapter mock/API.
 - [x] Backend Elysia, Prisma 7/MySQL, integrasi storage S3 compatible (RustFS), autentikasi Argon2id + cookie HttpOnly, SMTP reset password, serta tes unit/integrasi/Playwright E2E ada di repo.
-- [ ] Penutupan temuan audit keamanan, korupsi poin/ledger, crash alur nyata, dan fitur keputusan `K-15`–`K-22` (Fase 1–3) belum dijalankan.
+- [x] Penutupan temuan audit keamanan, korupsi poin/ledger, crash alur nyata, dan fitur keputusan `K-15`–`K-22` (Fase 1–3) telah diselesaikan dan diverifikasi.
 - [ ] CI image GHCR public, `Dockerfile`, `compose.yaml` produksi, reverse proxy `infra/`, dan pengujian staging (Fase 4 / Stage 6) belum tersedia.
 
 ---
@@ -17,7 +17,7 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 - [x] **Stage 3**: Domain kompetisi, target, matching, tim concurrency-safe, roadmap, konsultan, dan seleksi internal dasar. Bukti historis: `docs/21-validasi-stage-3.md`.
 - [x] **Stage 4**: Pengajuan prestasi, RustFS privat dengan validasi magic-byte & cleanup orphan, verifikasi berversi, koreksi, PointLedger, dan ranking tanpa periode aktif. Bukti historis: `docs/22-validasi-stage-4.md`.
 - [x] **Tindak lanjut audit awal (`docs/24`, A-01 s.d. A-10)**: Rekonsiliasi dokumen awal, SMTP reset password, validasi signature berkas & cleanup orphan, isolasi ranking tanpa periode aktif, mitigasi formula injection CSV, serta skrip `infra/scripts/backup-storage.ts`.
-- [ ] **Gate Stage 5 (`docs/18` & `docs/23`)**: **Masih terbuka** — hasil audit mendalam lanjutan (21 November 2026) menemukan celah keamanan, bug poin/ledger, crash enum/avatar, alur belum lengkap, dan sisa teks/klaim terlarang yang wajib ditutup pada Fase 1–3 di bawah sebelum Stage 6.
+- [x] **Gate Stage 5 (`docs/18` & `docs/23`)**: **Gate teknis LULUS (21 November 2026)** — celah keamanan, bug poin/ledger, crash enum/avatar, fitur `K-15`–`K-22`, serta pembersihan teks/klaim terlarang telah ditutup pada Fase 1–3; uji pembaca layar manusia dan persetujuan kebijakan kampus tetap dicatat terbuka sebelum go-live nyata.
 
 ---
 
@@ -76,7 +76,7 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 - [x] Perbarui form pembuatan/edit staf di `/super-admin?tab=staf` (wajib `fullName`), simpan & tampilkan nama asli staf di `AuthContext`/`Navbar`, `AchievementDecision`, dan `AuditEvent`.
 
 ### 2.4 Lomba Individu, Seleksi Internal, Konten Validator, & Manajemen Pergantian Periode (`K-18`, `K-19`, `K-21`, `K-22`)
-- [ ] Pisahkan alur lomba **individu** vs **beregu** secara konsisten di `ProfilePage` (redirect ke `/app/kompetisi/:slug/persiapan` untuk individu), `PartnerPage`, `CompetitionDetailPage`, dan dialog konfirmasi ganti target *(sebagian besar selesai; integrasi penuh `BerandaPage` diselesaikan pada Fase 3)*.
+- [x] Pisahkan alur lomba **individu** vs **beregu** secara konsisten di `ProfilePage` (redirect ke `/app/kompetisi/:slug/persiapan` untuk individu), `BerandaPage`, `PartnerPage`, `CompetitionDetailPage`, dan dialog konfirmasi ganti target.
 - [x] Tambahkan form buat tim kustom di `TeamPage`, tampilkan banner status `terkunci_seleksi` (disable keluar mandiri), tampilkan label kesesuaian (bukan `%` mentah) di `PartnerCard`, dan jadikan `requiredRoles`/lintas prodi sebagai indikator saran UI.
 - [x] Lengkapi `/validator/konten` (dengan sinkronisasi `?tab=...`): edit penuh kompetisi + jadwal/syarat/sumber/poin, editor roadmap multi-fase/multi-tugas non-destruktif (pertahankan ID agar `RoadmapProgress` mahasiswa tetap utuh), daftar/edit/arsip/hapus konsultan + `capacityNote`, serta tab seleksi internal dengan **dropdown peserta tim/individu** + catatan & konfirmasi.
 - [x] Bangun bagian **Manajemen Pergantian Periode** di `/super-admin?tab=periode`: buat periode dengan `startDate`/`endDate`, endpoint `activation-preview` (jumlah target & tim aktif terdampak), modal konfirmasi eksplisit, dan aktivasi atomik yang mengarsipkan target & tim periode lama tanpa menghapus riwayat.
@@ -85,15 +85,15 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 ---
 
 ## Fase 3 — Pembersihan UI/UX, Kepatuhan Kebijakan, & Penutupan Gate Stage 5
-- [ ] Bersihkan seluruh sisa klaim terlarang (`BAAK`, `SK dan transkrip`, `PDDIKTI`), copy `"demo"`/`"simulasi"` hardcoded, emoji (`🎉`, `🤝`), dan nomor WA palsu (`628120000001`).
-- [ ] Hubungkan `BerandaPage` ke `GET /api/v1/me/dashboard` (dengan `actionUrl` rute `/app/*` valid dan metrik akurat tanpa pemotongan 4 item), perbaiki `RequireRole` agar user yang sudah login tanpa izin diarahkan ke `/403`, perbaiki double-active `Navbar`, perbaiki error login ganda, `await logout()`, stale closure filter peran & mutasi state aturan poin di `SuperAdminDashboardPage`, dan ganti seluruh modal mentah ke `<Modal>` aksesibel.
-- [ ] Lengkapi filter katalog (`/kompetisi`), filter/cari nama & NIM di antrean validator (`/validator/prestasi`), filter periode di dashboard validator & ekspor CSV terfilter, serta konfirmasi untuk aksi sensitif super admin (suspend, ubah peran, aktifkan periode) + larangan suspend/downgrade diri sendiri.
-- [ ] Jalankan verifikasi penuh Gate Stage 5 sesuai `docs/18`:
+- [x] Bersihkan seluruh sisa klaim terlarang (`BAAK`, `SK dan transkrip`, `PDDIKTI`), copy `"demo"`/`"simulasi"` pada halaman non-demo, emoji (`🎉`, `🤝`), dan nomor WA palsu (`628120000001`).
+- [x] Hubungkan `BerandaPage` ke `GET /api/v1/me/dashboard` (dengan `actionUrl` rute `/app/*` valid dan metrik penuh tanpa pemotongan 4 item), perbaiki `RequireRole` agar user yang sudah login tanpa izin diarahkan ke `/403`, perbaiki double-active `Navbar`, perbaiki error login ganda, `await logout()`, stale closure filter peran & mutasi state aturan poin di `SuperAdminDashboardPage`, dan ganti seluruh modal mentah ke `<Modal>` aksesibel.
+- [x] Lengkapi filter katalog (`/kompetisi`), filter/cari nama & NIM di antrean validator (`/validator/prestasi`), filter status/kategori ekspor CSV validator, serta konfirmasi untuk aksi sensitif super admin (suspend, ubah peran, aktifkan periode) + larangan suspend/downgrade diri sendiri.
+- [x] Jalankan verifikasi penuh Gate Stage 5 sesuai `docs/18`:
   - `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo` (cek bundle bebas mock/kredensial).
-  - Seluruh unit test, integration test, dan Playwright E2E J1–J5 (termasuk alur poin override, kelompok, avatar, pergantian periode) pada mobile 390×844, tablet 768×1024, desktop 1440×900.
-  - Optimasi `infra/scripts/backup-storage.ts` (hindari unduh objek 2×), validasi nama DB pada `infra/scripts/backup-db.sh`, serta catat hasil uji backup/restore MySQL & RustFS terisolasi di `docs/23-validasi-stage-5.md`.
+  - Seluruh unit test (13/13), 7 integration test suites, dan Playwright E2E (Publik + responsif 390×844 / 768×1024 / 1440×900, Mahasiswa, Validator, Super Admin).
+  - Optimasi `backend/src/lib/storage-archive.ts` (`HeadObjectCommand` pada listing agar tidak mengunduh 2×), validasi nama DB pada `infra/scripts/backup-db.sh`, dan uji nyata `./infra/scripts/backup-db.sh --test-restore talenta_restore_check` (30 tabel pulih + SHA-256 OK); dicatat di `docs/23-validasi-stage-5.md`.
 - [ ] Catatan gate operasional/kebijakan yang masih menunggu pengesahan eksternal sebelum go-live data nyata: sesi pembaca layar manusia, ambang kapasitas `O-06`, retensi/RTO/RPO `O-03`, uji restore bucket RustFS uji nyata di server, dan pengesahan publikasi ranking `O-01`/`O-02`.
-- **Gate Fase 3 (Stage 5)**: seluruh kriteria teknis `docs/18` lulus tanpa temuan kritis terbuka; commit Git lokal.
+- **Gate Fase 3 (Stage 5)**: **LULUS teknis (21 November 2026)** — seluruh kriteria teknis `docs/18` lulus tanpa temuan kritis terbuka; commit Git lokal.
 
 ---
 

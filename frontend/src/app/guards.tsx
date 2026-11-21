@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
 import { Role } from '../types';
 import { userService } from '@talenta/services';
@@ -13,7 +13,7 @@ export const RequireRole: React.FC<{ allowedRoles: Role[] }> = ({ allowedRoles }
     return <PageLoading message="Memuat sesi pengguna..." />;
   }
 
-  if (!currentUser || !allowedRoles.includes(currentRole)) {
+  if (!currentUser) {
     const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
     const rawPath = location.pathname + location.search;
     const strippedPath =
@@ -21,13 +21,18 @@ export const RequireRole: React.FC<{ allowedRoles: Role[] }> = ({ allowedRoles }
     return <Navigate to={`/masuk?redirect=${encodeURIComponent(strippedPath)}`} replace />;
   }
 
+  if (!allowedRoles.includes(currentRole)) {
+    return <Navigate to="/403" replace />;
+  }
+
   return <Outlet />;
 };
 
 export const RequireTarget: React.FC = () => {
   const { currentUser, isLoading } = useAuth();
+  const { slug } = useParams<{ slug?: string }>();
   const [checking, setChecking] = useState(true);
-  const [hasTarget, setHasTarget] = useState(false);
+  const [targetSlug, setTargetSlug] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -43,7 +48,7 @@ export const RequireTarget: React.FC = () => {
       .getProfile(currentUser.id)
       .then((profile) => {
         if (cancelled) return;
-        setHasTarget(Boolean(profile?.targetKompetisiSlug));
+        setTargetSlug(profile?.targetKompetisiSlug || '');
         setChecking(false);
       })
       .catch(() => {
@@ -74,8 +79,12 @@ export const RequireTarget: React.FC = () => {
     );
   }
 
-  if (!hasTarget) {
+  if (!targetSlug) {
     return <Navigate to="/app/profil?need=target" replace />;
+  }
+
+  if (slug && slug !== targetSlug) {
+    return <Navigate to={`/app/kompetisi/${targetSlug}/persiapan`} replace />;
   }
 
   return <Outlet />;

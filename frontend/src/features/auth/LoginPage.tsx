@@ -107,7 +107,7 @@ export const LoginPage: React.FC = () => {
         </div>
       )}
 
-      {loginError && (
+      {loginError && isDevelopment && authMode === 'demo' && (
         <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
           {loginError}
         </div>

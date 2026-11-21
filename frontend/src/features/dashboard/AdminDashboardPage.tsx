@@ -165,7 +165,7 @@ export const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="p-4 space-y-2.5 text-xs">
             <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-50/90 text-emerald-950 border border-emerald-200/80">
-              <span className="font-bold">Prestasi disetujui (demo)</span>
+              <span className="font-bold">Prestasi Disetujui</span>
               <strong className="text-emerald-700 text-sm font-black">{stats.pengajuanPrestasi.disetujui}</strong>
             </div>
 
@@ -185,7 +185,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2 leading-relaxed">
-              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> yang sah dihitung dalam pelaporan PDDIKTI dan akreditasi pemeringkatan kemahasiswaan institusi.
+              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> oleh validator yang dihitung dalam rekapitulasi resmi dan papan ranking kemahasiswaan internal kampus.
             </div>
           </CardContent>
         </Card>

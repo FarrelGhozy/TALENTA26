@@ -61,8 +61,9 @@ export async function runValidatorFlows(page: Page, achievementTitle: string, st
   await page.waitForLoadState('domcontentloaded');
   log.step('Memeriksa berkas dan data telaah verifikasi');
 
-  // Pastikan tombol / panel keputusan ada
-  const approveButton = page.locator('button:has-text("Setujui prestasi")');
+  // Pastikan panel kalkulasi poin & tombol keputusan ada
+  await page.locator('text=Kalkulasi Poin Otomatis').waitFor({ state: 'visible', timeout: 8000 });
+  const approveButton = page.locator('button:has-text("Setujui Prestasi")');
   await approveButton.waitFor({ state: 'visible', timeout: 8000 });
 
   // 4. Eksekusi Persetujuan Prestasi

@@ -101,10 +101,13 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
   await page.waitForURL((url) => url.pathname.includes('/app/prestasi'), { timeout: 10000 });
   await page.waitForLoadState('domcontentloaded');
 
-  // Verifikasi prestasi yang baru diajukan muncul dengan status 'submitted'
+  // Verifikasi prestasi yang baru diajukan muncul dengan status 'submitted' & dapat dibuka di /app/prestasi/:id
   const submittedItem = page.locator(`text=${achievementTitle}`);
   await submittedItem.first().waitFor({ state: 'visible', timeout: 8000 });
-  log.pass(`Prestasi "${achievementTitle}" berhasil diajukan dan muncul di daftar prestasi`);
+  await submittedItem.first().click();
+  await page.waitForURL((url) => /\/app\/prestasi\/[^/]+$/.test(url.pathname), { timeout: 8000 });
+  await page.locator('text=Dokumen Bukti Pendukung').waitFor({ state: 'visible', timeout: 5000 });
+  log.pass(`Prestasi "${achievementTitle}" berhasil diajukan & halaman detail mahasiswa dapat diakses`);
 
   return { student, achievementTitle };
 }

@@ -92,12 +92,15 @@ export const Navbar: React.FC = () => {
   const navLinks = getNavLinks();
 
   const isActive = (to: string) => {
-    if (to === '/') return strippedPath === '/';
-    return strippedPath === to || strippedPath.startsWith(`${to}/`);
+    const cleanTarget = to.split('?')[0];
+    if (cleanTarget === '/' || cleanTarget === '/validator' || cleanTarget === '/super-admin') {
+      return strippedPath === cleanTarget;
+    }
+    return strippedPath === cleanTarget || strippedPath.startsWith(`${cleanTarget}/`);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setMobileOpen(false);
     navigate('/masuk');
   };

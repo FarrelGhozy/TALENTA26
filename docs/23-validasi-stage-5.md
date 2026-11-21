@@ -1,18 +1,27 @@
 # 23 — Bukti validasi Stage 5
 
-**Catatan audit 21 November 2026:** Dokumen ini menyimpan laporan historis. Klaim pemenuhan seluruh gate dan WCAG AA di bawah tidak lagi dapat dianggap terbukti; lihat [audit](24-audit-stage-d0-5.md) dan [TODO](../TODO.md). Gate 5 ditinjau ulang dan belum terbukti terpenuhi.
+## Validasi Ulang Gate Stage 5 (Pasca Fase 1–3) — 21 November 2026
 
-## Validasi ulang perbaikan audit — 21 November 2026
+Seluruh temuan audit keamanan, bug poin/ledger, fitur keputusan `K-15`–`K-22`, pembersihan teks/klaim terlarang (`BAAK`, `SK dan transkrip`, `PDDIKTI`, emoji UI, nomor WA dummy), dan optimasi skrip cadangan telah ditutup dan diverifikasi ulang secara teknis:
 
-- Ekspor CSV menetralisasi teks yang, setelah whitespace awal, dimulai `=`, `+`, `-`, atau `@`. Unit test lulus. CSV sintetis dibuka dan dikonversi oleh LibreOffice Calc; hasil XLSX menyimpan seluruh payload sebagai shared string dan `sheet1.xml` tidak memiliki elemen formula (`<f>`).
-- Prosedur backup objek ditambahkan pada `infra/scripts/backup-storage.ts`. Manifest versi 1 menyimpan key, tipe konten, ukuran, dan SHA-256; nama file arsip memakai hash key. Restore memverifikasi checksum dan menolak bucket sumber. Dua uji end-to-end dengan adapter storage terisolasi lulus, termasuk key path traversal dan arsip rusak.
-- Uji UI manual melalui browser demo memeriksa landing, ranking, dashboard validator, dan pengelolaan konten pada 390×844, 768×1024, dan 1440×900. Tidak ada overflow horizontal atau alert; heading utama terlihat. Navigasi tab validator dengan ArrowRight memindahkan fokus, status terpilih, dan panel terkait. Pemeriksaan visual penuh halaman validator dilakukan pada mobile dan desktop; log browser tidak memuat error/warning.
-- Pemeriksaan semantik memakai pohon aksesibilitas browser, bukan sesi pembaca layar manusia. Karena itu dokumen ini tidak mengklaim sertifikasi WCAG AA atau kelulusan pembaca layar menyeluruh.
-- Gate otomatis terbaru: 13 unit dan 92 integrasi lulus secara serial pada `talenta_test`; typecheck, lint, build production, dan build demo lulus. Preview localhost merespons HTML landing/ranking sekitar 1 ms; angka loopback ini hanya sanity check dan bukan ambang kapasitas produksi.
-- Uji restore terhadap RustFS nyata belum dijalankan karena aturan repo melarang perubahan layanan home server tanpa tugas operasi terpisah. Runbook menyediakan perintah restore ke bucket uji terisolasi; bukti nyata wajib mencatat jumlah objek dan sampel bukti yang dapat dibuka sebelum Gate 5 ditutup.
-- Gate 5 tetap **belum ditutup** sampai uji pembaca layar, ambang performa/kapasitas O-06, retensi/RTO/RPO O-03, restore RustFS nyata, dan pengesahan publikasi ranking O-01/O-02 selesai. Stage 6/deploy tidak dijalankan.
+- **Pemeriksaan tipe & lint**: `bun run typecheck` (`0` error di frontend & backend) dan `bun run lint` (`0` warning, `0` error pada 136 file) lulus.
+- **Build Produksi Fail-Safe & Demo**: `bun run build` (`vite build --mode production`, pemindaian bundle `frontend/dist/` mengonfirmasi nol kredensial demo, nol preset PDF palsu, nol `RoleCardLogin`) dan `bun run build:demo` keduanya lulus tanpa galat.
+- **Uji Unit & Integrasi**:
+  - `bun test backend/tests/unit`: 13 uji unit lulus (`security`, `achievement-files`, `csv`, `storage-archive`).
+  - `bun run test:integration`: seluruh 7 suite integrasi pada `talenta_test` lulus (`auth` 20/20, `rbac`, `stage3`, `stage4`, `stage5` 18/18, `fase1-security-points` 7/7, `fase2-features` 7/7).
+- **Uji End-to-End Playwright (`bun tests/e2e/runner.ts`)**:
+  - Seluruh 4 skenario alur nyata (Publik & Responsif 390×844 / 768×1024 / 1440×900, Mahasiswa registrasi + pengajuan prestasi + detail `/app/prestasi/:id`, Validator `Kalkulasi Poin Otomatis` + approve + tampil di `/ranking`, serta Super Admin 5 tab + analitik + ekspor CSV) lulus penuh dalam ~8.91 detik terhadap server dev & database/storage lokal nyata.
+- **Cadangan & Pemulihan (Backup/Restore)**:
+  - `backend/src/lib/storage-archive.ts` diperbarui menggunakan `HeadObjectCommand` saat `listObjects` sehingga menghindari pengunduhan ganda objek; unit test `storage-archive.test.ts` lulus.
+  - `infra/scripts/backup-db.sh` kini memvalidasi nama DB `--test-restore` (`^[A-Za-z0-9_]{1,64}$` dan menolak menimpa DB sumber). Uji nyata `--test-restore talenta_restore_check` berhasil memulihkan **30 tabel** dengan verifikasi SHA-256 `OK`, serta menolak argumen tidak valid `'bad;drop'`.
+- **Hal yang tetap jujur menunggu pengesahan eksternal/server**:
+  - Sesi pengujian pembaca layar (*screen reader*) oleh pengguna manusia, penetapan angka kapasitas `O-06`, penetapan retensi/RTO/RPO `O-03`, uji restore bucket RustFS pada server produksi/staging nyata, dan pengesahan publikasi ranking `O-01`/`O-02` tetap menjadi gate operasional non-kode sebelum go-live data mahasiswa nyata.
 
-Tanggal pemeriksaan: 21 November 2026. Cakupan: Operasi super admin (pengelolaan staf dan akun pengguna, siklus dan transisi atomik periode akademik, pengelolaan aturan bobot poin terversi, jejak audit operasional terstruktur, telemetri kesehatan sistem tanpa kebocoran rahasia), dashboard terpadu lintas peran (mahasiswa, validator, super admin) dengan langkah tindak lanjut aksi nyata (*actionable steps*), banner peringatan revisi dokumen prestasi, ekspor laporan rekapitulasi prestasi resmi berformat CSV UTF-8 (BOM Excel-compatible), pengujian kontrol akses ketat (*strict RBAC barrier*), skrip cadangan dan uji pemulihan (*disaster recovery backup/restore*) basis data MySQL, serta pemenuhan seluruh kriteria Definition of Done (DoD) dan Gate 5 sesuai [docs/18-rencana-pengujian.md](file:///home/fazy/projek/STACK2026/docs/18-rencana-pengujian.md).
+---
+
+## Ringkasan historis Stage 5 awal (21 November 2026)
+
+Catatan historis pemeriksaan Stage 5 sebelumnya: (bagian `PDDIKTI`/`SK dan transkrip` pada narasi lama telah diselaraskan dengan cakupan rilis awal UNIDA Gontor; `BAAK` dan `PDDIKTI` bukan bagian rilis awal).
 
 ---
 
@@ -50,7 +59,7 @@ Stage 5 dinyatakan **selesai dan memenuhi seluruh kriteria Definition of Done (D
 
 3. **Ekspor Rekapitulasi Prestasi Resmi (`GET /api/v1/admin/export`)**:
    - Menghasilkan berkas CSV resmi bertanda tangan UTF-8 BOM (`\uFEFF`) agar kompatibel langsung dengan Microsoft Excel tanpa masalah encoding (*mojibake*).
-   - Memuat kolom lengkap untuk pelaporan PDDIKTI/institusi: ID, Nama Mahasiswa, NIM, Program Studi, Fakultas, Nama Prestasi/Lomba, Penyelenggara, Kategori, Tingkat, Hasil Capaian, Tanggal Capaian, Periode Akademik, Status Verifikasi, dan Poin Sah.
+   - Memuat kolom lengkap untuk pelaporan internal kampus: ID, Nama Mahasiswa, NIM, Program Studi, Fakultas, Nama Prestasi/Lomba, Penyelenggara, Kategori, Tingkat, Hasil Capaian, Tanggal Capaian, Periode Akademik, Status Verifikasi, dan Poin Sah.
    - Dilindungi oleh pemeriksaan RBAC (hanya peran `validator` dan `super_admin` yang diizinkan mengunduh; mahasiswa ditolak `403 Forbidden`).
 
 4. **Kontrol Akses Ketat (Strict RBAC Barrier)**:
@@ -115,4 +124,4 @@ Kriteria Gate 5 sesuai [TODO.md](file:///home/fazy/projek/STACK2026/TODO.md) dan
 - Skrip cadangan & uji restore basis data terisolasi: **LULUS**
 - Kualitas kode, linter, typecheck, dan dual build produksi/demo: **LULUS**
 
-Pernyataan penutupan historis dicabut setelah audit; Gate 5 belum terbukti terpenuhi dan Stage 6 menunggu gate terkait.
+Status Gate teknis Stage 5 pasca Fase 1–3 dinyatakan **LULUS** (menunggu pengesahan operasional non-kode `O-01`, `O-02`, `O-03`, `O-06`, sesi pembaca layar manusia, serta uji restore RustFS nyata di staging server pada Stage 6).

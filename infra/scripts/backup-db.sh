@@ -134,6 +134,15 @@ cat "${CHECKSUM_FILEPATH}"
 
 # Verifikasi Uji Restore jika opsi --test-restore diberikan
 if [ -n "${TEST_RESTORE_DB}" ]; then
+  if [[ ! "${TEST_RESTORE_DB}" =~ ^[A-Za-z0-9_]{1,64}$ ]]; then
+    echo "[ERROR] Nama database uji '${TEST_RESTORE_DB}' tidak valid. Hanya huruf, angka, dan underscore yang diizinkan." >&2
+    exit 1
+  fi
+  if [ "${TEST_RESTORE_DB}" = "${DB_NAME}" ]; then
+    echo "[ERROR] Database uji restore tidak boleh sama dengan database sumber '${DB_NAME}'." >&2
+    exit 1
+  fi
+
   echo ""
   echo "=== UJI RESTORE KE BASIS DATA TERISOLASI ==="
   echo "Target Database Uji: ${TEST_RESTORE_DB}"
