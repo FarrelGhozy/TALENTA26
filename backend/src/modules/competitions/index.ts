@@ -14,6 +14,7 @@ export const competitionRoutes = new Elysia()
         category: query.category,
         level: query.level,
         format: query.format,
+        periodId: query.periodId,
         search: query.q || query.search,
       });
       return { data };
@@ -23,6 +24,7 @@ export const competitionRoutes = new Elysia()
         category: t.Optional(t.String()),
         level: t.Optional(t.String()),
         format: t.Optional(t.String()),
+        periodId: t.Optional(t.String()),
         q: t.Optional(t.String()),
         search: t.Optional(t.String()),
       }),
@@ -42,7 +44,16 @@ export const competitionRoutes = new Elysia()
   .get('/api/v1/admin/competitions', async ({ auth }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);
-    const data = await compService.getAllCompetitionsAdmin();
+    const data = await compService.getAllCompetitionsAdmin(auth.user.institutionId);
+    return { data };
+  })
+  .get('/api/v1/admin/competitions/:id/participants', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const data = await compService.getCompetitionParticipantsAdmin(
+      params.id,
+      auth.user.institutionId
+    );
     return { data };
   })
   .post(
@@ -73,6 +84,10 @@ export const competitionRoutes = new Elysia()
         competitionDate: t.Optional(t.String()),
         requirements: t.Optional(t.Array(t.String())),
         scheduleTimeline: t.Optional(t.Array(t.Object({ label: t.String(), tanggal: t.String() }))),
+        competitionCategoryId: t.Optional(t.Nullable(t.String())),
+        pointTemplateId: t.Optional(t.Nullable(t.String())),
+        pointDescription: t.Optional(t.Nullable(t.String())),
+        sourceUrl: t.Optional(t.Nullable(t.String())),
       }),
     }
   )
@@ -85,7 +100,8 @@ export const competitionRoutes = new Elysia()
       const updated = await compService.updateCompetition(
         params.id,
         auth.user.id,
-        body as compService.UpdateCompetitionDto
+        body as compService.UpdateCompetitionDto,
+        auth.user.institutionId
       );
       return { data: updated };
     },
@@ -100,8 +116,14 @@ export const competitionRoutes = new Elysia()
         maxTeamMembers: t.Optional(t.Number()),
         requiredRoles: t.Optional(t.Array(t.String())),
         description: t.Optional(t.String()),
-        registrationDeadline: t.Optional(t.String()),
-        competitionDate: t.Optional(t.String()),
+        registrationDeadline: t.Optional(t.Nullable(t.String())),
+        competitionDate: t.Optional(t.Nullable(t.String())),
+        requirements: t.Optional(t.Array(t.String())),
+        scheduleTimeline: t.Optional(t.Array(t.Object({ label: t.String(), tanggal: t.String() }))),
+        competitionCategoryId: t.Optional(t.Nullable(t.String())),
+        pointTemplateId: t.Optional(t.Nullable(t.String())),
+        pointDescription: t.Optional(t.Nullable(t.String())),
+        sourceUrl: t.Optional(t.Nullable(t.String())),
         status: t.Optional(t.Union([t.Literal('draft'), t.Literal('published'), t.Literal('archived')])),
       }),
     }
@@ -109,12 +131,22 @@ export const competitionRoutes = new Elysia()
   .post('/api/v1/admin/competitions/:id/publish', async ({ auth, params }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);
-    const updated = await compService.setCompetitionStatus(params.id, auth.user.id, 'published');
+    const updated = await compService.setCompetitionStatus(
+      params.id,
+      auth.user.id,
+      'published',
+      auth.user.institutionId
+    );
     return { data: updated };
   })
   .post('/api/v1/admin/competitions/:id/archive', async ({ auth, params }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);
-    const updated = await compService.setCompetitionStatus(params.id, auth.user.id, 'archived');
+    const updated = await compService.setCompetitionStatus(
+      params.id,
+      auth.user.id,
+      'archived',
+      auth.user.institutionId
+    );
     return { data: updated };
   });

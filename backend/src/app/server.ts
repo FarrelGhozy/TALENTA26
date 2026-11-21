@@ -16,6 +16,7 @@ import { systemRoutes } from '../modules/system';
 import { dashboardRoutes } from '../modules/dashboard';
 import { assertSameOrigin } from './middleware/csrf';
 import { selectionRoutes } from '../modules/selections';
+import { pointRoutes } from '../modules/points';
 
 export function createServer() {
   const currentConfig = loadConfig();
@@ -54,7 +55,8 @@ export function createServer() {
     .use(achievementRoutes)
     .use(systemRoutes)
     .use(dashboardRoutes)
-    .use(selectionRoutes);
+    .use(selectionRoutes)
+    .use(pointRoutes);
 
   return app;
 }

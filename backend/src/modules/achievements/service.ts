@@ -9,11 +9,13 @@ import {
 } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 import { getStorageService } from '../../lib/storage';
+import { resolveAchievementPoints } from '../points/service';
 import type {
   AchievementCategory,
   AchievementLevel,
   AchievementResult,
   AchievementStatus,
+  ParticipationType,
   Prisma,
 } from '@prisma/client';
 
@@ -39,6 +41,12 @@ export interface CreateAchievementInput {
   isFromInternalSelection?: boolean;
   competitionId?: string;
   competitionSlug?: string;
+  participationType?: ParticipationType;
+  teamId?: string;
+  participantUserIds?: string[];
+  competitionCategoryId?: string;
+  subCategoryId?: string;
+  subCompetitionName?: string;
 }
 
 export interface UpdateAchievementInput extends Partial<CreateAchievementInput> {
@@ -54,6 +62,13 @@ export interface RevisionInput {
   eventDate?: string;
   description?: string;
   note?: string;
+  participationType?: ParticipationType;
+  teamId?: string | null;
+  participantUserIds?: string[];
+  competitionCategoryId?: string | null;
+  subCategoryId?: string | null;
+  subCompetitionName?: string | null;
+  replaceEvidenceIds?: string[];
 }
 
 export interface AdminAchievementFilter {
@@ -187,9 +202,117 @@ export async function cleanupUploadedFiles(
   await Promise.allSettled(keys.map((key) => storage.deleteFile(key)));
 }
 
-// 1. Ambil daftar prestasi milik mahasiswa login
+async function resolveParticipants(
+  institutionId: string,
+  submitterId: string,
+  participationType: ParticipationType,
+  teamId?: string | null,
+  participantUserIds?: string[]
+): Promise<Array<{ userId: string; roleInTeam: string | null; isSubmitter: boolean }>> {
+  if (participationType === 'individu') {
+    return [{ userId: submitterId, roleInTeam: null, isSubmitter: true }];
+  }
+
+  const memberMap = new Map<string, { userId: string; roleInTeam: string | null; isSubmitter: boolean }>();
+  memberMap.set(submitterId, { userId: submitterId, roleInTeam: null, isSubmitter: true });
+
+  if (teamId) {
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        competition: {
+          select: { institutionId: true },
+        },
+        members: {
+          where: { status: 'active' },
+          select: { userId: true, roleInTeam: true },
+        },
+      },
+    });
+    if (!team || team.competition.institutionId !== institutionId) {
+      throw new NotFoundError('Tim tidak ditemukan');
+    }
+    const isMember = team.members.some((m) => m.userId === submitterId);
+    if (!isMember) {
+      throw new ForbiddenError('Anda bukan anggota aktif tim yang dipilih');
+    }
+    for (const m of team.members) {
+      memberMap.set(m.userId, {
+        userId: m.userId,
+        roleInTeam: m.roleInTeam,
+        isSubmitter: m.userId === submitterId,
+      });
+    }
+  }
+
+  if (Array.isArray(participantUserIds) && participantUserIds.length > 0) {
+    const uniqueIds = Array.from(new Set(participantUserIds.filter(Boolean)));
+    const validUsers = await prisma.user.findMany({
+      where: {
+        id: { in: uniqueIds },
+        institutionId,
+        role: 'mahasiswa',
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    if (validUsers.length !== uniqueIds.length) {
+      throw new ValidationError('Sebagian anggota kelompok yang dipilih tidak valid atau bukan mahasiswa aktif', {
+        participantUserIds: 'Pastikan seluruh anggota adalah mahasiswa aktif satu kampus',
+      });
+    }
+    for (const u of validUsers) {
+      if (!memberMap.has(u.id)) {
+        memberMap.set(u.id, {
+          userId: u.id,
+          roleInTeam: null,
+          isSubmitter: u.id === submitterId,
+        });
+      }
+    }
+  }
+
+  return Array.from(memberMap.values());
+}
+
+async function resolveCategoryAndSubCategory(
+  institutionId: string,
+  competitionCategoryId?: string | null,
+  subCategoryId?: string | null
+) {
+  let validCatId: string | null = competitionCategoryId || null;
+  let validSubId: string | null = subCategoryId || null;
+
+  if (validSubId) {
+    const sub = await prisma.competitionSubCategory.findUnique({
+      where: { id: validSubId },
+      include: { category: true },
+    });
+    if (!sub || sub.category.institutionId !== institutionId) {
+      throw new ValidationError('Sub-lomba tidak ditemukan', { subCategoryId: 'Sub-lomba tidak valid' });
+    }
+    if (!validCatId) {
+      validCatId = sub.categoryId;
+    } else if (sub.categoryId !== validCatId) {
+      throw new ValidationError('Sub-lomba tidak sesuai dengan jenis lomba yang dipilih', {
+        subCategoryId: 'Sub-lomba harus berada dalam jenis lomba yang sama',
+      });
+    }
+  } else if (validCatId) {
+    const cat = await prisma.competitionCategory.findUnique({ where: { id: validCatId } });
+    if (!cat || cat.institutionId !== institutionId) {
+      throw new ValidationError('Jenis lomba tidak ditemukan', { competitionCategoryId: 'Jenis lomba tidak valid' });
+    }
+  }
+
+  return { competitionCategoryId: validCatId, subCategoryId: validSubId };
+}
+
+// 1. Ambil daftar prestasi milik mahasiswa login (termasuk anggota kelompok)
 export async function getStudentAchievements(userId: string, status?: string) {
-  const whereClause: Prisma.AchievementWhereInput = { userId };
+  const whereClause: Prisma.AchievementWhereInput = {
+    OR: [{ userId }, { participants: { some: { userId } } }],
+  };
   if (status && status !== 'semua') {
     whereClause.status = status as AchievementStatus;
   }
@@ -197,12 +320,39 @@ export async function getStudentAchievements(userId: string, status?: string) {
   return prisma.achievement.findMany({
     where: whereClause,
     include: {
+      competition: {
+        select: { id: true, slug: true, name: true },
+      },
+      competitionCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      subCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      team: {
+        select: { id: true, name: true },
+      },
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              studentProfile: {
+                select: { fullName: true, nim: true, studyProgram: true },
+              },
+            },
+          },
+        },
+      },
       evidences: {
+        where: { isActive: true },
         select: {
           id: true,
           fileName: true,
           fileSize: true,
           mimeType: true,
+          isActive: true,
           uploadedAt: true,
         },
       },
@@ -232,6 +382,7 @@ export async function getAchievementById(
       user: {
         select: {
           id: true,
+          fullName: true,
           email: true,
           studentProfile: {
             select: {
@@ -243,12 +394,45 @@ export async function getAchievementById(
           },
         },
       },
+      competition: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          pointDescription: true,
+        },
+      },
+      competitionCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      subCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      team: {
+        select: { id: true, name: true },
+      },
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              studentProfile: {
+                select: { fullName: true, nim: true, studyProgram: true },
+              },
+            },
+          },
+        },
+      },
       evidences: {
+        orderBy: { uploadedAt: 'asc' },
         select: {
           id: true,
           fileName: true,
           fileSize: true,
           mimeType: true,
+          isActive: true,
+          supersededByRevisionId: true,
           uploadedAt: true,
         },
       },
@@ -261,6 +445,7 @@ export async function getAchievementById(
           decidedBy: {
             select: {
               id: true,
+              fullName: true,
               email: true,
               role: true,
             },
@@ -274,12 +459,25 @@ export async function getAchievementById(
     throw new NotFoundError('Data prestasi tidak ditemukan');
   }
 
-  // Anti-IDOR: Mahasiswa hanya boleh melihat miliknya sendiri
-  if (role === 'mahasiswa' && achievement.userId !== userId) {
+  // Anti-IDOR: Mahasiswa hanya boleh melihat miliknya sendiri atau prestasi kelompok di mana ia anggota
+  const isParticipant = achievement.participants.some((p) => p.userId === userId);
+  if (role === 'mahasiswa' && achievement.userId !== userId && !isParticipant) {
     throw new ForbiddenError('Anda tidak berhak mengakses data prestasi ini');
   }
 
-  return achievement;
+  const pointRecommendation = await resolveAchievementPoints({
+    institutionId: achievement.institutionId,
+    category: achievement.category,
+    level: achievement.level,
+    result: achievement.result,
+    competitionId: achievement.competitionId,
+    subCategoryId: achievement.subCategoryId,
+  });
+
+  return {
+    ...achievement,
+    pointRecommendation,
+  };
 }
 
 // 3. Buat pengajuan prestasi baru
@@ -306,15 +504,15 @@ export async function createAchievement(
     validateFileItem(f);
   }
 
-  // Deteksi kemungkinan duplikat (nama dan tanggal capaian sama oleh pengguna yang sama)
-  const eventDateObj = new Date(input.eventDate);
-  const potentialDuplicate = await prisma.achievement.findFirst({
-    where: {
-      userId,
-      name: input.name.trim(),
-      eventDate: eventDateObj,
-    },
-  });
+  const participationType: ParticipationType =
+    input.participationType === 'kelompok' ? 'kelompok' : 'individu';
+  const participants = await resolveParticipants(
+    institutionId,
+    userId,
+    participationType,
+    input.teamId,
+    input.participantUserIds
+  );
 
   // Ambil periode akademik aktif
   const activePeriod = await prisma.academicPeriod.findFirst({
@@ -325,13 +523,52 @@ export async function createAchievement(
   }
 
   // Hubungkan dengan kompetisi jika ada slug / ID
-  let competitionId = input.competitionId;
+  let competitionId = input.competitionId || null;
+  let competitionCategoryIdInput = input.competitionCategoryId || null;
   if (!competitionId && input.competitionSlug) {
     const comp = await prisma.competition.findUnique({
       where: { slug: input.competitionSlug },
     });
-    if (comp) competitionId = comp.id;
+    if (comp && comp.institutionId === institutionId) {
+      competitionId = comp.id;
+      if (!competitionCategoryIdInput && comp.competitionCategoryId) {
+        competitionCategoryIdInput = comp.competitionCategoryId;
+      }
+    }
+  } else if (competitionId) {
+    const comp = await prisma.competition.findUnique({
+      where: { id: competitionId },
+    });
+    if (!comp || comp.institutionId !== institutionId) {
+      throw new NotFoundError('Kompetisi tidak ditemukan');
+    }
+    if (!competitionCategoryIdInput && comp.competitionCategoryId) {
+      competitionCategoryIdInput = comp.competitionCategoryId;
+    }
   }
+
+  const { competitionCategoryId, subCategoryId } = await resolveCategoryAndSubCategory(
+    institutionId,
+    competitionCategoryIdInput,
+    input.subCategoryId
+  );
+
+  // Deteksi kemungkinan duplikat (nama & tanggal capaian sama oleh pengaju atau anggota kelompok)
+  const eventDateObj = new Date(input.eventDate);
+  const participantIds = participants.map((p) => p.userId);
+  const potentialDuplicate = await prisma.achievement.findFirst({
+    where: {
+      institutionId,
+      name: input.name.trim(),
+      eventDate: eventDateObj,
+      status: { not: 'dibatalkan' },
+      OR: [
+        { userId: { in: participantIds } },
+        { participants: { some: { userId: { in: participantIds } } } },
+      ],
+    },
+    select: { id: true },
+  });
 
   const storage = getStorageService();
   const uploadedKeys: string[] = [];
@@ -339,45 +576,67 @@ export async function createAchievement(
   let created;
   try {
     created = await prisma.$transaction(async (tx) => {
-    const ach = await tx.achievement.create({
-      data: {
-        institutionId,
-        userId,
-        academicPeriodId: activePeriod.id,
-        competitionId,
-        name: input.name.trim(),
-        organizer: input.organizer.trim(),
-        category: input.category,
-        level: input.level,
-        result: input.result,
-        eventDate: eventDateObj,
-        description: input.description?.trim() || null,
-        isFromInternalSelection: Boolean(input.isFromInternalSelection),
-        status: 'menunggu',
-        version: 1,
-      },
-    });
-
-    // Simpan berkas ke storage privat dan buat record metadata
-    for (const file of files) {
-      const ext = path.extname(file.name).toLowerCase();
-      const randomKey = `institutions/${institutionId}/achievements/${ach.id}/${crypto.randomUUID()}${ext}`;
-      await storage.uploadFile(randomKey, file.buffer, file.type);
-      uploadedKeys.push(randomKey);
-
-      await tx.achievementEvidence.create({
+      const ach = await tx.achievement.create({
         data: {
-          achievementId: ach.id,
-          uploaderId: userId,
-          objectKey: randomKey,
-          fileName: file.name,
-          fileSize: file.buffer.byteLength,
-          mimeType: file.type,
+          institutionId,
+          userId,
+          academicPeriodId: activePeriod.id,
+          competitionId,
+          competitionCategoryId,
+          subCategoryId,
+          subCompetitionName: input.subCompetitionName?.trim() || null,
+          teamId: participationType === 'kelompok' ? (input.teamId || null) : null,
+          participationType,
+          potentialDuplicateOfId: potentialDuplicate?.id || null,
+          name: input.name.trim(),
+          organizer: input.organizer.trim(),
+          category: input.category,
+          level: input.level,
+          result: input.result,
+          eventDate: eventDateObj,
+          description: input.description?.trim() || null,
+          isFromInternalSelection: Boolean(input.isFromInternalSelection),
+          status: 'menunggu',
+          version: 1,
         },
       });
-    }
 
-    return ach;
+      await tx.achievementParticipant.createMany({
+        data: participants.map((p) => ({
+          achievementId: ach.id,
+          userId: p.userId,
+          roleInTeam: p.roleInTeam,
+          isSubmitter: p.isSubmitter,
+        })),
+      });
+
+      // Simpan berkas ke storage privat dan buat record metadata
+      for (const file of files) {
+        const ext = path.extname(file.name).toLowerCase();
+        const randomKey = `institutions/${institutionId}/achievements/${ach.id}/${crypto.randomUUID()}${ext}`;
+        await storage.uploadFile(randomKey, file.buffer, file.type);
+        uploadedKeys.push(randomKey);
+
+        await tx.achievementEvidence.create({
+          data: {
+            achievementId: ach.id,
+            uploaderId: userId,
+            objectKey: randomKey,
+            fileName: file.name,
+            fileSize: file.buffer.byteLength,
+            mimeType: file.type,
+            isActive: true,
+          },
+        });
+      }
+
+      return tx.achievement.findUniqueOrThrow({
+        where: { id: ach.id },
+        include: {
+          participants: true,
+          evidences: { where: { isActive: true } },
+        },
+      });
     });
   } catch (error) {
     await cleanupUploadedFiles(storage, uploadedKeys);
@@ -393,8 +652,10 @@ export async function createAchievement(
     metadata: {
       name: created.name,
       category: created.category,
+      participationType: created.participationType,
+      participantsCount: participants.length,
       filesCount: files.length,
-      potentialDuplicate: Boolean(potentialDuplicate),
+      potentialDuplicateOfId: potentialDuplicate?.id || null,
     },
   });
 
@@ -415,7 +676,7 @@ export async function submitRevision(
 ) {
   const current = await prisma.achievement.findUnique({
     where: { id: achievementId },
-    include: { evidences: true },
+    include: { evidences: true, participants: true },
   });
 
   if (!current) throw new NotFoundError('Data prestasi tidak ditemukan');
@@ -432,16 +693,29 @@ export async function submitRevision(
     validateFileItem(f);
   }
 
-  const totalFiles = current.evidences.length + newFiles.length;
-  if (totalFiles > 3) {
-    throw new ValidationError(
-      `Total berkas bukti (${totalFiles}) melampaui batas maksimal 3 berkas`,
-      { evidence: 'Maksimal total 3 berkas bukti' }
-    );
+  const replaceIds = Array.from(new Set((input.replaceEvidenceIds || []).filter(Boolean)));
+  const activeEvidences = current.evidences.filter((e) => e.isActive);
+  for (const rId of replaceIds) {
+    if (!activeEvidences.some((e) => e.id === rId)) {
+      throw new ValidationError('ID berkas bukti yang ingin diganti tidak ditemukan atau sudah tidak aktif', {
+        replaceEvidenceIds: 'Berkas bukti yang diganti tidak valid',
+      });
+    }
   }
 
-  const storage = getStorageService();
-  const uploadedKeys: string[] = [];
+  const remainingActiveCount = activeEvidences.filter((e) => !replaceIds.includes(e.id)).length;
+  const finalActiveCount = remainingActiveCount + newFiles.length;
+  if (finalActiveCount < 1) {
+    throw new ValidationError('Pengajuan wajib memiliki minimal 1 berkas bukti aktif', {
+      evidence: 'Minimal 1 berkas bukti aktif wajib tersedia',
+    });
+  }
+  if (finalActiveCount > 3) {
+    throw new ValidationError(
+      `Total berkas bukti aktif (${finalActiveCount}) melampaui batas maksimal 3 berkas`,
+      { evidence: 'Maksimal total 3 berkas bukti aktif' }
+    );
+  }
 
   const mergedEventDate = input.eventDate || current.eventDate.toISOString().split('T')[0];
   validateAchievementInput({
@@ -454,69 +728,151 @@ export async function submitRevision(
     description: input.description !== undefined ? input.description : (current.description || undefined),
   });
 
+  const nextParticipationType: ParticipationType =
+    input.participationType !== undefined
+      ? input.participationType
+      : current.participationType;
+  const nextTeamId =
+    input.teamId !== undefined
+      ? input.teamId
+      : (nextParticipationType === 'kelompok' ? current.teamId : null);
+
+  let nextParticipants: Array<{ userId: string; roleInTeam: string | null; isSubmitter: boolean }> | null = null;
+  if (
+    input.participationType !== undefined ||
+    input.teamId !== undefined ||
+    input.participantUserIds !== undefined
+  ) {
+    nextParticipants = await resolveParticipants(
+      current.institutionId,
+      userId,
+      nextParticipationType,
+      nextTeamId,
+      input.participantUserIds
+    );
+  }
+
+  const nextCategoryIdInput =
+    input.competitionCategoryId !== undefined ? input.competitionCategoryId : current.competitionCategoryId;
+  const nextSubIdInput =
+    input.subCategoryId !== undefined ? input.subCategoryId : current.subCategoryId;
+  const { competitionCategoryId, subCategoryId } = await resolveCategoryAndSubCategory(
+    current.institutionId,
+    nextCategoryIdInput,
+    nextSubIdInput
+  );
+
+  const storage = getStorageService();
+  const uploadedKeys: string[] = [];
+
   let updated;
   try {
     updated = await prisma.$transaction(async (tx) => {
-    // 1. Simpan snapshot versi lama ke achievement_revisions
-    await tx.achievementRevision.create({
-      data: {
-        achievementId: current.id,
-        versionNumber: current.version,
-        snapshotJson: {
-          name: current.name,
-          organizer: current.organizer,
-          category: current.category,
-          level: current.level,
-          result: current.result,
-          eventDate: current.eventDate.toISOString(),
-          description: current.description,
-          reviewNote: current.reviewNote,
-        },
-        note: input.note || 'Pengiriman revisi oleh mahasiswa',
-      },
-    });
-
-    // 2. Unggah berkas baru bila ada
-    for (const file of newFiles) {
-      const ext = path.extname(file.name).toLowerCase();
-      const randomKey = `institutions/${current.institutionId}/achievements/${current.id}/${crypto.randomUUID()}${ext}`;
-      await storage.uploadFile(randomKey, file.buffer, file.type);
-      uploadedKeys.push(randomKey);
-
-      await tx.achievementEvidence.create({
+      // 1. Simpan snapshot versi lama ke achievement_revisions
+      const revision = await tx.achievementRevision.create({
         data: {
           achievementId: current.id,
-          uploaderId: userId,
-          objectKey: randomKey,
-          fileName: file.name,
-          fileSize: file.buffer.byteLength,
-          mimeType: file.type,
+          versionNumber: current.version,
+          snapshotJson: {
+            name: current.name,
+            organizer: current.organizer,
+            category: current.category,
+            level: current.level,
+            result: current.result,
+            eventDate: current.eventDate.toISOString(),
+            description: current.description,
+            participationType: current.participationType,
+            teamId: current.teamId,
+            competitionCategoryId: current.competitionCategoryId,
+            subCategoryId: current.subCategoryId,
+            subCompetitionName: current.subCompetitionName,
+            reviewNote: current.reviewNote,
+            replacedEvidenceIds: replaceIds,
+          },
+          note: input.note || 'Pengiriman revisi oleh mahasiswa',
         },
       });
-    }
 
-    // 3. Update field data dan status menjadi 'menunggu'
-    const eventDateObj = input.eventDate ? new Date(input.eventDate) : current.eventDate;
-    const achUpdated = await tx.achievement.update({
-      where: { id: current.id },
-      data: {
-        name: input.name ? input.name.trim() : current.name,
-        organizer: input.organizer ? input.organizer.trim() : current.organizer,
-        category: input.category || current.category,
-        level: input.level || current.level,
-        result: input.result || current.result,
-        eventDate: eventDateObj,
-        description: input.description !== undefined ? input.description?.trim() : current.description,
-        status: 'menunggu',
-        version: current.version + 1,
-        reviewNote: null,
-      },
-      include: {
-        evidences: true,
-      },
-    });
+      // 2. Nonaktifkan berkas bukti lama yang dipilih untuk diganti (tetap tersimpan untuk jejak audit)
+      if (replaceIds.length > 0) {
+        await tx.achievementEvidence.updateMany({
+          where: {
+            achievementId: current.id,
+            id: { in: replaceIds },
+          },
+          data: {
+            isActive: false,
+            supersededByRevisionId: revision.id,
+          },
+        });
+      }
 
-    return achUpdated;
+      // 3. Unggah berkas baru bila ada
+      for (const file of newFiles) {
+        const ext = path.extname(file.name).toLowerCase();
+        const randomKey = `institutions/${current.institutionId}/achievements/${current.id}/${crypto.randomUUID()}${ext}`;
+        await storage.uploadFile(randomKey, file.buffer, file.type);
+        uploadedKeys.push(randomKey);
+
+        await tx.achievementEvidence.create({
+          data: {
+            achievementId: current.id,
+            uploaderId: userId,
+            objectKey: randomKey,
+            fileName: file.name,
+            fileSize: file.buffer.byteLength,
+            mimeType: file.type,
+            isActive: true,
+          },
+        });
+      }
+
+      // 4. Perbarui daftar anggota bila diubah
+      if (nextParticipants) {
+        await tx.achievementParticipant.deleteMany({
+          where: { achievementId: current.id },
+        });
+        await tx.achievementParticipant.createMany({
+          data: nextParticipants.map((p) => ({
+            achievementId: current.id,
+            userId: p.userId,
+            roleInTeam: p.roleInTeam,
+            isSubmitter: p.isSubmitter,
+          })),
+        });
+      }
+
+      // 5. Update field data dan status menjadi 'menunggu'
+      const eventDateObj = input.eventDate ? new Date(input.eventDate) : current.eventDate;
+      const achUpdated = await tx.achievement.update({
+        where: { id: current.id },
+        data: {
+          name: input.name ? input.name.trim() : current.name,
+          organizer: input.organizer ? input.organizer.trim() : current.organizer,
+          category: input.category || current.category,
+          level: input.level || current.level,
+          result: input.result || current.result,
+          eventDate: eventDateObj,
+          description: input.description !== undefined ? (input.description?.trim() || null) : current.description,
+          participationType: nextParticipationType,
+          teamId: nextParticipationType === 'kelompok' ? (nextTeamId || null) : null,
+          competitionCategoryId,
+          subCategoryId,
+          subCompetitionName:
+            input.subCompetitionName !== undefined
+              ? (input.subCompetitionName?.trim() || null)
+              : current.subCompetitionName,
+          status: 'menunggu',
+          version: current.version + 1,
+          reviewNote: null,
+        },
+        include: {
+          evidences: { where: { isActive: true } },
+          participants: true,
+        },
+      });
+
+      return achUpdated;
     });
   } catch (error) {
     await cleanupUploadedFiles(storage, uploadedKeys);
@@ -532,6 +888,7 @@ export async function submitRevision(
     metadata: {
       newVersion: updated.version,
       newFilesCount: newFiles.length,
+      replacedEvidenceCount: replaceIds.length,
     },
   });
 
@@ -589,15 +946,27 @@ export async function getEvidenceFile(
 ) {
   const evidence = await prisma.achievementEvidence.findUnique({
     where: { id: evidenceId },
-    include: { achievement: true },
+    include: {
+      achievement: {
+        include: {
+          participants: { select: { userId: true } },
+        },
+      },
+    },
   });
 
   if (!evidence || (institutionId && evidence.achievement.institutionId !== institutionId)) {
     throw new NotFoundError('Berkas bukti tidak ditemukan');
   }
 
-  // Anti-IDOR: Mahasiswa hanya boleh unduh berkas miliknya sendiri
-  if (role === 'mahasiswa' && evidence.uploaderId !== userId && evidence.achievement.userId !== userId) {
+  // Anti-IDOR: Mahasiswa hanya boleh unduh berkas miliknya sendiri atau prestasi kelompok di mana ia anggota
+  const isParticipant = evidence.achievement.participants.some((p) => p.userId === userId);
+  if (
+    role === 'mahasiswa' &&
+    evidence.uploaderId !== userId &&
+    evidence.achievement.userId !== userId &&
+    !isParticipant
+  ) {
     throw new ForbiddenError('Anda tidak memiliki izin untuk mengunduh berkas bukti ini');
   }
 
@@ -648,6 +1017,7 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
       user: {
         select: {
           id: true,
+          fullName: true,
           email: true,
           studentProfile: {
             select: {
@@ -659,32 +1029,69 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
           },
         },
       },
+      competition: {
+        select: { id: true, slug: true, name: true },
+      },
+      competitionCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      subCategory: {
+        select: { id: true, code: true, name: true },
+      },
+      team: {
+        select: { id: true, name: true },
+      },
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              studentProfile: {
+                select: { fullName: true, nim: true, studyProgram: true },
+              },
+            },
+          },
+        },
+      },
       evidences: {
+        where: { isActive: true },
         select: {
           id: true,
           fileName: true,
           fileSize: true,
           mimeType: true,
+          isActive: true,
           uploadedAt: true,
         },
       },
       decisions: {
         orderBy: { createdAt: 'desc' },
         take: 1,
+        include: {
+          decidedBy: {
+            select: { id: true, fullName: true, role: true },
+          },
+        },
       },
     },
     orderBy: { createdAt: 'desc' },
   });
 }
 
-// 7. Keputusan validator (approve, request_changes, reject) dengan Concurrency Lock
+// 7. Keputusan validator (approve, request_changes, reject) dengan Concurrency Lock, 3-Lapis Poin, & Kelompok
 export async function decideAchievement(
   achievementId: string,
   validatorId: string,
   action: 'approve' | 'request_changes' | 'reject',
   reason?: string,
   clientVersion?: number,
-  institutionId?: string
+  institutionId?: string,
+  options?: {
+    overridePoints?: number;
+    overrideReason?: string;
+    idempotencyKey?: string;
+  }
 ) {
   if ((action === 'request_changes' || action === 'reject') && (!reason || reason.trim().length < 3)) {
     throw new ValidationError('Alasan keputusan wajib diisi minimal 3 karakter', {
@@ -692,11 +1099,37 @@ export async function decideAchievement(
     });
   }
 
+  const overridePoints = options?.overridePoints;
+  const overrideReason = options?.overrideReason?.trim();
+
+  if (overridePoints !== undefined) {
+    if (action !== 'approve') {
+      throw new ValidationError('Override poin hanya dapat diberikan saat menyetujui pengajuan', {
+        overridePoints: 'Override poin hanya berlaku pada aksi approve',
+      });
+    }
+    if (!Number.isInteger(overridePoints) || overridePoints < 0) {
+      throw new ValidationError('Nilai override poin harus berupa bilangan bulat >= 0', {
+        overridePoints: 'Nilai poin tidak valid',
+      });
+    }
+    if (!overrideReason || overrideReason.length < 3) {
+      throw new ValidationError('Alasan perubahan poin (override) wajib diisi minimal 3 karakter', {
+        overrideReason: 'Alasan perubahan poin wajib diisi minimal 3 karakter',
+      });
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT id FROM achievements WHERE id = ${achievementId} FOR UPDATE`;
 
     const ach = await tx.achievement.findUnique({
       where: { id: achievementId },
+      include: {
+        participants: {
+          select: { userId: true },
+        },
+      },
     });
 
     if (!ach || (institutionId && ach.institutionId !== institutionId)) {
@@ -716,12 +1149,49 @@ export async function decideAchievement(
       );
     }
 
+    if (overridePoints !== undefined && ach.category !== 'kompetisi' && overridePoints > 0) {
+      throw new ValidationError('Override poin hanya berlaku untuk prestasi kategori kompetisi lomba', {
+        overridePoints: 'Prestasi non-kompetisi tidak dapat diberi poin ranking',
+      });
+    }
+
     let newStatus: AchievementStatus;
     if (action === 'approve') newStatus = 'disetujui';
     else if (action === 'request_changes') newStatus = 'perlu_perbaikan';
     else newStatus = 'ditolak';
 
-    // 1. Rekam riwayat keputusan validator
+    let calculatedPoints = 0;
+    let awardedPoints = 0;
+    let pointSource = 'non_competition';
+    let ruleVersion = 1;
+
+    if (newStatus === 'disetujui') {
+      const resolution = await resolveAchievementPoints({
+        institutionId: ach.institutionId,
+        category: ach.category,
+        level: ach.level,
+        result: ach.result,
+        competitionId: ach.competitionId,
+        subCategoryId: ach.subCategoryId,
+      });
+      ruleVersion = resolution.ruleVersion;
+      calculatedPoints = ach.category === 'kompetisi' ? resolution.calculatedPoints : 0;
+
+      if (ach.category === 'kompetisi') {
+        if (overridePoints !== undefined) {
+          awardedPoints = overridePoints;
+          pointSource = 'validator_override';
+        } else {
+          awardedPoints = calculatedPoints;
+          pointSource = resolution.pointSource;
+        }
+      } else {
+        awardedPoints = 0;
+        pointSource = 'non_competition';
+      }
+    }
+
+    // 1. Rekam riwayat keputusan validator (termasuk poin otomatis / override)
     await tx.achievementDecision.create({
       data: {
         achievementId: ach.id,
@@ -730,35 +1200,43 @@ export async function decideAchievement(
         previousStatus: ach.status,
         newStatus,
         reason: reason?.trim() || null,
+        calculatedPoints: newStatus === 'disetujui' ? calculatedPoints : null,
+        awardedPoints: newStatus === 'disetujui' ? awardedPoints : null,
+        pointSource: newStatus === 'disetujui' ? pointSource : null,
+        overrideReason: overridePoints !== undefined ? overrideReason : null,
         version: ach.version,
       },
     });
 
     // 2. Jika disetujui dan merupakan prestasi lomba (kategori 'kompetisi'):
-    // Hitung poin berdasar PointRule versi aktif terbaru dan catat ke PointLedger
-    if (newStatus === 'disetujui' && ach.category === 'kompetisi') {
-      const pointRule = await tx.pointRule.findFirst({
-        where: {
-          institutionId: ach.institutionId,
-          level: ach.level,
-          result: ach.result,
-          isActive: true,
-        },
-        orderBy: { version: 'desc' },
-      });
+    // Berikan poin penuh ke seluruh anggota yang tercatat (atau pengaju bila individu)
+    const recipientIds =
+      ach.participants.length > 0
+        ? Array.from(new Set(ach.participants.map((p) => p.userId)))
+        : [ach.userId];
 
-      const awardedPoints = pointRule?.points || 0;
-      if (awardedPoints > 0) {
+    if (newStatus === 'disetujui' && ach.category === 'kompetisi' && awardedPoints > 0) {
+      const baseKey = options?.idempotencyKey?.trim() || `approve:${ach.id}:v${ach.version}`;
+      const ledgerReason =
+        overridePoints !== undefined
+          ? `Persetujuan kompetisi (Override Validator: ${overrideReason})`
+          : `Persetujuan prestasi kompetisi (${ach.level} - ${ach.result})`;
+
+      for (const recipientId of recipientIds) {
         await tx.pointLedger.create({
           data: {
             institutionId: ach.institutionId,
-            userId: ach.userId,
+            userId: recipientId,
             achievementId: ach.id,
             academicPeriodId: ach.academicPeriodId,
-            ruleVersion: pointRule?.version || 1,
+            ruleVersion,
             points: awardedPoints,
             type: 'award',
-            reason: `Persetujuan prestasi kompetisi (${ach.level} - ${ach.result})`,
+            pointSource,
+            calculatedPoints,
+            overrideReason: overridePoints !== undefined ? overrideReason : null,
+            idempotencyKey: `${baseKey}:${recipientId}`,
+            reason: ledgerReason,
           },
         });
       }
@@ -774,7 +1252,14 @@ export async function decideAchievement(
       },
     });
 
-    return { updated, previousStatus: ach.status };
+    return {
+      updated,
+      previousStatus: ach.status,
+      calculatedPoints,
+      awardedPoints,
+      pointSource,
+      recipientCount: recipientIds.length,
+    };
   });
 
   await recordAuditEvent({
@@ -788,6 +1273,11 @@ export async function decideAchievement(
       newStatus: result.updated.status,
       reason: reason?.trim() || null,
       version: result.updated.version,
+      calculatedPoints: result.calculatedPoints,
+      awardedPoints: result.awardedPoints,
+      pointSource: result.pointSource,
+      overrideReason: overridePoints !== undefined ? overrideReason : null,
+      recipientCount: result.recipientCount,
     },
   });
 
@@ -864,6 +1354,8 @@ export async function correctAchievement(
             ruleVersion: bucket.ruleVersion,
             points: -bucket.net,
             type: 'reversal',
+            pointSource: 'reversal',
+            idempotencyKey: `correct:${ach.id}:v${ach.version}:${bucket.userId}:${bucket.ruleVersion}`,
             reason: `Koreksi pembatalan persetujuan: ${reason.trim()}`,
           },
         });

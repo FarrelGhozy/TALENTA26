@@ -578,8 +578,8 @@ describe('Stage 4 — Prestasi, Bukti Privat RustFS/S3, Verifikasi & Ranking Int
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              action: 'reject',
-              reason: 'Data meragukan.',
+              action: 'approve',
+              reason: 'Persetujuan paralel oleh admin.',
               version: 3,
             }),
           })

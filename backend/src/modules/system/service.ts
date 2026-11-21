@@ -35,6 +35,7 @@ export async function getUsers(institutionId: string, params: UserFilterParams) 
     const q = params.search.trim();
     where.OR = [
       { email: { contains: q } },
+      { fullName: { contains: q } },
       { studentProfile: { fullName: { contains: q } } },
       { studentProfile: { nim: { contains: q } } },
     ];
@@ -51,6 +52,7 @@ export async function getUsers(institutionId: string, params: UserFilterParams) 
         id: true,
         institutionId: true,
         email: true,
+        fullName: true,
         role: true,
         status: true,
         createdAt: true,
@@ -169,11 +171,13 @@ export async function createStaff(
   }
 
   const passwordHash = await hashPassword(data.password);
+  const displayName = data.fullName?.trim() || email.split('@')[0];
 
   const newUser = await prisma.user.create({
     data: {
       institutionId,
       email,
+      fullName: displayName,
       passwordHash,
       role: data.role,
       status: 'active',
@@ -182,6 +186,7 @@ export async function createStaff(
       id: true,
       institutionId: true,
       email: true,
+      fullName: true,
       role: true,
       status: true,
       createdAt: true,
@@ -197,11 +202,55 @@ export async function createStaff(
     targetId: newUser.id,
     metadata: {
       email: newUser.email,
+      fullName: displayName,
       role: newUser.role,
     },
   });
 
   return newUser;
+}
+
+export async function updateUserName(
+  userId: string,
+  fullName: string,
+  actorId: string,
+  institutionId: string
+) {
+  const cleanName = fullName?.trim();
+  if (!cleanName || cleanName.length < 2) {
+    throw new ValidationError('Nama lengkap minimal 2 karakter');
+  }
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, institutionId: true, fullName: true, role: true },
+  });
+  if (!target || target.institutionId !== institutionId) {
+    throw new NotFoundError('Pengguna tidak ditemukan');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { fullName: cleanName },
+    select: {
+      id: true,
+      institutionId: true,
+      email: true,
+      fullName: true,
+      role: true,
+      status: true,
+    },
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId,
+    action: 'USER_NAME_UPDATED',
+    targetType: 'User',
+    targetId: userId,
+    metadata: { previousName: target.fullName, newName: cleanName },
+  });
+
+  return updated;
 }
 
 export async function updateStaffRole(
@@ -285,7 +334,7 @@ export async function getAcademicPeriods(institutionId: string) {
 }
 
 export async function createAcademicPeriod(
-  data: { name: string; year: number; semester: string },
+  data: { name: string; year: number; semester: string; startDate?: string; endDate?: string },
   actorId: string,
   institutionId: string
 ) {
@@ -299,12 +348,20 @@ export async function createAcademicPeriod(
     throw new ValidationError('Semester harus ganjil atau genap');
   }
 
+  const start = data.startDate ? new Date(data.startDate) : null;
+  const end = data.endDate ? new Date(data.endDate) : null;
+  if (start && end && start > end) {
+    throw new ValidationError('Tanggal mulai periode tidak boleh melewati tanggal selesai');
+  }
+
   const period = await prisma.academicPeriod.create({
     data: {
       institutionId,
       name: data.name.trim(),
       year: data.year,
       semester: data.semester,
+      startDate: start,
+      endDate: end,
       isActive: false,
     },
   });
@@ -325,10 +382,53 @@ export async function createAcademicPeriod(
   return period;
 }
 
+export async function getAcademicPeriodActivationPreview(
+  periodId: string,
+  institutionId: string
+) {
+  const targetPeriod = await prisma.academicPeriod.findUnique({ where: { id: periodId } });
+  if (!targetPeriod || targetPeriod.institutionId !== institutionId) {
+    throw new NotFoundError('Periode akademik tidak ditemukan');
+  }
+
+  const currentActive = await prisma.academicPeriod.findFirst({
+    where: { institutionId, isActive: true, id: { not: periodId } },
+  });
+
+  const [activeTargetsToArchive, activeTeamsToArchive] = await Promise.all([
+    prisma.studentTarget.count({
+      where: {
+        status: 'active',
+        user: { institutionId },
+        competition: {
+          academicPeriodId: { not: periodId },
+        },
+      },
+    }),
+    prisma.team.count({
+      where: {
+        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+        competition: {
+          institutionId,
+          academicPeriodId: { not: periodId },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    targetPeriod,
+    currentActivePeriod: currentActive,
+    activeTargetsToArchive,
+    activeTeamsToArchive,
+  };
+}
+
 export async function activateAcademicPeriod(
   periodId: string,
   actorId: string,
-  institutionId: string
+  institutionId: string,
+  archiveOldTargets = true
 ) {
   const period = await prisma.academicPeriod.findUnique({
     where: { id: periodId },
@@ -338,17 +438,49 @@ export async function activateAcademicPeriod(
     throw new NotFoundError('Periode akademik tidak ditemukan');
   }
 
-  // Atomik: nonaktifkan semua periode lain dan aktifkan yang dipilih
-  const [, activated] = await prisma.$transaction([
-    prisma.academicPeriod.updateMany({
-      where: { institutionId },
-      data: { isActive: false },
-    }),
-    prisma.academicPeriod.update({
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.academicPeriod.updateMany({
+      where: { institutionId, isActive: true, id: { not: periodId } },
+      data: { isActive: false, archivedAt: new Date() },
+    });
+
+    const activated = await tx.academicPeriod.update({
       where: { id: periodId },
-      data: { isActive: true },
-    }),
-  ]);
+      data: { isActive: true, archivedAt: null },
+    });
+
+    let archivedTargetsCount = 0;
+    let archivedTeamsCount = 0;
+
+    if (archiveOldTargets) {
+      const targetRes = await tx.studentTarget.updateMany({
+        where: {
+          status: 'active',
+          user: { institutionId },
+          OR: [
+            { academicPeriodId: { not: periodId } },
+            { academicPeriodId: null, competition: { academicPeriodId: { not: periodId } } },
+          ],
+        },
+        data: { status: 'archived' },
+      });
+      archivedTargetsCount = targetRes.count;
+
+      const teamRes = await tx.team.updateMany({
+        where: {
+          status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+          competition: {
+            institutionId,
+            academicPeriodId: { not: periodId },
+          },
+        },
+        data: { status: 'arsip', version: { increment: 1 } },
+      });
+      archivedTeamsCount = teamRes.count;
+    }
+
+    return { activated, archivedTargetsCount, archivedTeamsCount };
+  });
 
   await recordAuditEvent({
     institutionId,
@@ -357,13 +489,15 @@ export async function activateAcademicPeriod(
     targetType: 'AcademicPeriod',
     targetId: periodId,
     metadata: {
-      periodName: activated.name,
-      year: activated.year,
-      semester: activated.semester,
+      periodName: result.activated.name,
+      year: result.activated.year,
+      semester: result.activated.semester,
+      archivedTargetsCount: result.archivedTargetsCount,
+      archivedTeamsCount: result.archivedTeamsCount,
     },
   });
 
-  return activated;
+  return result.activated;
 }
 
 export async function getPointRules(institutionId: string) {
@@ -507,6 +641,7 @@ export async function getAuditLogs(institutionId: string, params: AuditLogFilter
           select: {
             id: true,
             email: true,
+            fullName: true,
             role: true,
             studentProfile: {
               select: {

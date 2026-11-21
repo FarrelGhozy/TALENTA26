@@ -4,7 +4,7 @@ import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
 import { resolveClientIp } from '../../app/middleware/client-ip';
 import { prisma } from '../../lib/prisma';
-import { NotFoundError } from '../../app/middleware/error';
+import { NotFoundError, ValidationError } from '../../app/middleware/error';
 
 export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
   .use(authPlugin)
@@ -50,11 +50,75 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
         experience: t.Optional(t.String()),
       }),
     }
-  );
+  )
+  .post('/avatar', async ({ auth, request, body, headers, server }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
 
-export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
+    const b = (body || {}) as any;
+    let fileItem: File | null = null;
+    if (b.avatar instanceof File) {
+      fileItem = b.avatar;
+    } else {
+      const formData = await request.formData().catch(() => null);
+      const fromForm = formData?.get('avatar');
+      if (fromForm instanceof File) {
+        fileItem = fromForm;
+      }
+    }
+
+    if (!fileItem) {
+      throw new ValidationError('Berkas foto profil (field avatar) wajib dipilih');
+    }
+
+    const buffer = Buffer.from(await fileItem.arrayBuffer());
+    const remoteAddress = server?.requestIP?.(request)?.address;
+    const result = await profileService.uploadStudentAvatar(
+      auth.user.id,
+      auth.user.institutionId,
+      { name: fileItem.name, type: fileItem.type, buffer },
+      resolveClientIp(headers, remoteAddress),
+      headers['user-agent'] || ''
+    );
+    return { data: result };
+  })
+  .delete('/avatar', async ({ auth }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
+    const result = await profileService.deleteStudentAvatar(auth.user.id, auth.user.institutionId);
+    return { data: result };
+  });
+
+export const userRoutes = new Elysia({ prefix: '/api/v1' })
   .use(authPlugin)
-  .get('/:userId', async ({ auth, params }) => {
+  .get(
+    '/students/directory',
+    async ({ auth, query }) => {
+      assertAuthenticated(auth);
+      const list = await profileService.searchStudentDirectory(auth.user.institutionId, query.q);
+      return { data: list };
+    },
+    {
+      query: t.Object({
+        q: t.Optional(t.String()),
+      }),
+    }
+  )
+  .get('/users/:userId/avatar', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    const file = await profileService.getAuthorizedUserAvatar(
+      params.userId,
+      auth.user.institutionId
+    );
+    return new Response(file.buffer, {
+      headers: {
+        'Content-Type': file.contentType,
+        'Cache-Control': 'private, max-age=300',
+        'Content-Length': file.buffer.byteLength.toString(),
+      },
+    });
+  })
+  .get('/users/:userId', async ({ auth, params }) => {
     assertAuthenticated(auth);
     const user = await prisma.user.findUnique({
       where: { id: params.userId },
@@ -62,6 +126,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
         id: true,
         institutionId: true,
         email: true,
+        fullName: true,
         role: true,
         status: true,
         createdAt: true,
@@ -76,6 +141,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
             faculty: true,
             enrollmentYear: true,
             avatarUrl: true,
+            avatarObjectKey: true,
             phone: true,
             bio: true,
             skills: true,
@@ -99,6 +165,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
         data: {
           id: user.id,
           institutionId: user.institutionId,
+          fullName: user.fullName || user.studentProfile?.fullName || null,
           role: user.role,
           email: '',
           studentProfile: user.studentProfile
@@ -119,7 +186,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
 
     return { data: user };
   })
-  .get('/', async ({ auth }) => {
+  .get('/users', async ({ auth }) => {
     assertAuthenticated(auth);
     const users = await prisma.user.findMany({
       where: {
@@ -131,6 +198,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
         id: true,
         institutionId: true,
         email: true,
+        fullName: true,
         role: true,
         studentProfile: {
           select: {
@@ -152,6 +220,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1/users' })
       data: users.map((u) => ({
         id: u.id,
         institutionId: u.institutionId,
+        fullName: u.fullName || u.studentProfile?.fullName || null,
         role: u.role,
         email: isStaff || auth.user.id === u.id ? u.email : '',
         studentProfile: u.studentProfile,

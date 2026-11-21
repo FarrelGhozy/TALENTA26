@@ -91,6 +91,11 @@ enum PointLedgerType {
   reversal
 }
 
+enum ParticipationType {
+  individu
+  kelompok
+}
+
 model Institution {
   id        String   @id @default(cuid())
   code      String   @unique
@@ -98,32 +103,39 @@ model Institution {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users           User[]
-  auditEvents     AuditEvent[]
-  academicPeriods AcademicPeriod[]
-  competitions    Competition[]
-  achievements    Achievement[]
-  pointRules      PointRule[]
-  pointLedgers    PointLedger[]
-  selections      InternalSelection[]
+  users                 User[]
+  auditEvents           AuditEvent[]
+  academicPeriods       AcademicPeriod[]
+  competitions          Competition[]
+  competitionCategories CompetitionCategory[]
+  pointTemplates        PointTemplate[]
+  competitionPointRules CompetitionPointRule[]
+  achievements          Achievement[]
+  pointRules            PointRule[]
+  pointLedgers          PointLedger[]
+  selections            InternalSelection[]
 
   @@map("institutions")
 }
 
 model AcademicPeriod {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   institutionId String
   name          String
   year          Int
-  semester      String   @default("ganjil")
-  isActive      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  semester      String    @default("ganjil")
+  startDate     DateTime? @map("start_date")
+  endDate       DateTime? @map("end_date")
+  archivedAt    DateTime? @map("archived_at")
+  isActive      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  institution  Institution   @relation(fields: [institutionId], references: [id])
-  competitions Competition[]
-  achievements Achievement[]
-  pointLedgers PointLedger[]
+  institution    Institution     @relation(fields: [institutionId], references: [id])
+  competitions   Competition[]
+  studentTargets StudentTarget[]
+  achievements   Achievement[]
+  pointLedgers   PointLedger[]
 
   @@index([institutionId, isActive])
   @@map("academic_periods")
@@ -133,50 +145,55 @@ model User {
   id            String     @id @default(cuid())
   institutionId String
   email         String     @unique
+  fullName      String?    @map("full_name")
   passwordHash  String
   role          Role       @default(mahasiswa)
   status        UserStatus @default(active)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  institution         Institution          @relation(fields: [institutionId], references: [id])
-  studentProfile      StudentProfile?
-  sessions            AuthSession[]
-  passwordResetTokens PasswordResetToken[]
-  auditEvents         AuditEvent[]
-  studentTargets      StudentTarget[]
-  createdTeams        Team[]               @relation("TeamCreator")
-  teamMemberships     TeamMember[]
-  sentInvites         TeamInvite[]         @relation("SentInvites")
-  receivedInvites     TeamInvite[]         @relation("ReceivedInvites")
-  roadmapProgress     RoadmapProgress[]
-  achievements        Achievement[]
-  uploadedEvidences   AchievementEvidence[]
-  decidedAchievements AchievementDecision[]
-  pointLedgers        PointLedger[]
+  institution             Institution              @relation(fields: [institutionId], references: [id])
+  studentProfile          StudentProfile?
+  sessions                AuthSession[]
+  passwordResetTokens     PasswordResetToken[]
+  auditEvents             AuditEvent[]
+  studentTargets          StudentTarget[]
+  createdTeams            Team[]                   @relation("TeamCreator")
+  teamMemberships         TeamMember[]
+  sentInvites             TeamInvite[]             @relation("SentInvites")
+  receivedInvites         TeamInvite[]             @relation("ReceivedInvites")
+  roadmapProgress         RoadmapProgress[]
+  achievements            Achievement[]
+  achievementParticipants AchievementParticipant[]
+  uploadedEvidences       AchievementEvidence[]
+  decidedAchievements     AchievementDecision[]
+  pointLedgers            PointLedger[]
+  participantSelections   InternalSelection[]      @relation("SelectionParticipant")
+  confirmedSelections     InternalSelection[]      @relation("SelectionValidator")
 
   @@index([institutionId, role, status])
   @@map("users")
 }
 
 model StudentProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  nim          String   @unique
-  fullName     String
-  studyProgram String
-  faculty      String
-  enrollmentYear Int?     @map("enrollment_year")
-  avatarUrl    String?  @map("avatar_url") @db.Text
-  phone        String?
-  bio          String?  @db.Text
-  skills       Json?
-  interests    Json?
-  availability Json?
-  rolesCapable Json?
-  experience   String?  @db.Text
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  nim             String   @unique
+  fullName        String
+  studyProgram    String
+  faculty         String
+  enrollmentYear  Int?     @map("enrollment_year")
+  avatarUrl       String?  @map("avatar_url") @db.Text
+  avatarObjectKey String?  @map("avatar_object_key")
+  phone           String?
+  bio             String?  @db.Text
+  skills          Json?
+  interests       Json?
+  availability    Json?
+  rolesCapable    Json?
+  experience      String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -184,37 +201,101 @@ model StudentProfile {
   @@map("student_profiles")
 }
 
-model Competition {
-  id                   String            @id @default(cuid())
-  institutionId        String
-  academicPeriodId     String?
-  slug                 String            @unique
-  name                 String
-  organizer            String
-  category             String
-  level                String            @default("nasional")
-  format               CompetitionFormat @default(beregu)
-  minTeamMembers       Int               @default(1)
-  maxTeamMembers       Int               @default(1)
-  requiredRoles        Json?
-  registrationDeadline DateTime?
-  competitionDate      DateTime?
-  description          String            @db.Text
-  requirements         Json?
-  scheduleTimeline     Json?
-  status               CompetitionStatus @default(draft)
-  version              Int               @default(1)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+model CompetitionCategory {
+  id            String   @id @default(cuid())
+  institutionId String   @map("institution_id")
+  code          String
+  name          String
+  description   String?  @db.Text
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  institution        Institution         @relation(fields: [institutionId], references: [id])
-  academicPeriod     AcademicPeriod?     @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
-  studentTargets     StudentTarget[]
-  teams              Team[]
-  roadmaps           Roadmap[]
-  consultantContacts ConsultantContact[]
-  achievements       Achievement[]
-  selections         InternalSelection[]
+  institution   Institution              @relation(fields: [institutionId], references: [id])
+  subCategories CompetitionSubCategory[]
+  competitions  Competition[]
+  achievements  Achievement[]
+
+  @@unique([institutionId, code])
+  @@map("competition_categories")
+}
+
+model CompetitionSubCategory {
+  id                String   @id @default(cuid())
+  categoryId        String   @map("category_id")
+  code              String
+  name              String
+  description       String?  @db.Text
+  defaultPointsNote String?  @map("default_points_note") @db.Text
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  category              CompetitionCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  competitionPointRules CompetitionPointRule[]
+  achievements          Achievement[]
+
+  @@unique([categoryId, code])
+  @@map("competition_sub_categories")
+}
+
+model PointTemplate {
+  id            String   @id @default(cuid())
+  institutionId String   @map("institution_id")
+  name          String
+  description   String?  @db.Text
+  version       Int      @default(1)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution  Institution   @relation(fields: [institutionId], references: [id])
+  rules        PointRule[]
+  competitions Competition[]
+
+  @@index([institutionId, version, isActive])
+  @@map("point_templates")
+}
+
+model Competition {
+  id                    String            @id @default(cuid())
+  institutionId         String
+  academicPeriodId      String?
+  competitionCategoryId String?           @map("competition_category_id")
+  pointTemplateId       String?           @map("point_template_id")
+  slug                  String            @unique
+  name                  String
+  organizer             String
+  category              String
+  level                 String            @default("nasional")
+  format                CompetitionFormat @default(beregu)
+  minTeamMembers        Int               @default(1)
+  maxTeamMembers        Int               @default(1)
+  requiredRoles         Json?
+  registrationDeadline  DateTime?
+  competitionDate       DateTime?
+  description           String            @db.Text
+  requirements          Json?
+  scheduleTimeline      Json?
+  sourceUrl             String?           @map("source_url")
+  sourceUpdatedAt       DateTime?         @map("source_updated_at")
+  pointDescription      String?           @map("point_description") @db.Text
+  status                CompetitionStatus @default(draft)
+  version               Int               @default(1)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  institution           Institution            @relation(fields: [institutionId], references: [id])
+  academicPeriod        AcademicPeriod?        @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
+  competitionCategory   CompetitionCategory?   @relation(fields: [competitionCategoryId], references: [id], onDelete: SetNull)
+  pointTemplate         PointTemplate?         @relation(fields: [pointTemplateId], references: [id], onDelete: SetNull)
+  studentTargets        StudentTarget[]
+  teams                 Team[]
+  roadmaps              Roadmap[]
+  consultantContacts    ConsultantContact[]
+  achievements          Achievement[]
+  selections            InternalSelection[]
+  competitionPointRules CompetitionPointRule[]
 
   @@index([institutionId, status])
   @@index([academicPeriodId])
@@ -223,18 +304,21 @@ model Competition {
 }
 
 model StudentTarget {
-  id            String       @id @default(cuid())
-  userId        String
-  competitionId String
-  status        TargetStatus @default(active)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id               String       @id @default(cuid())
+  userId           String
+  competitionId    String
+  academicPeriodId String?      @map("academic_period_id")
+  status           TargetStatus @default(active)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition    Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod? @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([competitionId, status])
+  @@index([academicPeriodId, status])
   @@map("student_targets")
 }
 
@@ -248,11 +332,12 @@ model Team {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  competition Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  creator     User         @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
-  members     TeamMember[]
-  invites     TeamInvite[]
-  selections  InternalSelection[]
+  competition  Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  creator      User                @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  members      TeamMember[]
+  invites      TeamInvite[]
+  selections   InternalSelection[]
+  achievements Achievement[]
 
   @@index([competitionId, status])
   @@index([creatorId])
@@ -378,21 +463,28 @@ model ConsultantContact {
 }
 
 model InternalSelection {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   institutionId     String
   competitionId     String
-  teamId             String
-  stage              String
-  result             String   @default("menunggu")
-  organizerVerified Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  teamId            String?
+  userId            String?   @map("user_id")
+  stage             String
+  result            String    @default("menunggu")
+  organizerVerified Boolean   @default(false)
+  notes             String?   @db.Text
+  confirmedAt       DateTime? @map("confirmed_at")
+  validatorId       String?   @map("validator_id")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id])
   competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team        Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  participant User?       @relation("SelectionParticipant", fields: [userId], references: [id], onDelete: Cascade)
+  validator   User?       @relation("SelectionValidator", fields: [validatorId], references: [id], onDelete: SetNull)
 
   @@unique([competitionId, teamId, stage])
+  @@unique([competitionId, userId, stage])
   @@index([institutionId, result])
   @@map("internal_selections")
 }
@@ -448,55 +540,84 @@ model AuditEvent {
 }
 
 model Achievement {
-  id                    String              @id @default(cuid())
-  institutionId         String
-  userId                String
-  academicPeriodId      String?
-  competitionId         String?
-  name                  String
-  organizer             String
-  category              AchievementCategory @default(kompetisi)
-  level                 AchievementLevel    @default(nasional)
-  result                AchievementResult   @default(juara_1)
-  eventDate             DateTime
-  description           String?             @db.Text
-  isFromInternalSelection Boolean           @default(false)
-  status                AchievementStatus   @default(menunggu)
-  version               Int                 @default(1)
-  reviewNote            String?             @db.Text
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id                      String              @id @default(cuid())
+  institutionId           String
+  userId                  String
+  academicPeriodId        String?
+  competitionId           String?
+  competitionCategoryId   String?             @map("competition_category_id")
+  subCategoryId           String?             @map("sub_category_id")
+  subCompetitionName      String?             @map("sub_competition_name")
+  teamId                  String?             @map("team_id")
+  participationType       ParticipationType   @default(individu) @map("participation_type")
+  potentialDuplicateOfId  String?             @map("potential_duplicate_of_id")
+  name                    String
+  organizer               String
+  category                AchievementCategory @default(kompetisi)
+  level                   AchievementLevel    @default(nasional)
+  result                  AchievementResult   @default(juara_1)
+  eventDate               DateTime
+  description             String?             @db.Text
+  isFromInternalSelection Boolean             @default(false)
+  status                  AchievementStatus   @default(menunggu)
+  version                 Int                 @default(1)
+  reviewNote              String?             @db.Text
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
 
-  institution    Institution           @relation(fields: [institutionId], references: [id])
-  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  academicPeriod AcademicPeriod?       @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
-  competition    Competition?          @relation(fields: [competitionId], references: [id], onDelete: SetNull)
-  evidences      AchievementEvidence[]
-  revisions      AchievementRevision[]
-  decisions      AchievementDecision[]
-  pointLedgers   PointLedger[]
+  institution         Institution              @relation(fields: [institutionId], references: [id])
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  academicPeriod      AcademicPeriod?          @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
+  competition         Competition?             @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  competitionCategory CompetitionCategory?     @relation(fields: [competitionCategoryId], references: [id], onDelete: SetNull)
+  subCategory         CompetitionSubCategory?  @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  team                Team?                    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  participants        AchievementParticipant[]
+  evidences           AchievementEvidence[]
+  revisions           AchievementRevision[]
+  decisions           AchievementDecision[]
+  pointLedgers        PointLedger[]
 
   @@index([institutionId, status])
   @@index([userId, status])
   @@index([academicPeriodId])
   @@index([competitionId])
+  @@index([teamId])
   @@map("achievements")
 }
 
-model AchievementEvidence {
+model AchievementParticipant {
   id            String   @id @default(cuid())
-  achievementId String
-  uploaderId    String
-  objectKey     String
-  fileName      String
-  fileSize      Int
-  mimeType      String
-  uploadedAt    DateTime @default(now())
+  achievementId String   @map("achievement_id")
+  userId        String   @map("user_id")
+  roleInTeam    String?  @map("role_in_team")
+  isSubmitter   Boolean  @default(false) @map("is_submitter")
+  createdAt     DateTime @default(now())
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, userId])
+  @@index([userId])
+  @@map("achievement_participants")
+}
+
+model AchievementEvidence {
+  id                     String   @id @default(cuid())
+  achievementId          String
+  uploaderId             String
+  objectKey              String   @unique
+  fileName               String
+  fileSize               Int
+  mimeType               String
+  isActive               Boolean  @default(true) @map("is_active")
+  supersededByRevisionId String?  @map("superseded_by_revision_id")
+  uploadedAt             DateTime @default(now())
 
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   uploader    User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
-  @@index([achievementId])
+  @@index([achievementId, isActive])
   @@index([uploaderId])
   @@map("achievement_evidences")
 }
@@ -516,15 +637,19 @@ model AchievementRevision {
 }
 
 model AchievementDecision {
-  id             String            @id @default(cuid())
-  achievementId  String
-  decidedById    String
-  action         String
-  previousStatus AchievementStatus
-  newStatus      AchievementStatus
-  reason         String?           @db.Text
-  version        Int
-  createdAt      DateTime          @default(now())
+  id               String            @id @default(cuid())
+  achievementId    String
+  decidedById      String
+  action           String
+  previousStatus   AchievementStatus
+  newStatus        AchievementStatus
+  reason           String?           @db.Text
+  calculatedPoints Int?              @map("calculated_points")
+  awardedPoints    Int?              @map("awarded_points")
+  pointSource      String?           @map("point_source")
+  overrideReason   String?           @map("override_reason") @db.Text
+  version          Int
+  createdAt        DateTime          @default(now())
 
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   decidedBy   User        @relation(fields: [decidedById], references: [id], onDelete: Restrict)
@@ -535,34 +660,62 @@ model AchievementDecision {
 }
 
 model PointRule {
-  id            String            @id @default(cuid())
-  institutionId String
-  version       Int               @default(1)
-  level         AchievementLevel
-  result        AchievementResult
-  points        Int
-  isActive      Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  institutionId   String
+  pointTemplateId String?           @map("point_template_id")
+  version         Int               @default(1)
+  level           AchievementLevel
+  result          AchievementResult
+  points          Int
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  institution Institution @relation(fields: [institutionId], references: [id])
+  institution   Institution    @relation(fields: [institutionId], references: [id])
+  pointTemplate PointTemplate? @relation(fields: [pointTemplateId], references: [id], onDelete: SetNull)
 
   @@unique([institutionId, version, level, result])
   @@index([institutionId, version, isActive])
   @@map("point_rules")
 }
 
+model CompetitionPointRule {
+  id            String            @id @default(cuid())
+  institutionId String            @map("institution_id")
+  competitionId String?           @map("competition_id")
+  subCategoryId String?           @map("sub_category_id")
+  level         AchievementLevel
+  result        AchievementResult
+  points        Int
+  description   String?           @db.Text
+  isActive      Boolean           @default(true) @map("is_active")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  institution Institution             @relation(fields: [institutionId], references: [id])
+  competition Competition?            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  subCategory CompetitionSubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId, competitionId, subCategoryId, isActive])
+  @@map("competition_point_rules")
+}
+
 model PointLedger {
-  id               String          @id @default(cuid())
-  institutionId    String
-  userId           String
-  achievementId    String
-  academicPeriodId String?
-  ruleVersion      Int             @default(1)
-  points           Int
-  type             PointLedgerType @default(award)
-  reason           String?         @db.Text
-  createdAt        DateTime        @default(now())
+  id                 String          @id @default(cuid())
+  institutionId      String
+  userId             String
+  achievementId      String
+  academicPeriodId   String?
+  ruleVersion        Int             @default(1)
+  points             Int
+  type               PointLedgerType @default(award)
+  pointSource        String          @default("template") @map("point_source")
+  calculatedPoints   Int?            @map("calculated_points")
+  overrideReason     String?         @map("override_reason") @db.Text
+  idempotencyKey     String?         @unique @map("idempotency_key")
+  reversedByLedgerId String?         @map("reversed_by_ledger_id")
+  reason             String?         @db.Text
+  createdAt          DateTime        @default(now())
 
   institution    Institution     @relation(fields: [institutionId], references: [id])
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)

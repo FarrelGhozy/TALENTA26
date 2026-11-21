@@ -55,7 +55,7 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
 
 ## Fase 2 — Implementasi Fitur & Alur Baru (`K-15` s.d. `K-22`)
 ### 2.1 Skema & Migrasi Prisma MySQL
-- [ ] Buat migrasi Prisma untuk:
+- [x] Buat migrasi Prisma (`20261121134000_add_fase2_features`) dan terapkan ke `talenta_dev` + `talenta_test`:
   - `User.fullName` (nama asli staf/pengguna, `K-20`).
   - `StudentProfile.avatarObjectKey` (objek privat RustFS, `K-20`).
   - `AcademicPeriod.startDate`, `endDate`, `archivedAt` + `StudentTarget.academicPeriodId` (`K-21`).
@@ -65,22 +65,22 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
   - `InternalSelection`: `teamId?` opsional, `userId?` opsional, `notes?`, `confirmedAt?`, `validatorId?` (`K-18`).
 
 ### 2.2 Sistem Poin 3 Lapis, Jenis/Sub-Lomba, Override Validator, & Prestasi Kelompok (`K-15`, `K-16`, `K-17`)
-- [ ] **Admin/Super Admin**: Endpoint & UI `/super-admin?tab=poin` untuk kelola **Template Poin berversi**, **Master Jenis & Sub-Lomba**, dan bobot default + keterangannya.
-- [ ] **Admin/Validator**: Pengaturan poin per perlombaan/sub-lomba (pakai template atau custom bobot + keterangan poin) pada `/validator/konten?tab=kompetisi`.
-- [ ] **Mahasiswa**: Perbarui `/app/prestasi/baru` untuk pilih **jenis & sub-lomba**, lihat keterangan poin, pilih kepesertaan `individu` atau `kelompok` (tarik dari tim aktif atau cari rekan satu institusi); buat halaman detail `/app/prestasi/:id`; lengkapi **revisi penuh** (semua field + ganti berkas bukti lama) dan aksi **batalkan pengajuan** (`menunggu → dibatalkan`).
-- [ ] **Validator**: Perbarui `/validator/prestasi/:id` untuk menampilkan detail lengkap (jenis/sub-lomba, anggota kelompok, deskripsi, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + sumber aturan & keterangannya), tampilkan panel keputusan hanya pada status `menunggu`, sediakan input **override poin + alasan wajib** saat *approve*, beri poin penuh ke seluruh anggota kelompok secara atomik, dan balikkan seluruh anggota saat koreksi.
+- [x] **Admin/Super Admin**: Endpoint & UI `/super-admin?tab=poin` untuk kelola **Template Poin berversi** (`PointTemplate`), dan **Master Jenis & Sub-Lomba** serta bobot default + keterangannya di `/validator/konten?tab=poin` (dapat diakses validator & super admin).
+- [x] **Admin/Validator**: Pengaturan poin per perlombaan/sub-lomba (pakai template atau custom bobot + keterangan poin) pada `/validator/konten?tab=poin` dan `/validator/konten?tab=kompetisi`.
+- [x] **Mahasiswa**: Perbarui `/app/prestasi/baru` untuk pilih **jenis & sub-lomba**, lihat keterangan poin, pilih kepesertaan `individu` atau `kelompok` (tarik dari tim aktif atau cari rekan satu institusi); buat halaman detail `/app/prestasi/:id`; lengkapi **revisi penuh** (semua field + ganti berkas bukti lama via `replaceEvidenceIds`) dan aksi **batalkan pengajuan** (`menunggu → dibatalkan`).
+- [x] **Validator**: Perbarui `/validator/prestasi/:id` untuk menampilkan detail lengkap (jenis/sub-lomba, anggota kelompok, deskripsi, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + sumber aturan & keterangannya), tampilkan panel keputusan hanya pada status `menunggu`, sediakan input **override poin + alasan wajib** saat *approve*, beri poin penuh ke seluruh anggota kelompok secara atomik, dan balikkan seluruh anggota saat koreksi.
 
 ### 2.3 Avatar Privat RustFS & Nama Asli Staf (`K-20`)
-- [ ] Implementasikan `POST /api/v1/me/profile/avatar` (validasi magic-byte JPEG/PNG/WebP maks 2 MB → unggah ke RustFS privat) dan `GET /api/v1/users/:id/avatar` (stream terotorisasi; pastikan tidak muncul di ranking publik).
-- [ ] Perbarui `StepIdentitas.tsx` & `ProfilePage.tsx` (pakai endpoint upload avatar + `AuthContext.refreshUser()`, hapus `window.alert()`, tampilkan NIM dengan status belum terverifikasi kampus, field pengalaman/bio, kunci input email agar tidak hilang diam-diam).
-- [ ] Perbarui form pembuatan/edit staf di `/super-admin?tab=staf` (wajib `fullName`), simpan & tampilkan nama asli staf di `Navbar`, `AchievementDecision`, dan `AuditEvent` (bukan "Tim Validator" / "Super Administrator").
+- [x] Implementasikan `POST /api/v1/me/profile/avatar` (validasi magic-byte JPEG/PNG/WebP maks 2 MB → unggah ke RustFS privat), `DELETE /api/v1/me/profile/avatar`, dan `GET /api/v1/users/:id/avatar` (stream terotorisasi; tidak muncul di ranking publik).
+- [x] Perbarui `StepIdentitas.tsx` & `ProfilePage.tsx` (pakai endpoint upload avatar + `AuthContext.refreshUser()`, hapus `window.alert()`, tampilkan NIM dengan status belum terverifikasi kampus, field pengalaman/bio/telepon/fakultas, kunci input email agar tidak hilang diam-diam).
+- [x] Perbarui form pembuatan/edit staf di `/super-admin?tab=staf` (wajib `fullName`), simpan & tampilkan nama asli staf di `AuthContext`/`Navbar`, `AchievementDecision`, dan `AuditEvent`.
 
 ### 2.4 Lomba Individu, Seleksi Internal, Konten Validator, & Manajemen Pergantian Periode (`K-18`, `K-19`, `K-21`, `K-22`)
-- [ ] Pisahkan alur lomba **individu** vs **beregu** secara konsisten di `ProfilePage` (redirect ke `/app/kompetisi/:slug/persiapan` untuk individu), `BerandaPage`, `PartnerPage`, `CompetitionDetailPage`, dan tambahkan dialog konfirmasi arsip tim saat ganti target.
-- [ ] Tambahkan form buat tim kustom di `TeamPage`, tampilkan banner status `terkunci_seleksi` (disable keluar mandiri), tampilkan label kesesuaian (bukan `%` mentah) di `PartnerCard`, dan jadikan `requiredRoles`/lintas prodi sebagai indikator saran UI.
-- [ ] Lengkapi `/validator/konten` (dengan sinkronisasi `?tab=...`): edit penuh kompetisi + pratinjau + jadwal/syarat/sumber, editor roadmap multi-fase/multi-tugas non-destruktif (tanpa `deleteMany` yang menghapus progres mahasiswa), daftar/edit/arsip konsultan + `capacityNote` + persetujuan publikasi, serta tab seleksi internal dengan **dropdown peserta tim/individu** + catatan & konfirmasi.
-- [ ] Bangun bagian **Manajemen Pergantian Periode** di `/super-admin?tab=periode`: buat periode dengan `startDate`/`endDate`, endpoint `activation-preview` (jumlah target & tim aktif terdampak), modal konfirmasi eksplisit, dan aktivasi atomik yang mengarsipkan target & tim periode lama tanpa menghapus riwayat.
-- **Gate Fase 2**: migrasi teruji pada DB uji + data eksisting; uji unit & integrasi mencakup poin 3 lapis, override validator, prestasi kelompok + koreksi, revisi/ganti bukti, batal pengajuan, avatar RustFS, nama staf, seleksi individu/beregu, dan pergantian periode; commit Git lokal.
+- [ ] Pisahkan alur lomba **individu** vs **beregu** secara konsisten di `ProfilePage` (redirect ke `/app/kompetisi/:slug/persiapan` untuk individu), `PartnerPage`, `CompetitionDetailPage`, dan dialog konfirmasi ganti target *(sebagian besar selesai; integrasi penuh `BerandaPage` diselesaikan pada Fase 3)*.
+- [x] Tambahkan form buat tim kustom di `TeamPage`, tampilkan banner status `terkunci_seleksi` (disable keluar mandiri), tampilkan label kesesuaian (bukan `%` mentah) di `PartnerCard`, dan jadikan `requiredRoles`/lintas prodi sebagai indikator saran UI.
+- [x] Lengkapi `/validator/konten` (dengan sinkronisasi `?tab=...`): edit penuh kompetisi + jadwal/syarat/sumber/poin, editor roadmap multi-fase/multi-tugas non-destruktif (pertahankan ID agar `RoadmapProgress` mahasiswa tetap utuh), daftar/edit/arsip/hapus konsultan + `capacityNote`, serta tab seleksi internal dengan **dropdown peserta tim/individu** + catatan & konfirmasi.
+- [x] Bangun bagian **Manajemen Pergantian Periode** di `/super-admin?tab=periode`: buat periode dengan `startDate`/`endDate`, endpoint `activation-preview` (jumlah target & tim aktif terdampak), modal konfirmasi eksplisit, dan aktivasi atomik yang mengarsipkan target & tim periode lama tanpa menghapus riwayat.
+- **Gate Fase 2**: **LULUS (21 November 2026)** — migrasi `20261121134000_add_fase2_features` diterapkan ke `talenta_dev` & `talenta_test`; `bun run typecheck`, `bun run lint`, `bun run build` (+ bundle clean), `bun run build:demo`, 13 unit test, dan seluruh 7 suite integrasi (termasuk `fase2-features.test.ts` — 7 test, 52 assertions) lulus 100%. (Integrasi `BerandaPage` & UI/E2E polish berlanjut ke Fase 3).
 
 ---
 

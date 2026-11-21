@@ -12,6 +12,13 @@ export const targetRoutes = new Elysia({ prefix: '/api/v1' })
     const target = await targetService.getMyActiveTarget(auth.user.id);
     return { data: target };
   })
+  .get('/me/targets/history', async ({ auth }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['mahasiswa']);
+
+    const history = await targetService.getMyTargetHistory(auth.user.id);
+    return { data: history };
+  })
   .post(
     '/me/target',
     async ({ auth, body }) => {

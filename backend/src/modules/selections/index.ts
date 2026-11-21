@@ -10,16 +10,24 @@ export const selectionRoutes = new Elysia({ prefix: '/api/v1/admin/selections' }
     assertRole(auth, ['validator', 'super_admin']);
     return { data: await service.listSelections(auth.user.institutionId) };
   })
-  .post('/', async ({ auth, body }) => {
-    assertAuthenticated(auth);
-    assertRole(auth, ['validator', 'super_admin']);
-    return { data: await service.saveSelection(auth.user.institutionId, auth.user.id, body) };
-  }, {
-    body: t.Object({
-      competitionId: t.String(),
-      teamId: t.String(),
-      stage: t.String(),
-      result: t.Union([t.Literal('menunggu'), t.Literal('lolos'), t.Literal('tidak')]),
-      organizerVerified: t.Boolean(),
-    }),
-  });
+  .post(
+    '/',
+    async ({ auth, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['validator', 'super_admin']);
+      return {
+        data: await service.saveSelection(auth.user.institutionId, auth.user.id, body),
+      };
+    },
+    {
+      body: t.Object({
+        competitionId: t.String(),
+        teamId: t.Optional(t.Nullable(t.String())),
+        userId: t.Optional(t.Nullable(t.String())),
+        stage: t.String(),
+        result: t.Union([t.Literal('menunggu'), t.Literal('lolos'), t.Literal('tidak')]),
+        organizerVerified: t.Boolean(),
+        notes: t.Optional(t.String()),
+      }),
+    }
+  );

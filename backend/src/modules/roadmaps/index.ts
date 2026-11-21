@@ -75,6 +75,15 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
     return { data: consultants };
   })
   // Validator & Admin Endpoints
+  .get('/admin/roadmaps/:competitionSlug', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const result = await roadmapService.getRoadmapAdminBySlug(
+      params.competitionSlug,
+      auth.user.institutionId
+    );
+    return { data: result };
+  })
   .post(
     '/admin/roadmaps/:competitionSlug',
     async ({ auth, params, body }) => {
@@ -94,12 +103,14 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
       body: t.Object({
         phases: t.Array(
           t.Object({
+            id: t.Optional(t.String()),
             orderIndex: t.Number(),
             title: t.String(),
             description: t.Optional(t.String()),
             targetDays: t.Optional(t.Number()),
             tasks: t.Array(
               t.Object({
+                id: t.Optional(t.String()),
                 orderIndex: t.Number(),
                 title: t.String(),
                 description: t.Optional(t.String()),
@@ -113,6 +124,12 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
       }),
     }
   )
+  .get('/admin/consultants', async ({ auth }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const result = await roadmapService.listConsultantsAdmin(auth.user.institutionId);
+    return { data: result };
+  })
   .post(
     '/admin/consultants',
     async ({ auth, body }) => {
@@ -134,6 +151,42 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
         field: t.String(),
         whatsappNumber: t.String(),
         capacityNote: t.Optional(t.String()),
+        isApproved: t.Optional(t.Boolean()),
+        status: t.Optional(t.Union([t.Literal('draft'), t.Literal('published'), t.Literal('archived')])),
       }),
     }
-  );
+  )
+  .patch(
+    '/admin/consultants/:id',
+    async ({ auth, params, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['validator', 'super_admin']);
+      const result = await roadmapService.updateConsultantContact(
+        auth.user.id,
+        params.id,
+        body,
+        auth.user.institutionId
+      );
+      return { data: result };
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        field: t.Optional(t.String()),
+        whatsappNumber: t.Optional(t.String()),
+        capacityNote: t.Optional(t.String()),
+        isApproved: t.Optional(t.Boolean()),
+        status: t.Optional(t.Union([t.Literal('draft'), t.Literal('published'), t.Literal('archived')])),
+      }),
+    }
+  )
+  .delete('/admin/consultants/:id', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const result = await roadmapService.deleteConsultantContact(
+      auth.user.id,
+      params.id,
+      auth.user.institutionId
+    );
+    return { data: result };
+  });

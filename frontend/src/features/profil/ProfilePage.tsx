@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, ArrowRight, ArrowLeft, AlertCircle, UserCheck, Target, Layers, Check } from 'lucide-react';
-import { Competition, User } from '../../types';
-import { competitionService, userService } from '@talenta/services';
+import { Competition, Team, User } from '../../types';
+import { competitionService, teamService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { StepIdentitas } from './components/StepIdentitas';
 import { StepMinatSkill } from './components/StepMinatSkill';
@@ -14,7 +15,7 @@ import { StepTarget } from './components/StepTarget';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const ProfilePage: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { notify } = useToast();
   const [searchParams] = useSearchParams();
@@ -23,9 +24,13 @@ export const ProfilePage: React.FC = () => {
   const [step, setStep] = useState(needTarget ? 3 : 1);
   const [userData, setUserData] = useState<Partial<User>>({});
   const [targetSlug, setTargetSlug] = useState('');
+  const [initialTargetSlug, setInitialTargetSlug] = useState('');
+  const [activeTeam, setActiveTeam] = useState<Team | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false);
   const [formError, setFormError] = useState('');
 
   useEffect(() => {
@@ -35,11 +40,16 @@ export const ProfilePage: React.FC = () => {
       userService.getById(currentUser.id),
       userService.getProfile(currentUser.id),
       competitionService.getAll(),
+      teamService.getTeamByUserId(currentUser.id).catch(() => null),
     ])
-      .then(([u, prof, comps]) => {
+      .then(([u, prof, comps, team]) => {
         if (cancelled) return;
         if (u) setUserData(u);
-        if (prof?.targetKompetisiSlug) setTargetSlug(prof.targetKompetisiSlug);
+        if (prof?.targetKompetisiSlug) {
+          setTargetSlug(prof.targetKompetisiSlug);
+          setInitialTargetSlug(prof.targetKompetisiSlug);
+        }
+        setActiveTeam(team && team.status !== 'arsip' ? team : null);
         setCompetitions(comps);
         setLoading(false);
       })
@@ -103,6 +113,60 @@ export const ProfilePage: React.FC = () => {
     setStep(s);
   };
 
+  const handleUploadAvatar = async (file: File) => {
+    if (!userService.uploadAvatar) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await userService.uploadAvatar(file);
+      const cacheBusted = `${res.avatarUrl}?t=${Date.now()}`;
+      setUserData((prev) => ({ ...prev, avatar: cacheBusted }));
+      await refreshUser();
+      notify('Foto profil privat berhasil diperbarui!');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!userService.deleteAvatar) return;
+    setUploadingAvatar(true);
+    try {
+      await userService.deleteAvatar();
+      setUserData((prev) => ({ ...prev, avatar: '' }));
+      await refreshUser();
+      notify('Foto profil berhasil dihapus.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const executeSaveAll = async () => {
+    if (!currentUser) return;
+    setSaving(true);
+    setConfirmSwitchOpen(false);
+    try {
+      await userService.updateProfile(currentUser.id, userData);
+      if (targetSlug) {
+        await userService.setTargetCompetition(currentUser.id, targetSlug);
+      }
+      await refreshUser();
+      notify('Profil & target kompetisi berhasil diperbarui!');
+      const chosenComp = competitions.find((c) => c.slug === targetSlug);
+      const isIndividu =
+        chosenComp?.format === 'individu' ||
+        (chosenComp && chosenComp.komposisi.min === 1 && chosenComp.komposisi.max === 1);
+      if (isIndividu && targetSlug) {
+        navigate(`/app/kompetisi/${targetSlug}/persiapan`);
+      } else {
+        navigate('/app/partner');
+      }
+    } catch (err: any) {
+      notify(err?.message || 'Gagal menyimpan profil. Coba lagi.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveAll = async () => {
     const err = validateStep(step);
     if (err) {
@@ -110,19 +174,11 @@ export const ProfilePage: React.FC = () => {
       return;
     }
     if (!currentUser) return;
-    setSaving(true);
-    try {
-      await userService.updateProfile(currentUser.id, userData);
-      if (targetSlug) {
-        await userService.setTargetCompetition(currentUser.id, targetSlug);
-      }
-      notify('Profil & target kompetisi berhasil diperbarui!');
-      navigate('/app/partner');
-    } catch {
-      notify('Gagal menyimpan profil. Coba lagi.', 'error');
-    } finally {
-      setSaving(false);
+    if (initialTargetSlug && targetSlug && targetSlug !== initialTargetSlug && activeTeam) {
+      setConfirmSwitchOpen(true);
+      return;
     }
+    await executeSaveAll();
   };
 
   if (loading) return <PageLoading message="Memuat profil dan minat mahasiswa..." />;
@@ -149,7 +205,7 @@ export const ProfilePage: React.FC = () => {
           Profil, Keahlian & Target Kompetisi
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Data ini dipakai oleh fitur rekomendasi rekan tim dan roadmap persiapan pada demo.
+          Data ini dipakai oleh fitur rekomendasi rekan tim, pembinaan roadmap, dan verifikasi prestasi kampus.
         </p>
       </div>
 
@@ -204,7 +260,15 @@ export const ProfilePage: React.FC = () => {
 
       {/* Step Content */}
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs">
-        {step === 1 && <StepIdentitas user={userData} onChange={handleUserChange} />}
+        {step === 1 && (
+          <StepIdentitas
+            user={userData}
+            onChange={handleUserChange}
+            onUploadAvatar={userService.uploadAvatar ? handleUploadAvatar : undefined}
+            onDeleteAvatar={userService.deleteAvatar ? handleDeleteAvatar : undefined}
+            uploadingAvatar={uploadingAvatar}
+          />
+        )}
         {step === 2 && <StepMinatSkill user={userData} onChange={handleUserChange} />}
         {step === 3 && (
           <StepTarget
@@ -255,14 +319,39 @@ export const ProfilePage: React.FC = () => {
                 variant="primary"
                 onClick={handleSaveAll}
                 isLoading={saving}
-                rightIcon={<Users className="w-4 h-4" />}
+                rightIcon={<Users className="w-4 h-4" aria-hidden="true" />}
               >
-                Simpan & Cari Partner
+                {(() => {
+                  const chosen = competitions.find((c) => c.slug === targetSlug);
+                  const isInd = chosen?.format === 'individu' || (chosen && chosen.komposisi.min === 1 && chosen.komposisi.max === 1);
+                  return isInd ? 'Simpan & Mulai Persiapan' : 'Simpan & Cari Partner';
+                })()}
               </Button>
             )}
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={confirmSwitchOpen}
+        onClose={() => setConfirmSwitchOpen(false)}
+        title="Konfirmasi Ganti Target Kompetisi"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setConfirmSwitchOpen(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" size="sm" isLoading={saving} onClick={executeSaveAll}>
+              Ya, Ganti Target
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Anda saat ini tergabung dalam tim aktif <strong className="text-slate-900">{activeTeam?.nama}</strong>.
+          Mengganti target kompetisi akan menyesuaikan rekomendasi tim dan persiapan roadmap Anda. Pastikan koordinasi dengan tim bila ingin berpindah lomba.
+        </p>
+      </Modal>
     </div>
   );
 };

@@ -49,6 +49,7 @@ async function main() {
       data: {
         institutionId: institution.id,
         email: superAdminEmail,
+        fullName: 'Administrator Utama TALENTA',
         passwordHash,
         role: 'super_admin',
         status: 'active',
@@ -86,12 +87,18 @@ async function main() {
         data: {
           institutionId: institution.id,
           email: validatorEmail,
+          fullName: 'Dr. Ahmad Validator',
           passwordHash: valHash,
           role: 'validator',
           status: 'active',
         },
       });
       console.log(`[SEED:DEV] Validator uji coba dibuat: ${validatorEmail}`);
+    } else if (!existingValidator.fullName) {
+      await prisma.user.update({
+        where: { id: existingValidator.id },
+        data: { fullName: 'Dr. Ahmad Validator' },
+      });
     }
 
     const studentEmail = 'mhs@unida.gontor.ac.id';
@@ -416,11 +423,26 @@ async function main() {
     }
   }
 
-  // 8. Aturan Poin Berversi (PointRule Versi 1 sesuai docs/09 — hanya dipasang bila belum ada aturan poin sama sekali)
+  // 8. Template & Aturan Poin Berversi (PointTemplate + PointRule Versi 1 — tidak menimpa aturan berjalan)
   const existingPointRuleCount = await prisma.pointRule.count({
     where: { institutionId: institution.id },
   });
   if (existingPointRuleCount === 0) {
+    let defaultTemplate = await prisma.pointTemplate.findFirst({
+      where: { institutionId: institution.id, version: 1 },
+    });
+    if (!defaultTemplate) {
+      defaultTemplate = await prisma.pointTemplate.create({
+        data: {
+          institutionId: institution.id,
+          name: 'Template Poin Standar v1',
+          description: 'Template bobot poin standar UNIDA Gontor untuk prestasi lomba berdasarkan tingkat dan capaian.',
+          version: 1,
+          isActive: true,
+        },
+      });
+    }
+
     const defaultRules: Array<{
       level: 'lokal' | 'nasional' | 'internasional';
       result: 'partisipasi' | 'finalis' | 'juara_3' | 'juara_2' | 'juara_1' | 'penghargaan_khusus';
@@ -451,6 +473,7 @@ async function main() {
     await prisma.pointRule.createMany({
       data: defaultRules.map((r) => ({
         institutionId: institution.id,
+        pointTemplateId: defaultTemplate.id,
         version: 1,
         level: r.level,
         result: r.result,
@@ -458,9 +481,71 @@ async function main() {
         isActive: true,
       })),
     });
-    console.log('[SEED] Aturan bobot poin prestasi versi 1 berhasil dipasang.');
+    console.log('[SEED] Template & aturan bobot poin prestasi versi 1 berhasil dipasang.');
   } else {
     console.log('[SEED] Aturan bobot poin sudah ada, seed tidak menimpa aturan berjalan.');
+  }
+
+  // 9. Master Jenis & Sub-Lomba untuk lingkungan development/test
+  if (!isProd) {
+    const existingCatCount = await prisma.competitionCategory.count({
+      where: { institutionId: institution.id },
+    });
+    if (existingCatCount === 0) {
+      const catSeeds = [
+        {
+          code: 'kepenulisan',
+          name: 'Kepenulisan & Riset',
+          description: 'Karya tulis ilmiah, PKM, esai, dan riset mahasiswa.',
+          subs: [
+            { code: 'pkm-rsh', name: 'PKM Riset Sosial Humaniora (PKM-RSH)' },
+            { code: 'pkm-kc', name: 'PKM Karsa Cipta (PKM-KC)' },
+            { code: 'pkm-pm', name: 'PKM Pengabdian kepada Masyarakat (PKM-PM)' },
+          ],
+        },
+        {
+          code: 'teknologi',
+          name: 'Teknologi & Inovasi Digital',
+          description: 'Pengembangan perangkat lunak, UI/UX, IoT, dan inovasi pendidikan digital.',
+          subs: [
+            { code: 'inovasi-digital', name: 'Inovasi Teknologi Digital Pendidikan' },
+            { code: 'desain-uiux', name: 'Desain UI/UX & Produk Digital' },
+          ],
+        },
+        {
+          code: 'sains',
+          name: 'Olimpiade Sains (MIPA)',
+          description: 'Kompetisi bidang Matematika, Fisika, Kimia, dan Biologi.',
+          subs: [
+            { code: 'matematika', name: 'Matematika' },
+            { code: 'fisika', name: 'Fisika' },
+            { code: 'kimia', name: 'Kimia' },
+            { code: 'biologi', name: 'Biologi' },
+          ],
+        },
+      ];
+
+      for (const c of catSeeds) {
+        const createdCat = await prisma.competitionCategory.create({
+          data: {
+            institutionId: institution.id,
+            code: c.code,
+            name: c.name,
+            description: c.description,
+          },
+        });
+        for (const s of c.subs) {
+          await prisma.competitionSubCategory.create({
+            data: {
+              categoryId: createdCat.id,
+              code: s.code,
+              name: s.name,
+            },
+          });
+        }
+      }
+      console.log('[SEED] Master jenis & sub-lomba development berhasil dipasang.');
+    }
   }
 
   console.log('[SEED] Inisialisasi basis data Stage 4 selesai dengan aman.');

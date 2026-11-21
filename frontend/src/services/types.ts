@@ -1,12 +1,15 @@
 import {
   Achievement,
   Competition,
+  CompetitionCategoryItem,
+  CompetitionPointRuleItem,
   Consultant,
   Invite,
   MatchCandidate,
   Profile,
   RankingResponse,
   Roadmap,
+  StudentDirectoryItem,
   Team,
   User,
 } from '../types';
@@ -22,8 +25,12 @@ export interface IUserService {
   getById(id: string): Promise<User | null>;
   getCurrentUser(): Promise<User>;
   updateProfile(userId: string, data: Partial<User>): Promise<User>;
+  uploadAvatar?(file: File): Promise<{ avatarUrl: string }>;
+  deleteAvatar?(): Promise<void>;
   getProfile(userId: string): Promise<Profile | null>;
   setTargetCompetition(userId: string, slug: string): Promise<Profile>;
+  getTargetHistory?(): Promise<Array<{ id: string; status: string; createdAt: string; competition: { id: string; slug: string; name: string }; academicPeriod?: { id: string; name: string } | null }>>;
+  searchStudents?(q?: string): Promise<StudentDirectoryItem[]>;
   login?(email: string, pass: string): Promise<{ user: User; token: string }>;
   register?(data: any): Promise<{ user: User; token: string }>;
   logout?(): Promise<void>;
@@ -57,9 +64,25 @@ export interface IAchievementService {
   create(data: any, files?: File[]): Promise<Achievement>;
   submitRevision?(id: string, data: any, files?: File[]): Promise<Achievement>;
   cancel?(id: string): Promise<Achievement>;
-  verify(id: string, statusOrAction: any, catatan?: string, version?: number): Promise<Achievement>;
+  verify(
+    id: string,
+    statusOrAction: any,
+    catatan?: string,
+    version?: number,
+    options?: { overridePoints?: number; overrideReason?: string; idempotencyKey?: string }
+  ): Promise<Achievement>;
   correct?(id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement>;
   getEvidenceDownloadUrl?(evidenceId: string): string;
+  getCompetitionCategories?(): Promise<CompetitionCategoryItem[]>;
+  getCompetitionPointConfig?(slug: string): Promise<{
+    competitionId: string;
+    slug: string;
+    name: string;
+    pointDescription?: string | null;
+    pointTemplate?: { id: string; name: string; version: number; rules?: PointRuleItem[] } | null;
+    competitionCategory?: CompetitionCategoryItem | null;
+    customRules: CompetitionPointRuleItem[];
+  }>;
   getRanking?(periodId?: string): Promise<RankingResponse>;
   getLifetimeRanking?(): Promise<RankingResponse>;
 }
@@ -78,30 +101,86 @@ export interface ValidatorCompetitionItem {
   format: 'individu' | 'beregu';
   minTeamMembers: number;
   maxTeamMembers: number;
+  requiredRoles?: string[];
+  requirements?: string[];
+  scheduleTimeline?: Array<{ label: string; tanggal: string }>;
   description: string;
+  sourceUrl?: string | null;
+  competitionCategoryId?: string | null;
+  pointTemplateId?: string | null;
+  pointDescription?: string | null;
   status: 'draft' | 'published' | 'archived';
+}
+
+export interface ValidatorRoadmapDetail {
+  id?: string;
+  competitionId: string;
+  competitionSlug: string;
+  competitionName: string;
+  phases: Array<{
+    id?: string;
+    orderIndex: number;
+    title: string;
+    description?: string | null;
+    targetDays?: number | null;
+    tasks: Array<{
+      id?: string;
+      orderIndex: number;
+      title: string;
+      description?: string | null;
+      isRequired?: boolean;
+      resourceUrl?: string | null;
+      resourceTitle?: string | null;
+    }>;
+  }>;
+}
+
+export interface ValidatorConsultantItem {
+  id: string;
+  name: string;
+  field: string;
+  whatsappNumber: string;
+  capacityNote?: string | null;
+  isApproved: boolean;
+  status: 'draft' | 'published' | 'archived';
+  competition?: { id: string; slug: string; name: string } | null;
+}
+
+export interface CompetitionParticipantOption {
+  teams: Array<{ id: string; name: string; status: string; memberNames: string[] }>;
+  individuals: Array<{ userId: string; fullName: string; nim: string; studyProgram: string }>;
 }
 
 export interface IValidatorContentService {
   getCompetitions(): Promise<ValidatorCompetitionItem[]>;
-  createCompetition(data: Omit<ValidatorCompetitionItem, 'id' | 'slug' | 'status'>): Promise<ValidatorCompetitionItem>;
+  createCompetition(data: Partial<ValidatorCompetitionItem> & { name: string; organizer: string; category: string; level: string; format: 'individu' | 'beregu'; minTeamMembers: number; maxTeamMembers: number; description: string }): Promise<ValidatorCompetitionItem>;
+  updateCompetition?(id: string, data: Partial<ValidatorCompetitionItem>): Promise<ValidatorCompetitionItem>;
   setCompetitionStatus(id: string, status: 'published' | 'archived'): Promise<ValidatorCompetitionItem>;
-  saveRoadmap(competitionSlug: string, phases: Array<{
-    orderIndex: number;
-    title: string;
-    description?: string;
-    targetDays?: number;
-    tasks: Array<{ orderIndex: number; title: string; description?: string; isRequired?: boolean }>;
-  }>): Promise<unknown>;
+  getRoadmap?(competitionSlug: string): Promise<ValidatorRoadmapDetail>;
+  saveRoadmap(competitionSlug: string, phases: ValidatorRoadmapDetail['phases']): Promise<unknown>;
+  getConsultants?(): Promise<ValidatorConsultantItem[]>;
   createConsultant(data: {
     competitionSlug: string;
     name: string;
     field: string;
     whatsappNumber: string;
     capacityNote?: string;
-  }): Promise<unknown>;
-  getSelections(): Promise<Array<{ id: string; stage: string; result: string; organizerVerified: boolean; competition?: { name: string }; team?: { name: string } }>>;
-  saveSelection(data: { competitionId: string; teamId: string; stage: string; result: 'menunggu' | 'lolos' | 'tidak'; organizerVerified: boolean }): Promise<unknown>;
+    isApproved?: boolean;
+    status?: 'draft' | 'published' | 'archived';
+  }): Promise<ValidatorConsultantItem>;
+  updateConsultant?(id: string, data: Partial<{ name: string; field: string; whatsappNumber: string; capacityNote: string; isApproved: boolean; status: 'draft' | 'published' | 'archived' }>): Promise<ValidatorConsultantItem>;
+  deleteConsultant?(id: string): Promise<void>;
+  getCompetitionParticipants?(competitionId: string): Promise<CompetitionParticipantOption>;
+  getSelections(): Promise<Array<{ id: string; stage: string; result: string; organizerVerified: boolean; notes?: string | null; confirmedAt?: string | null; competitionId?: string; teamId?: string | null; userId?: string | null; competition?: { id: string; name: string; format?: string }; team?: { id: string; name: string } | null; user?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string } | null } | null }>>;
+  saveSelection(data: { competitionId: string; teamId?: string | null; userId?: string | null; stage: string; result: 'menunggu' | 'lolos' | 'tidak'; organizerVerified: boolean; notes?: string }): Promise<unknown>;
+  getCompetitionCategories?(): Promise<CompetitionCategoryItem[]>;
+  createCompetitionCategory?(data: { code: string; name: string; description?: string }): Promise<CompetitionCategoryItem>;
+  updateCompetitionCategory?(id: string, data: Partial<{ name: string; description: string; isActive: boolean }>): Promise<CompetitionCategoryItem>;
+  createCompetitionSubCategory?(data: { categoryId: string; code: string; name: string; description?: string; defaultPointsNote?: string; rules?: Array<{ level: string; result: string; points: number; description?: string }> }): Promise<any>;
+  updateCompetitionSubCategory?(id: string, data: Partial<{ name: string; description: string; defaultPointsNote: string; isActive: boolean; rules: Array<{ level: string; result: string; points: number; description?: string }> }>): Promise<any>;
+  getCompetitionPointConfig?(competitionId: string): Promise<any>;
+  saveCompetitionPointConfig?(competitionId: string, data: { pointTemplateId?: string | null; competitionCategoryId?: string | null; pointDescription?: string | null; customRules?: Array<{ subCategoryId?: string | null; level: string; result: string; points: number; description?: string }> }): Promise<any>;
+  getPointTemplates?(): Promise<PointTemplateItem[]>;
 }
 
 export interface AdminStats {
@@ -128,11 +207,32 @@ export interface AcademicPeriodItem {
   year: number;
   semester: string;
   isActive: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  archivedAt?: string | null;
   createdAt: string;
   _count?: {
     competitions: number;
     achievements: number;
   };
+}
+
+export interface AcademicPeriodActivationPreview {
+  targetPeriod: AcademicPeriodItem;
+  currentActivePeriod: AcademicPeriodItem | null;
+  activeTargetsToArchive: number;
+  activeTeamsToArchive: number;
+}
+
+export interface PointTemplateItem {
+  id: string;
+  name: string;
+  description?: string | null;
+  version: number;
+  isActive: boolean;
+  createdAt: string;
+  rules: PointRuleItem[];
+  _count?: { competitions: number };
 }
 
 export interface PointRuleItem {
@@ -194,13 +294,18 @@ export interface ISystemService {
     totalPages: number;
   }>;
   updateUserStatus(userId: string, status: 'active' | 'suspended' | 'pending_verification'): Promise<any>;
-  createStaff(data: { email: string; password: string; role: 'validator' | 'super_admin' }): Promise<any>;
+  createStaff(data: { email: string; fullName?: string; password: string; role: 'validator' | 'super_admin' }): Promise<any>;
+  updateUserName?(userId: string, fullName: string): Promise<any>;
   updateStaffRole(userId: string, role: 'validator' | 'super_admin'): Promise<any>;
   getAcademicPeriods(): Promise<AcademicPeriodItem[]>;
-  createAcademicPeriod(data: { name: string; year: number; semester: 'ganjil' | 'genap' }): Promise<AcademicPeriodItem>;
-  activateAcademicPeriod(id: string): Promise<AcademicPeriodItem>;
+  createAcademicPeriod(data: { name: string; year: number; semester: 'ganjil' | 'genap'; startDate?: string; endDate?: string }): Promise<AcademicPeriodItem>;
+  getAcademicPeriodPreview?(id: string): Promise<AcademicPeriodActivationPreview>;
+  activateAcademicPeriod(id: string, archiveOldTargets?: boolean): Promise<AcademicPeriodItem>;
   getPointRules(): Promise<{ activeVersion: number | null; activeRules: PointRuleItem[]; versions: any[] }>;
   createPointRuleVersion(rules: PointRuleItem[]): Promise<any>;
+  getPointTemplates?(): Promise<PointTemplateItem[]>;
+  createPointTemplate?(data: { name: string; description?: string; activateAsDefault?: boolean; rules: PointRuleItem[] }): Promise<PointTemplateItem>;
+  activatePointTemplate?(id: string): Promise<PointTemplateItem>;
   getAuditLogs(params?: { action?: string; actorId?: string; targetType?: string; page?: number; limit?: number }): Promise<{
     logs: AuditLogItem[];
     total: number;

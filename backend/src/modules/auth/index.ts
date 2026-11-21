@@ -114,6 +114,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       data: {
         id: user.id,
         email: user.email,
+        fullName: user.fullName || user.studentProfile?.fullName || null,
         role: user.role,
         status: user.status,
         institutionId: user.institutionId,

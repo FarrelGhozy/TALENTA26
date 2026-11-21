@@ -59,6 +59,7 @@ export async function getStudentDashboard(userId: string, institutionId: string)
             },
           },
           members: {
+            where: { status: 'active' },
             include: {
               user: {
                 select: {
@@ -120,7 +121,10 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     }
   }
 
-  // 5. Rangkuman pengajuan prestasi
+  // 5. Rangkuman pengajuan prestasi (milik sendiri maupun anggota kelompok)
+  const achOwnerFilter = {
+    OR: [{ userId }, { participants: { some: { userId } } }],
+  };
   const [
     totalAchievements,
     pendingCount,
@@ -129,12 +133,12 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     rejectedCount,
     draftCount,
   ] = await Promise.all([
-    prisma.achievement.count({ where: { userId } }),
-    prisma.achievement.count({ where: { userId, status: 'menunggu' } }),
-    prisma.achievement.count({ where: { userId, status: 'perlu_perbaikan' } }),
-    prisma.achievement.count({ where: { userId, status: 'disetujui' } }),
-    prisma.achievement.count({ where: { userId, status: 'ditolak' } }),
-    prisma.achievement.count({ where: { userId, status: 'draft' } }),
+    prisma.achievement.count({ where: achOwnerFilter }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'menunggu' } }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'perlu_perbaikan' } }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'disetujui' } }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'ditolak' } }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'draft' } }),
   ]);
 
   // 6. Poin periode aktif

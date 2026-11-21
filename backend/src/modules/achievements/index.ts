@@ -7,7 +7,39 @@ import type {
   AchievementCategory,
   AchievementLevel,
   AchievementResult,
+  ParticipationType,
 } from '@prisma/client';
+
+function parseStringArrayField(
+  bodyVal: unknown,
+  rawFormData: FormData | null,
+  ...keys: string[]
+): string[] | undefined {
+  if (Array.isArray(bodyVal)) {
+    return bodyVal.map((v) => String(v)).filter(Boolean);
+  }
+  if (typeof bodyVal === 'string' && bodyVal.trim()) {
+    try {
+      const parsed = JSON.parse(bodyVal);
+      if (Array.isArray(parsed)) return parsed.map((v) => String(v)).filter(Boolean);
+    } catch {
+      return bodyVal.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  if (rawFormData) {
+    for (const k of keys) {
+      const all = rawFormData.getAll(k).map((v) => String(v).trim()).filter(Boolean);
+      if (all.length === 1 && all[0].startsWith('[')) {
+        try {
+          const parsed = JSON.parse(all[0]);
+          if (Array.isArray(parsed)) return parsed.map((v) => String(v)).filter(Boolean);
+        } catch {}
+      }
+      if (all.length > 0) return all;
+    }
+  }
+  return undefined;
+}
 
 function extractUploadedFiles(rawItems: any[]): Promise<achService.UploadedFileItem[]> {
   return Promise.all(
@@ -116,7 +148,21 @@ export const achievementRoutes = new Elysia()
     const result = (b.result || b.jenisCapaian || rawFormData?.get('jenisCapaian') || rawFormData?.get('result') || 'juara_1') as AchievementResult;
     const eventDate = (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || '') as string;
     const description = (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || '') as string;
+    const competitionId = (b.competitionId || rawFormData?.get('competitionId') || '') as string;
     const competitionSlug = (b.competitionSlug || rawFormData?.get('competitionSlug') || '') as string;
+    const competitionCategoryId = (b.competitionCategoryId || rawFormData?.get('competitionCategoryId') || '') as string;
+    const subCategoryId = (b.subCategoryId || rawFormData?.get('subCategoryId') || '') as string;
+    const subCompetitionName = (b.subCompetitionName || rawFormData?.get('subCompetitionName') || '') as string;
+    const participationTypeRaw = (b.participationType || rawFormData?.get('participationType') || 'individu') as string;
+    const participationType: ParticipationType =
+      participationTypeRaw === 'kelompok' ? 'kelompok' : 'individu';
+    const teamId = (b.teamId || rawFormData?.get('teamId') || '') as string;
+    const participantUserIds = parseStringArrayField(
+      b.participantUserIds,
+      rawFormData,
+      'participantUserIds',
+      'participantUserIds[]'
+    );
     const isFromInternalSelection =
       b.isFromInternalSelection === true ||
       b.isFromInternalSelection === 'true' ||
@@ -132,7 +178,14 @@ export const achievementRoutes = new Elysia()
       result,
       eventDate,
       description,
+      competitionId: competitionId || undefined,
       competitionSlug: competitionSlug || undefined,
+      competitionCategoryId: competitionCategoryId || undefined,
+      subCategoryId: subCategoryId || undefined,
+      subCompetitionName: subCompetitionName || undefined,
+      participationType,
+      teamId: teamId || undefined,
+      participantUserIds,
       isFromInternalSelection,
     };
 
@@ -177,6 +230,22 @@ export const achievementRoutes = new Elysia()
         } catch {}
       }
 
+      const participationTypeRaw = (b.participationType || rawFormData?.get('participationType') || undefined) as
+        | string
+        | undefined;
+      const replaceEvidenceIds = parseStringArrayField(
+        b.replaceEvidenceIds,
+        rawFormData,
+        'replaceEvidenceIds',
+        'replaceEvidenceIds[]'
+      );
+      const participantUserIds = parseStringArrayField(
+        b.participantUserIds,
+        rawFormData,
+        'participantUserIds',
+        'participantUserIds[]'
+      );
+
       const payload: achService.RevisionInput = {
         name: (b.name || b.nama || rawFormData?.get('nama') || rawFormData?.get('name') || undefined) as string | undefined,
         organizer: (b.organizer || b.penyelenggara || rawFormData?.get('penyelenggara') || rawFormData?.get('organizer') || undefined) as string | undefined,
@@ -186,6 +255,24 @@ export const achievementRoutes = new Elysia()
         eventDate: (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || undefined) as string | undefined,
         description: (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || undefined) as string | undefined,
         note: (b.note || b.catatan || rawFormData?.get('catatan') || rawFormData?.get('note') || undefined) as string | undefined,
+        participationType:
+          participationTypeRaw === 'kelompok'
+            ? 'kelompok'
+            : participationTypeRaw === 'individu'
+              ? 'individu'
+              : undefined,
+        teamId: (b.teamId !== undefined ? b.teamId : rawFormData?.get('teamId')) as string | null | undefined,
+        participantUserIds,
+        competitionCategoryId: (b.competitionCategoryId !== undefined
+          ? b.competitionCategoryId
+          : rawFormData?.get('competitionCategoryId')) as string | null | undefined,
+        subCategoryId: (b.subCategoryId !== undefined
+          ? b.subCategoryId
+          : rawFormData?.get('subCategoryId')) as string | null | undefined,
+        subCompetitionName: (b.subCompetitionName !== undefined
+          ? b.subCompetitionName
+          : rawFormData?.get('subCompetitionName')) as string | null | undefined,
+        replaceEvidenceIds,
       };
 
       const rawItems: any[] = [];
@@ -292,7 +379,7 @@ export const achievementRoutes = new Elysia()
 
   .post(
     '/api/v1/admin/achievements/:id/decisions',
-    async ({ auth, params, body }) => {
+    async ({ auth, params, body, request }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['validator', 'super_admin']);
 
@@ -300,19 +387,28 @@ export const achievementRoutes = new Elysia()
         action: 'approve' | 'request_changes' | 'reject';
         reason?: string;
         version?: number;
+        overridePoints?: number;
+        overrideReason?: string;
+        idempotencyKey?: string;
       };
 
       if (!b.action || !['approve', 'request_changes', 'reject'].includes(b.action)) {
         throw new ValidationError('Aksi keputusan tidak valid');
       }
 
+      const headerIdempotencyKey = request.headers.get('idempotency-key') || undefined;
       const updated = await achService.decideAchievement(
         params.id,
         auth.user.id,
         b.action,
         b.reason,
         b.version,
-        auth.user.institutionId
+        auth.user.institutionId,
+        {
+          overridePoints: b.overridePoints,
+          overrideReason: b.overrideReason,
+          idempotencyKey: b.idempotencyKey || headerIdempotencyKey,
+        }
       );
 
       return { data: updated };
@@ -322,6 +418,9 @@ export const achievementRoutes = new Elysia()
         action: t.String(),
         reason: t.Optional(t.String()),
         version: t.Optional(t.Number()),
+        overridePoints: t.Optional(t.Number()),
+        overrideReason: t.Optional(t.String()),
+        idempotencyKey: t.Optional(t.String()),
       }),
     }
   )

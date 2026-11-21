@@ -25,7 +25,10 @@ function getInitials(name?: string): string {
 
 export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatus, onInvite, onCancel }) => {
   const [loading, setLoading] = useState(false);
-  const { user, matchScore, reasons, isOverlapTime } = candidate;
+  const { user, matchScore, labelKesesuaian, reasons, isOverlapTime } = candidate;
+  const displayLabel =
+    labelKesesuaian ||
+    (matchScore >= 80 ? 'Sangat Cocok' : matchScore >= 60 ? 'Cocok' : 'Cukup Cocok');
 
   const handleInvite = async () => {
     setLoading(true);
@@ -78,10 +81,10 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border shadow-2xs ${getScoreColor(
                 matchScore
               )}`}
-              aria-label={`Skor kecocokan ${matchScore} persen`}
+              aria-label={`Tingkat kesesuaian ${displayLabel}`}
             >
-              <Target className="w-3.5 h-3.5 text-blue-700" />
-              {matchScore}% Cocok
+              <Target className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
+              {displayLabel}
             </div>
             <div className="mt-1 flex justify-end">
               <MatchReasonTooltip reasons={reasons} score={matchScore} />

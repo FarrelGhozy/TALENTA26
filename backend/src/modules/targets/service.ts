@@ -7,12 +7,25 @@ export async function getMyActiveTarget(userId: string): Promise<StudentTarget |
   return prisma.studentTarget.findFirst({
     where: { userId, status: 'active' },
     include: {
+      academicPeriod: true,
       competition: {
         include: {
           academicPeriod: true,
         },
       },
     },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function getMyTargetHistory(userId: string) {
+  return prisma.studentTarget.findMany({
+    where: { userId },
+    include: {
+      academicPeriod: { select: { id: true, name: true, year: true, semester: true } },
+      competition: { select: { id: true, slug: true, name: true, category: true, level: true, format: true } },
+    },
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -29,8 +42,11 @@ export async function setTargetCompetition(
     throw new NotFoundError('Kompetisi terbit tidak ditemukan.');
   }
 
+  const activePeriod = await prisma.academicPeriod.findFirst({
+    where: { institutionId, isActive: true },
+  });
+
   return prisma.$transaction(async (tx) => {
-    // 1. Cek target aktif saat ini
     const currentTarget = await tx.studentTarget.findFirst({
       where: { userId, status: 'active' },
       include: { competition: true },
@@ -41,7 +57,6 @@ export async function setTargetCompetition(
         return currentTarget;
       }
 
-      // 2. Tangani tim pada kompetisi lama (jika ada)
       const currentMembership = await tx.teamMember.findFirst({
         where: {
           userId,
@@ -61,7 +76,6 @@ export async function setTargetCompetition(
           );
         }
 
-        // Tandai status anggota 'left'
         await tx.teamMember.update({
           where: { id: currentMembership.id },
           data: { status: 'left' },
@@ -88,22 +102,22 @@ export async function setTargetCompetition(
         }
       }
 
-      // Arsipkan target lama setelah pengecekan tim aman
       await tx.studentTarget.update({
         where: { id: currentTarget.id },
         data: { status: 'archived' },
       });
     }
 
-    // 3. Buat target aktif baru
     const newTarget = await tx.studentTarget.create({
       data: {
         userId,
         competitionId: comp.id,
+        academicPeriodId: comp.academicPeriodId || activePeriod?.id || null,
         status: 'active',
       },
       include: {
         competition: true,
+        academicPeriod: true,
       },
     });
 
@@ -115,6 +129,7 @@ export async function setTargetCompetition(
       targetId: newTarget.id,
       metadata: {
         competitionSlug: comp.slug,
+        academicPeriodId: newTarget.academicPeriodId,
         previousTargetSlug: currentTarget?.competition.slug || null,
       },
     });

@@ -1,13 +1,17 @@
-import React, { useRef } from 'react';
-import { Camera, Trash2, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { AlertCircle, Camera, ShieldAlert, Trash2, Upload } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
 import { Select, SelectOption } from '../../../components/ui/Select';
+import { Badge } from '../../../components/ui/Badge';
 import { User } from '../../../types';
 import { assetUrl } from '../../../lib/asset';
 
 interface StepIdentitasProps {
   user: Partial<User>;
   onChange: (field: keyof User, val: any) => void;
+  onUploadAvatar?: (file: File) => Promise<void>;
+  onDeleteAvatar?: () => Promise<void>;
+  uploadingAvatar?: boolean;
 }
 
 function getInitials(name?: string): string {
@@ -19,24 +23,43 @@ function getInitials(name?: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) => {
+export const StepIdentitas: React.FC<StepIdentitasProps> = ({
+  user,
+  onChange,
+  onUploadAvatar,
+  onDeleteAvatar,
+  uploadingAvatar = false,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarError, setAvatarError] = useState('');
   const currentAvatar = user.avatar || '';
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    setAvatarError('');
 
-    if (!file.type.startsWith('image/')) {
-      alert('Berkas harus berupa gambar (JPG atau PNG)');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setAvatarError('Berkas foto profil harus berformat JPG, PNG, atau WebP.');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran foto profil maksimal 2 MB');
+      setAvatarError('Ukuran foto profil maksimal 2 MB.');
       return;
     }
 
+    if (onUploadAvatar) {
+      try {
+        await onUploadAvatar(file);
+      } catch (err: any) {
+        setAvatarError(err?.message || 'Gagal mengunggah foto profil.');
+      }
+      return;
+    }
+
+    // Mode demo fallback (saat tidak terhubung storage privat)
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -44,11 +67,19 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
       }
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
-  const handleRemoveAvatar = () => {
-    onChange('avatar', '');
+  const handleRemoveAvatar = async () => {
+    setAvatarError('');
+    if (onDeleteAvatar) {
+      try {
+        await onDeleteAvatar();
+      } catch (err: any) {
+        setAvatarError(err?.message || 'Gagal menghapus foto profil.');
+      }
+    } else {
+      onChange('avatar', '');
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -107,7 +138,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/png, image/jpeg, image/jpg"
+          accept="image/png, image/jpeg, image/webp"
           className="hidden"
           onChange={handleFileUpload}
         />
@@ -115,30 +146,39 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
         <div className="space-y-3 text-center sm:text-left flex-1">
           <div>
             <h3 className="text-sm font-bold text-slate-900">
-              Foto Profil
+              Foto Profil Privat
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Format JPG, JPEG, atau PNG. Ukuran maksimal 2 MB.
+              Format JPG, PNG, atau WebP (maks. 2 MB). Foto disimpan privat untuk koordinasi pembinaan internal kampus dan tidak ditampilkan pada ranking publik.
             </p>
           </div>
+
+          {avatarError && (
+            <div role="alert" className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>{avatarError}</span>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
             <button
               type="button"
+              disabled={uploadingAvatar}
               onClick={() => fileInputRef.current?.click()}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>{currentAvatar ? 'Ganti Foto' : 'Unggah Foto'}</span>
+              <Upload className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{uploadingAvatar ? 'Mengunggah...' : currentAvatar ? 'Ganti Foto' : 'Unggah Foto'}</span>
             </button>
 
             {currentAvatar && (
               <button
                 type="button"
+                disabled={uploadingAvatar}
                 onClick={handleRemoveAvatar}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 disabled:opacity-60 transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Hapus Foto</span>
               </button>
             )}
@@ -148,20 +188,44 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
 
       {/* Form Fields */}
       <div className="space-y-4">
-        <Input
-          label="Nama Lengkap"
-          value={user.nama || ''}
-          onChange={(e) => onChange('nama', e.target.value)}
-          required
-        />
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Nama Lengkap"
+            value={user.nama || ''}
+            onChange={(e) => onChange('nama', e.target.value)}
+            required
+          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700">NIM</label>
+              <Badge color="amber" size="sm" className="inline-flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3" aria-hidden="true" />
+                Diisi mandiri (belum verifikasi kampus)
+              </Badge>
+            </div>
+            <input
+              type="text"
+              readOnly
+              value={user.nim || 'Belum tercatat'}
+              aria-label="Nomor Induk Mahasiswa"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-600 cursor-not-allowed"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Input
             label="Program Studi"
             value={user.prodi || ''}
             onChange={(e) => onChange('prodi', e.target.value)}
-            placeholder="contoh: Informatika"
+            placeholder="contoh: Teknik Informatika"
             required
+          />
+          <Input
+            label="Fakultas"
+            value={user.fakultas || ''}
+            onChange={(e) => onChange('fakultas', e.target.value)}
+            placeholder="contoh: Sains dan Teknologi"
           />
           <Select
             label="Angkatan"
@@ -172,14 +236,51 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
           />
         </div>
 
-        <Input
-          label="Email Kampus"
-          type="email"
-          value={user.email || ''}
-          onChange={(e) => onChange('email', e.target.value)}
-          helper="Email aktif untuk koordinasi pembinaan kampus"
-          required
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Email Akun"
+            type="email"
+            value={user.email || ''}
+            disabled
+            helper="Email akun terdaftar dan tidak dapat diubah di halaman profil"
+          />
+          <Input
+            label="Nomor WhatsApp / Telepon Aktif"
+            type="tel"
+            value={user.phone || ''}
+            onChange={(e) => onChange('phone', e.target.value)}
+            placeholder="contoh: 081234567890"
+            helper="Hanya digunakan untuk koordinasi tim internal"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="profil-bio" className="block text-xs font-bold text-slate-700 mb-1.5">
+            Bio Singkat
+          </label>
+          <textarea
+            id="profil-bio"
+            rows={2}
+            value={user.bio || ''}
+            onChange={(e) => onChange('bio', e.target.value)}
+            placeholder="Ceritakan singkat fokus keahlian dan tujuan kompetisi Anda..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="profil-experience" className="block text-xs font-bold text-slate-700 mb-1.5">
+            Pengalaman Lomba / Organisasi (Opsional)
+          </label>
+          <textarea
+            id="profil-experience"
+            rows={3}
+            value={user.pengalaman || ''}
+            onChange={(e) => onChange('pengalaman', e.target.value)}
+            placeholder="Tuliskan pengalaman kepanitiaan, riset, proyek, atau lomba yang pernah diikuti..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+          />
+        </div>
       </div>
     </div>
   );

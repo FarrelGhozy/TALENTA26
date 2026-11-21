@@ -129,6 +129,25 @@ export const systemRoutes = new Elysia()
     }
   )
 
+  .patch(
+    '/api/v1/system/users/:id/name',
+    async ({ auth, params, body }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['super_admin']);
+      const data = await systemService.updateUserName(
+        params.id,
+        body.fullName,
+        auth.user.id,
+        auth.user.institutionId
+      );
+      return { message: 'Nama akun berhasil diperbarui', data };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({ fullName: t.String() }),
+    }
+  )
+
   // Periode Akademik
   .get('/api/v1/system/academic-periods', async ({ auth }) => {
     assertAuthenticated(auth);
@@ -150,6 +169,8 @@ export const systemRoutes = new Elysia()
           name: body.name,
           year: body.year,
           semester: body.semester,
+          startDate: body.startDate,
+          endDate: body.endDate,
         },
         auth.user.id,
         institutionId
@@ -166,12 +187,29 @@ export const systemRoutes = new Elysia()
         name: t.String(),
         year: t.Number(),
         semester: t.Union([t.Literal('ganjil'), t.Literal('genap')]),
+        startDate: t.Optional(t.String()),
+        endDate: t.Optional(t.String()),
       }),
+    }
+  )
+  .get(
+    '/api/v1/system/academic-periods/:id/activation-preview',
+    async ({ auth, params }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['super_admin']);
+      const data = await systemService.getAcademicPeriodActivationPreview(
+        params.id,
+        auth.user.institutionId
+      );
+      return { data };
+    },
+    {
+      params: t.Object({ id: t.String() }),
     }
   )
   .post(
     '/api/v1/system/academic-periods/:id/activate',
-    async ({ auth, params }) => {
+    async ({ auth, params, body }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
@@ -179,7 +217,8 @@ export const systemRoutes = new Elysia()
       const data = await systemService.activateAcademicPeriod(
         params.id,
         auth.user.id,
-        institutionId
+        institutionId,
+        body?.archiveOldTargets ?? true
       );
 
       return {
@@ -191,6 +230,11 @@ export const systemRoutes = new Elysia()
       params: t.Object({
         id: t.String(),
       }),
+      body: t.Optional(
+        t.Object({
+          archiveOldTargets: t.Optional(t.Boolean()),
+        })
+      ),
     }
   )
 

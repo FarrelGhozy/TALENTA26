@@ -63,6 +63,7 @@ export async function validateSession(token: string): Promise<SessionData | null
           id: true,
           institutionId: true,
           email: true,
+          fullName: true,
           role: true,
           status: true,
           createdAt: true,

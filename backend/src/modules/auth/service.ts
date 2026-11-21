@@ -38,6 +38,7 @@ export interface AuthResult {
   user: {
     id: string;
     email: string;
+    fullName?: string | null;
     role: Role;
     status: string;
     studentProfile: StudentProfile | null;
@@ -118,6 +119,7 @@ export async function registerMahasiswa(
       data: {
         institutionId,
         email,
+        fullName,
         passwordHash,
         role: 'mahasiswa',
         status: 'active',
@@ -156,6 +158,7 @@ export async function registerMahasiswa(
     user: {
       id: result.user.id,
       email: result.user.email,
+      fullName: result.user.fullName,
       role: result.user.role,
       status: result.user.status,
       studentProfile: result.profile,
@@ -226,6 +229,7 @@ export async function login(
     user: {
       id: user.id,
       email: user.email,
+      fullName: user.fullName || user.studentProfile?.fullName || null,
       role: user.role,
       status: user.status,
       studentProfile: user.studentProfile,
@@ -263,6 +267,7 @@ export async function getMe(userId: string): Promise<Omit<User, 'passwordHash'> 
       id: true,
       institutionId: true,
       email: true,
+      fullName: true,
       role: true,
       status: true,
       createdAt: true,

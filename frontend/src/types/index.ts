@@ -22,8 +22,13 @@ export interface User {
   institutionId: string;
   nama: string;
   email: string;
+  nim?: string;
   prodi: string;
+  fakultas?: string;
   angkatan?: number;
+  phone?: string;
+  bio?: string;
+  pengalaman?: string;
   avatar?: string;
   role: Role[];
   skill: Skill[];
@@ -63,17 +68,23 @@ export interface TahapItem {
 }
 
 export interface Competition {
+  id?: string;
   slug: string;
   institutionId: string;
   namaResmi: string;
+  penyelenggara?: string;
   kategori: string;
   tingkat: string;
+  format?: 'individu' | 'beregu';
   deskripsi: string;
   syarat: string[];
   komposisi: KomposisiTim;
   tahapan: (string | TahapItem)[];
   jadwal: JadwalItem[];
   seleksiInternal: SeleksiInternalItem[];
+  competitionCategoryId?: string | null;
+  pointTemplateId?: string | null;
+  pointDescription?: string | null;
 }
 
 export interface TeamMember {
@@ -131,6 +142,96 @@ export interface AchievementProof {
   size: number;
   mimeType?: string;
   uploadedAt?: string;
+  isActive?: boolean;
+  supersededByRevisionId?: string | null;
+}
+
+export interface AchievementParticipantItem {
+  id: string;
+  userId: string;
+  fullName: string;
+  nim?: string;
+  studyProgram?: string;
+  roleInTeam?: string | null;
+  isSubmitter: boolean;
+}
+
+export interface AchievementDecisionItem {
+  id: string;
+  action: string;
+  previousStatus: string;
+  newStatus: string;
+  reason?: string | null;
+  calculatedPoints?: number | null;
+  awardedPoints?: number | null;
+  pointSource?: string | null;
+  overrideReason?: string | null;
+  version: number;
+  createdAt: string;
+  decidedBy?: {
+    id: string;
+    fullName: string;
+    role: string;
+  } | null;
+}
+
+export interface AchievementRevisionItem {
+  id: string;
+  versionNumber: number;
+  note?: string | null;
+  snapshotJson?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface PointRecommendation {
+  calculatedPoints: number;
+  pointSource: 'sub_competition_rule' | 'competition_rule' | 'template' | 'non_competition';
+  ruleVersion: number;
+  explanation: string;
+}
+
+export interface CompetitionSubCategoryItem {
+  id: string;
+  categoryId: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  defaultPointsNote?: string | null;
+  isActive: boolean;
+  pointRules?: Array<{
+    id: string;
+    level: AchievementLevel;
+    result: AchievementType;
+    points: number;
+    description?: string | null;
+  }>;
+}
+
+export interface CompetitionCategoryItem {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  subCategories: CompetitionSubCategoryItem[];
+}
+
+export interface CompetitionPointRuleItem {
+  id?: string;
+  subCategoryId?: string | null;
+  subCategory?: { id: string; name: string; code: string } | null;
+  level: AchievementLevel;
+  result: AchievementType;
+  points: number;
+  description?: string | null;
+}
+
+export interface StudentDirectoryItem {
+  userId: string;
+  fullName: string;
+  nim: string;
+  studyProgram: string;
+  faculty: string;
 }
 
 export type AchievementCategory =
@@ -170,7 +271,25 @@ export interface Achievement {
   version?: number;
   catatan?: string;
   dariSeleksiInternal: boolean;
+  competitionId?: string | null;
   competitionSlug?: string;
+  competitionName?: string;
+  participationType?: 'individu' | 'kelompok';
+  teamId?: string | null;
+  teamName?: string | null;
+  competitionCategoryId?: string | null;
+  competitionCategoryName?: string | null;
+  subCategoryId?: string | null;
+  subCategoryName?: string | null;
+  subCompetitionName?: string | null;
+  potentialDuplicateOfId?: string | null;
+  pointRecommendation?: PointRecommendation | null;
+  participants?: AchievementParticipantItem[];
+  decisions?: AchievementDecisionItem[];
+  revisions?: AchievementRevisionItem[];
+  submitterName?: string;
+  submitterNim?: string;
+  submitterProdi?: string;
 }
 
 export interface RankingItem {
@@ -216,6 +335,7 @@ export interface Selection {
 export interface MatchCandidate {
   user: User;
   matchScore: number;
+  labelKesesuaian?: string;
   reasons: string[];
   isOverlapTime: boolean;
 }

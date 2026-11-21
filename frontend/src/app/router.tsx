@@ -46,6 +46,7 @@ export const router = createBrowserRouter(
           { path: 'tim', lazy: lazyRoute(() => import('../features/tim/TeamPage'), 'TeamPage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/prestasi/AchievementListPage'), 'AchievementListPage') },
           { path: 'prestasi/baru', lazy: lazyRoute(() => import('../features/prestasi/AchievementNewPage'), 'AchievementNewPage') },
+          { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/prestasi/AchievementDetailPage'), 'AchievementDetailPage') },
           {
             element: <RequireTarget />,
             children: [{ path: 'kompetisi/:slug/persiapan', lazy: lazyRoute(() => import('../features/roadmap/PreparationPage'), 'PreparationPage') }],

@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertCircle, ChevronRight, FileText, Edit3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertCircle, ChevronRight, FileText, Edit3, Users, XCircle } from 'lucide-react';
 import { Achievement } from '../../../types';
 import { formatDate, formatAchievementCategory, formatAchievementLevel } from '../../../lib/format';
 import { AchievementStatusBadge, AchievementTypeBadge } from './StatusBadge';
@@ -8,7 +9,9 @@ export const AchievementTable: React.FC<{
   achievements: Achievement[];
   onSelect?: (achievement: Achievement) => void;
   onRevise?: (achievement: Achievement) => void;
-}> = ({ achievements, onSelect, onRevise }) => {
+  onCancel?: (achievement: Achievement) => void;
+  studentDetailBasePath?: string;
+}> = ({ achievements, onSelect, onRevise, onCancel, studentDetailBasePath }) => {
   if (achievements.length === 0) {
     return (
       <div className="text-center py-12 text-xs text-slate-400 bg-white rounded-2xl border border-slate-200/90 p-6 space-y-2">
@@ -31,7 +34,9 @@ export const AchievementTable: React.FC<{
               <th scope="col" className="py-3.5 px-4">Capaian</th>
               <th scope="col" className="py-3.5 px-4">Tanggal</th>
               <th scope="col" className="py-3.5 px-4">Status Verifikasi</th>
-              {(onSelect || onRevise) && <th scope="col" className="py-3.5 px-4 text-right">Aksi</th>}
+              {(onSelect || onRevise || onCancel || studentDetailBasePath) && (
+                <th scope="col" className="py-3.5 px-4 text-right">Aksi</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -51,11 +56,33 @@ export const AchievementTable: React.FC<{
                   }`}
                 >
                   <td className="py-3.5 px-4.5 font-medium text-slate-900 max-w-xs">
-                    <div className="font-bold text-xs text-slate-900 leading-snug">{item.nama}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{item.penyelenggara}</div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {studentDetailBasePath ? (
+                        <Link
+                          to={`${studentDetailBasePath}/${item.id}`}
+                          className="font-bold text-xs text-slate-900 hover:text-blue-700 leading-snug"
+                        >
+                          {item.nama}
+                        </Link>
+                      ) : (
+                        <div className="font-bold text-xs text-slate-900 leading-snug">{item.nama}</div>
+                      )}
+                      {item.participationType === 'kelompok' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                          <Users className="w-3 h-3" aria-hidden="true" />
+                          Kelompok
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      {item.penyelenggara}
+                      {item.subCategoryName || item.subCompetitionName
+                        ? ` • ${item.subCategoryName || item.subCompetitionName}`
+                        : ''}
+                    </div>
                     {item.catatan && (
                       <div className="mt-1.5 text-[11px] text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200/90 flex items-start gap-1.5 shadow-2xs">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
                         <div>
                           <strong className="block text-amber-950">Catatan verifikator:</strong>
                           <span>{item.catatan}</span>
@@ -78,16 +105,25 @@ export const AchievementTable: React.FC<{
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <AchievementStatusBadge status={item.status} />
                   </td>
-                  {(onSelect || onRevise) && (
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  {(onSelect || onRevise || onCancel || studentDetailBasePath) && (
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
                       {onSelect && (
                         <button
                           onClick={() => onSelect(item)}
                           aria-label={`Periksa pengajuan ${item.nama}`}
                           className="font-extrabold text-blue-700 hover:text-blue-900 min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-blue-50 cursor-pointer inline-flex items-center gap-1 transition-colors text-xs"
                         >
-                          Periksa <ChevronRight className="w-3.5 h-3.5" />
+                          Periksa <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
+                      )}
+                      {studentDetailBasePath && (
+                        <Link
+                          to={`${studentDetailBasePath}/${item.id}`}
+                          aria-label={`Detail pengajuan ${item.nama}`}
+                          className="font-bold text-blue-700 hover:text-blue-900 min-h-[34px] px-2.5 py-1 rounded-xl hover:bg-blue-50 inline-flex items-center gap-1 transition-colors text-xs"
+                        >
+                          Detail <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                        </Link>
                       )}
                       {onRevise && item.status === 'perlu_perbaikan' && (
                         <button
@@ -95,8 +131,18 @@ export const AchievementTable: React.FC<{
                           aria-label={`Revisi pengajuan ${item.nama}`}
                           className="font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 min-h-[34px] px-3 py-1 rounded-xl cursor-pointer inline-flex items-center gap-1.5 transition-colors text-xs border border-amber-300 shadow-2xs"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          Revisi Berkas
+                          <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+                          Revisi
+                        </button>
+                      )}
+                      {onCancel && item.status === 'menunggu' && (
+                        <button
+                          onClick={() => onCancel(item)}
+                          aria-label={`Batalkan pengajuan ${item.nama}`}
+                          className="font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 min-h-[34px] px-2.5 py-1 rounded-xl cursor-pointer inline-flex items-center gap-1 transition-colors text-xs border border-rose-200"
+                        >
+                          <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                          Batalkan
                         </button>
                       )}
                     </td>

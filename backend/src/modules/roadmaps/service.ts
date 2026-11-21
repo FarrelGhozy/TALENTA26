@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma';
-import { NotFoundError } from '../../app/middleware/error';
+import { NotFoundError, ValidationError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 
 export async function getRoadmapByCompetitionSlug(slug: string) {
@@ -286,11 +286,13 @@ export async function getConsultantsByCompetitionSlug(slug: string) {
 // ================= Validator Admin Operations =================
 
 export interface CreateRoadmapPhaseDto {
+  id?: string;
   orderIndex: number;
   title: string;
   description?: string;
   targetDays?: number;
   tasks: {
+    id?: string;
     orderIndex: number;
     title: string;
     description?: string;
@@ -298,6 +300,29 @@ export interface CreateRoadmapPhaseDto {
     resourceUrl?: string;
     resourceTitle?: string;
   }[];
+}
+
+export async function getRoadmapAdminBySlug(competitionSlug: string, institutionId: string) {
+  const comp = await prisma.competition.findUnique({
+    where: { slug: competitionSlug },
+  });
+  if (!comp || comp.institutionId !== institutionId) {
+    throw new NotFoundError('Kompetisi tidak ditemukan');
+  }
+
+  return prisma.roadmap.findFirst({
+    where: { competitionId: comp.id },
+    include: {
+      phases: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          tasks: {
+            orderBy: { orderIndex: 'asc' },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function createOrUpdateRoadmap(
@@ -310,59 +335,172 @@ export async function createOrUpdateRoadmap(
     where: { slug: competitionSlug },
   });
 
-  if (!comp) {
+  if (!comp || comp.institutionId !== institutionId) {
     throw new NotFoundError('Kompetisi tidak ditemukan');
   }
 
   return prisma.$transaction(async (tx) => {
     let roadmap = await tx.roadmap.findFirst({
       where: { competitionId: comp.id },
+      include: {
+        phases: {
+          orderBy: { orderIndex: 'asc' },
+          include: { tasks: { orderBy: { orderIndex: 'asc' } } },
+        },
+      },
     });
 
     if (!roadmap) {
-      roadmap = await tx.roadmap.create({
+      const createdRoadmap = await tx.roadmap.create({
         data: {
           competitionId: comp.id,
           version: 1,
           status: 'published',
         },
       });
-    } else {
-      // Hapus fase lama & task untuk pembaruan kurikulum
-      await tx.roadmapPhase.deleteMany({
-        where: { roadmapId: roadmap.id },
+      for (const phaseDto of phases) {
+        const createdPhase = await tx.roadmapPhase.create({
+          data: {
+            roadmapId: createdRoadmap.id,
+            orderIndex: phaseDto.orderIndex,
+            title: phaseDto.title,
+            description: phaseDto.description,
+            targetDays: phaseDto.targetDays,
+          },
+        });
+        if (phaseDto.tasks && phaseDto.tasks.length > 0) {
+          await tx.roadmapTask.createMany({
+            data: phaseDto.tasks.map((t) => ({
+              phaseId: createdPhase.id,
+              orderIndex: t.orderIndex,
+              title: t.title,
+              description: t.description,
+              isRequired: t.isRequired ?? true,
+              resourceUrl: t.resourceUrl,
+              resourceTitle: t.resourceTitle,
+            })),
+          });
+        }
+      }
+      await recordAuditEvent({
+        institutionId,
+        actorId: validatorId,
+        action: 'ROADMAP_CREATED',
+        targetType: 'Roadmap',
+        targetId: createdRoadmap.id,
+        metadata: { competitionSlug, phasesCount: phases.length },
       });
-      roadmap = await tx.roadmap.update({
-        where: { id: roadmap.id },
-        data: { version: { increment: 1 } },
+      return tx.roadmap.findUniqueOrThrow({
+        where: { id: createdRoadmap.id },
+        include: {
+          phases: {
+            orderBy: { orderIndex: 'asc' },
+            include: { tasks: { orderBy: { orderIndex: 'asc' } } },
+          },
+        },
       });
     }
 
-    for (const phaseDto of phases) {
-      const createdPhase = await tx.roadmapPhase.create({
-        data: {
-          roadmapId: roadmap.id,
-          orderIndex: phaseDto.orderIndex,
-          title: phaseDto.title,
-          description: phaseDto.description,
-          targetDays: phaseDto.targetDays,
-        },
-      });
+    // Pembaruan non-destruktif: pertahankan fase/tugas eksisting agar RoadmapProgress mahasiswa tetap utuh
+    const keptPhaseIds: string[] = [];
+    for (let pIdx = 0; pIdx < phases.length; pIdx++) {
+      const phaseDto = phases[pIdx];
+      const existingPhase =
+        (phaseDto.id ? roadmap.phases.find((p) => p.id === phaseDto.id) : undefined) ||
+        roadmap.phases.find((p) => p.orderIndex === phaseDto.orderIndex);
 
-      if (phaseDto.tasks && phaseDto.tasks.length > 0) {
-        await tx.roadmapTask.createMany({
-          data: phaseDto.tasks.map((t) => ({
-            phaseId: createdPhase.id,
-            orderIndex: t.orderIndex,
-            title: t.title,
-            description: t.description,
-            isRequired: t.isRequired ?? true,
-            resourceUrl: t.resourceUrl,
-            resourceTitle: t.resourceTitle,
-          })),
+      let phaseId: string;
+      const existingTasks = existingPhase?.tasks || [];
+
+      if (existingPhase) {
+        await tx.roadmapPhase.update({
+          where: { id: existingPhase.id },
+          data: {
+            orderIndex: phaseDto.orderIndex,
+            title: phaseDto.title,
+            description: phaseDto.description,
+            targetDays: phaseDto.targetDays,
+          },
+        });
+        phaseId = existingPhase.id;
+      } else {
+        const createdPhase = await tx.roadmapPhase.create({
+          data: {
+            roadmapId: roadmap.id,
+            orderIndex: phaseDto.orderIndex,
+            title: phaseDto.title,
+            description: phaseDto.description,
+            targetDays: phaseDto.targetDays,
+          },
+        });
+        phaseId = createdPhase.id;
+      }
+      keptPhaseIds.push(phaseId);
+
+      const keptTaskIds: string[] = [];
+      for (const tDto of phaseDto.tasks || []) {
+        const existingTask =
+          (tDto.id ? existingTasks.find((t) => t.id === tDto.id) : undefined) ||
+          existingTasks.find((t) => t.orderIndex === tDto.orderIndex);
+
+        if (existingTask) {
+          await tx.roadmapTask.update({
+            where: { id: existingTask.id },
+            data: {
+              orderIndex: tDto.orderIndex,
+              title: tDto.title,
+              description: tDto.description,
+              isRequired: tDto.isRequired ?? true,
+              resourceUrl: tDto.resourceUrl,
+              resourceTitle: tDto.resourceTitle,
+            },
+          });
+          keptTaskIds.push(existingTask.id);
+        } else {
+          const createdTask = await tx.roadmapTask.create({
+            data: {
+              phaseId,
+              orderIndex: tDto.orderIndex,
+              title: tDto.title,
+              description: tDto.description,
+              isRequired: tDto.isRequired ?? true,
+              resourceUrl: tDto.resourceUrl,
+              resourceTitle: tDto.resourceTitle,
+            },
+          });
+          keptTaskIds.push(createdTask.id);
+        }
+      }
+
+      if (existingPhase) {
+        await tx.roadmapTask.deleteMany({
+          where: {
+            phaseId,
+            id: { notIn: keptTaskIds },
+          },
         });
       }
     }
+
+    await tx.roadmapPhase.deleteMany({
+      where: {
+        roadmapId: roadmap.id,
+        id: { notIn: keptPhaseIds },
+      },
+    });
+
+    const updatedRoadmap = await tx.roadmap.update({
+      where: { id: roadmap.id },
+      data: { version: { increment: 1 } },
+      include: {
+        phases: {
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            tasks: { orderBy: { orderIndex: 'asc' } },
+          },
+        },
+      },
+    });
 
     await recordAuditEvent({
       institutionId,
@@ -370,11 +508,22 @@ export async function createOrUpdateRoadmap(
       action: 'ROADMAP_UPDATED',
       targetType: 'Roadmap',
       targetId: roadmap.id,
-      metadata: { competitionSlug },
+      metadata: { competitionSlug, phasesCount: phases.length, nonDestructive: true },
     });
 
-    return roadmap;
+    return updatedRoadmap;
   });
+}
+
+function normalizeWhatsappNumber(raw: string): string {
+  const digits = raw.replace(/\D+/g, '');
+  if (digits.startsWith('0')) {
+    return `62${digits.slice(1)}`;
+  }
+  if (!digits.startsWith('62') || digits.length < 10 || digits.length > 15) {
+    throw new ValidationError('Nomor WhatsApp tidak valid. Gunakan format 628xxxxxxxxxx.');
+  }
+  return digits;
 }
 
 export interface CreateConsultantDto {
@@ -383,6 +532,22 @@ export interface CreateConsultantDto {
   field: string;
   whatsappNumber: string;
   capacityNote?: string;
+  isApproved?: boolean;
+  status?: 'draft' | 'published' | 'archived';
+}
+
+export async function listConsultantsAdmin(institutionId: string) {
+  return prisma.consultantContact.findMany({
+    where: {
+      competition: { institutionId },
+    },
+    include: {
+      competition: {
+        select: { id: true, slug: true, name: true },
+      },
+    },
+    orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
+  });
 }
 
 export async function createConsultantContact(
@@ -394,19 +559,23 @@ export async function createConsultantContact(
     where: { slug: dto.competitionSlug },
   });
 
-  if (!comp) {
+  if (!comp || comp.institutionId !== institutionId) {
     throw new NotFoundError('Kompetisi tidak ditemukan');
   }
+
+  const normalizedWa = normalizeWhatsappNumber(dto.whatsappNumber);
+  const approved = dto.isApproved ?? true;
+  const status = dto.status ?? (approved ? 'published' : 'draft');
 
   const consultant = await prisma.consultantContact.create({
     data: {
       competitionId: comp.id,
-      name: dto.name,
-      field: dto.field,
-      whatsappNumber: dto.whatsappNumber,
-      capacityNote: dto.capacityNote,
-      isApproved: true,
-      status: 'published',
+      name: dto.name.trim(),
+      field: dto.field.trim(),
+      whatsappNumber: normalizedWa,
+      capacityNote: dto.capacityNote?.trim() || null,
+      isApproved: approved,
+      status,
     },
   });
 
@@ -416,8 +585,78 @@ export async function createConsultantContact(
     action: 'CONSULTANT_CONTACT_CREATED',
     targetType: 'ConsultantContact',
     targetId: consultant.id,
-    metadata: { competitionSlug: dto.competitionSlug, name: dto.name },
+    metadata: { competitionSlug: dto.competitionSlug, name: consultant.name, isApproved: approved },
   });
 
   return consultant;
+}
+
+export async function updateConsultantContact(
+  validatorId: string,
+  id: string,
+  dto: Partial<CreateConsultantDto>,
+  institutionId: string
+) {
+  const existing = await prisma.consultantContact.findUnique({
+    where: { id },
+    include: { competition: { select: { institutionId: true } } },
+  });
+  if (!existing || existing.competition.institutionId !== institutionId) {
+    throw new NotFoundError('Kontak konsultasi tidak ditemukan');
+  }
+
+  const updateData: any = {};
+  if (dto.name !== undefined) updateData.name = dto.name.trim();
+  if (dto.field !== undefined) updateData.field = dto.field.trim();
+  if (dto.whatsappNumber !== undefined) {
+    updateData.whatsappNumber = normalizeWhatsappNumber(dto.whatsappNumber);
+  }
+  if (dto.capacityNote !== undefined) updateData.capacityNote = dto.capacityNote?.trim() || null;
+  if (dto.isApproved !== undefined) updateData.isApproved = dto.isApproved;
+  if (dto.status !== undefined) updateData.status = dto.status;
+
+  const updated = await prisma.consultantContact.update({
+    where: { id },
+    data: updateData,
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: validatorId,
+    action: 'CONSULTANT_CONTACT_UPDATED',
+    targetType: 'ConsultantContact',
+    targetId: id,
+    metadata: updateData,
+  });
+
+  return updated;
+}
+
+export async function deleteConsultantContact(
+  validatorId: string,
+  id: string,
+  institutionId: string
+) {
+  const existing = await prisma.consultantContact.findUnique({
+    where: { id },
+    include: { competition: { select: { institutionId: true } } },
+  });
+  if (!existing || existing.competition.institutionId !== institutionId) {
+    throw new NotFoundError('Kontak konsultasi tidak ditemukan');
+  }
+
+  const archived = await prisma.consultantContact.update({
+    where: { id },
+    data: { status: 'archived', isApproved: false },
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: validatorId,
+    action: 'CONSULTANT_CONTACT_ARCHIVED',
+    targetType: 'ConsultantContact',
+    targetId: id,
+  });
+
+  return archived;
 }

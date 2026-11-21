@@ -21,7 +21,17 @@ export const validatorContentMockService: IValidatorContentService = {
     return item;
   },
   async saveRoadmap() { return { ok: true }; },
-  async createConsultant() { return { ok: true }; },
+  async createConsultant(data) {
+    return {
+      id: `cons-${Date.now()}`,
+      name: data.name,
+      field: data.field,
+      whatsappNumber: data.whatsappNumber,
+      capacityNote: data.capacityNote || null,
+      isApproved: data.isApproved ?? true,
+      status: data.status ?? 'published',
+    };
+  },
   async getSelections() { return []; },
   async saveSelection() { return { ok: true }; },
 };

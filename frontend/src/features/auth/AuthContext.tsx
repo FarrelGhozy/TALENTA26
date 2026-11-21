@@ -10,7 +10,8 @@ interface AuthContextType {
   loginAsRole: (role: Role, userId?: string) => Promise<void>;
   loginWithCredentials: (email: string, pass: string) => Promise<User>;
   registerMahasiswa: (payload: any) => Promise<User>;
-  logout: () => void;
+  refreshUser: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -112,10 +113,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const refreshUser = async () => {
+    try {
+      const user = await userService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        const role = user.role[0] || 'mahasiswa';
+        setCurrentRole(role);
+        setItem('talenta-role', role);
+        setItem('talenta-user-id', user.id);
+      }
+    } catch {
+      // Abaikan bila sesi belum siap
+    }
+  };
+
+  const logout = async () => {
     try {
       if ((userService as any).logout) {
-        (userService as any).logout();
+        await (userService as any).logout();
       }
     } catch {
       // Ignore network error on logout
@@ -136,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginAsRole,
         loginWithCredentials,
         registerMahasiswa,
+        refreshUser,
         logout,
       }}
     >

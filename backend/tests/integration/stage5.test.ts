@@ -368,7 +368,11 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
       const res = await app.handle(
         new Request(`http://localhost/api/v1/system/academic-periods/${createdPeriodId}/activate`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${superAdminToken}` },
+          headers: {
+            Authorization: `Bearer ${superAdminToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ archiveOldTargets: false }),
         })
       );
 
