@@ -20,10 +20,10 @@ if ! command -v bun &> /dev/null; then
   exit 1
 fi
 
-# 2. Cek dependensi node_modules
+# 2. Cek dependensi node_modules tanpa memodifikasi lockfile
 if [ ! -d "node_modules/playwright" ]; then
-  echo "[INFO] Menginstal dependensi playwright..."
-  bun add -d playwright
+  echo "[ERROR] Dependensi playwright belum terpasang. Jalankan 'bun install --frozen-lockfile' terlebih dahulu."
+  exit 1
 fi
 
 # 3. Jalankan master runner Bun

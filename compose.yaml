@@ -1,0 +1,38 @@
+services:
+  migrate:
+    image: ghcr.io/${GHCR_OWNER:-fazy}/talenta-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    command: ["bunx", "prisma", "migrate", "deploy"]
+    restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:-fazy}/talenta-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:-fazy}/talenta-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped
