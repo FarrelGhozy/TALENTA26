@@ -3,13 +3,14 @@ import * as authService from './service';
 import { assertAuthenticated, extractToken, authPlugin } from '../../app/middleware/auth';
 import { authRateLimiter } from '../../app/middleware/rate-limit';
 import { loadConfig } from '../../lib/config';
+import { resolveClientIp } from '../../app/middleware/client-ip';
 
 export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .use(authPlugin)
   .post(
     '/register',
     async ({ body, headers, cookie }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+      const clientIp = resolveClientIp(headers);
       const userAgent = headers['user-agent'] || '';
 
       authRateLimiter.check(clientIp);
@@ -45,7 +46,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .post(
     '/login',
     async ({ body, headers, cookie }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+      const clientIp = resolveClientIp(headers);
       const userAgent = headers['user-agent'] || '';
 
       authRateLimiter.check(clientIp);
@@ -83,7 +84,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         token,
         auth?.user?.id,
         auth?.user?.institutionId,
-        headers['x-forwarded-for'] || '127.0.0.1',
+        resolveClientIp(headers),
         headers['user-agent']
       );
     }
@@ -111,7 +112,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .post(
     '/forgot-password',
     async ({ body, headers }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+      const clientIp = resolveClientIp(headers);
       authRateLimiter.check(clientIp);
 
       const result = await authService.requestPasswordReset(
@@ -130,7 +131,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .post(
     '/reset-password',
     async ({ body, headers }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+      const clientIp = resolveClientIp(headers);
       authRateLimiter.check(clientIp);
 
       const result = await authService.resetPasswordWithToken(

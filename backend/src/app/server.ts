@@ -14,6 +14,7 @@ import { roadmapRoutes } from '../modules/roadmaps';
 import { achievementRoutes } from '../modules/achievements';
 import { systemRoutes } from '../modules/system';
 import { dashboardRoutes } from '../modules/dashboard';
+import { assertSameOrigin } from './middleware/csrf';
 
 export function createServer() {
   const currentConfig = loadConfig();
@@ -32,6 +33,7 @@ export function createServer() {
       set.status = status;
       return body;
     })
+    .onBeforeHandle(({ request }) => assertSameOrigin(request))
     .use(authPlugin)
     .use(healthRoutes)
     .use(authRoutes)

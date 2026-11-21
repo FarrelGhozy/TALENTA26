@@ -17,6 +17,8 @@ Versi 2.0, 20 November 2026. Dokumen lama berjudul FIX v1.0 tidak lagi dianggap 
 | K-10 | AI dan beasiswa dikeluarkan dari rilis awal | tidak ada klaim aktif |
 | K-11 | Landing menampilkan ranking mahasiswa dari akumulasi poin lomba, tanpa filter bidang dan tanpa persetujuan tampil terpisah | data publik minimum; kebijakan privasi wajib ditinjau sebelum go-live |
 | K-12 | Aplikasi harus matang dan berkelanjutan lintas tahun, bukan satu demo | periode akademik, edisi lomba dan histori wajib |
+| K-13 | Pemulihan kata sandi produksi dikirim melalui SMTP yang dikonfigurasi operator | tanpa konfigurasi SMTP, production gagal tertutup; token tidak ditulis ke log |
+| K-14 | Rilis pertama menjalankan satu instance API di belakang proxy/tunnel privat | rate limit in-memory tidak diklaim aman untuk multi-instance; `TRUST_PROXY` hanya diaktifkan bila API tidak dapat diakses langsung |
 
 ## Rekomendasi rancangan yang belum menjadi kebijakan kampus
 | ID | Usulan | Alasan/gate |
@@ -34,7 +36,6 @@ Versi 2.0, 20 November 2026. Dokumen lama berjudul FIX v1.0 tidak lagi dianggap 
 | O-01 | Bobot poin final, kelas hasil khusus, dan definisi tingkat kampus/nasional/internasional? | pemilik produk + kampus | sebelum ranking data nyata |
 | O-02 | Dasar publikasi nama tanpa opt-in, isi pemberitahuan privasi, mekanisme koreksi/keberatan, serta identitas yang boleh tampil? | kampus/pengelola data | sebelum pilot mahasiswa nyata |
 | O-03 | Retensi bukti, audit dan akun; RTO/RPO dan lokasi backup terpisah? | operator + kampus | sebelum produksi |
-| O-04 | Mekanisme email verifikasi/reset dan layanan pengirim email? | pemilik produk + operator | Stage 2 |
 | O-05 | Domain resmi, brand, klaim resmi BAAK/SKPI, sumber data SSO dan pemadanan akun? | kampus | sebelum integrasi institusional |
 | O-06 | Ambang performa dan kapasitas, keamanan tambahan file, kebijakan kontak WA? | operator + validator | Stage 5 |
 

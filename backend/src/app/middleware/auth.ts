@@ -4,8 +4,7 @@ import { UnauthorizedError } from './error';
 
 export function extractToken(
   authHeader?: string | null,
-  cookieToken?: string | null,
-  queryToken?: string | null
+  cookieToken?: string | null
 ): string | null {
   if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
     return authHeader.slice(7).trim();
@@ -13,18 +12,14 @@ export function extractToken(
   if (cookieToken) {
     return cookieToken.trim();
   }
-  if (queryToken) {
-    return queryToken.trim();
-  }
   return null;
 }
 
 export async function resolveAuth(
   authHeader?: string | null,
-  cookieToken?: string | null,
-  queryToken?: string | null
+  cookieToken?: string | null
 ): Promise<SessionData | null> {
-  const token = extractToken(authHeader, cookieToken, queryToken);
+  const token = extractToken(authHeader, cookieToken);
   if (!token) return null;
   return validateSession(token);
 }
@@ -37,11 +32,10 @@ export function assertAuthenticated(auth: SessionData | null): asserts auth is S
 
 export const authPlugin = new Elysia({ name: 'auth-plugin' }).derive(
   { as: 'scoped' },
-  async ({ headers, cookie, query }) => {
+  async ({ headers, cookie }) => {
     const rawCookie = cookie.talenta_session?.value;
     const cookieStr = typeof rawCookie === 'string' ? rawCookie : null;
-    const queryToken = (query as any)?.token;
-    const auth = await resolveAuth(headers['authorization'], cookieStr, queryToken);
+    const auth = await resolveAuth(headers['authorization'], cookieStr);
     return { auth };
   }
 );

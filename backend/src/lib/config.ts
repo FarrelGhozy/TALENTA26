@@ -14,6 +14,7 @@ export interface AppConfig {
   sessionSecret: string;
   cookieSecret: string;
   publicOrigin: string;
+  trustProxy: boolean;
   superAdminBootstrapEmail?: string;
   superAdminBootstrapPassword?: string;
   smtp?: {
@@ -22,6 +23,7 @@ export interface AppConfig {
     user: string;
     pass: string;
     from: string;
+    secure: boolean;
   };
   s3: {
     endpoint?: string;
@@ -96,6 +98,7 @@ export function loadConfig(): AppConfig {
     process.env.COOKIE_SECRET || 'dev-cookie-secret-min-32-chars-long-12345';
   const publicOrigin =
     process.env.PUBLIC_ORIGIN || 'http://localhost:5173';
+  const trustProxy = process.env.TRUST_PROXY === 'true';
 
   const superAdminBootstrapEmail = process.env.SUPER_ADMIN_BOOTSTRAP_EMAIL;
   const superAdminBootstrapPassword =
@@ -109,6 +112,7 @@ export function loadConfig(): AppConfig {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS || '',
           from: process.env.SMTP_FROM || 'no-reply@unida.gontor.ac.id',
+          secure: process.env.SMTP_SECURE === 'true',
         }
       : undefined;
 
@@ -128,6 +132,7 @@ export function loadConfig(): AppConfig {
     sessionSecret,
     cookieSecret,
     publicOrigin,
+    trustProxy,
     superAdminBootstrapEmail,
     superAdminBootstrapPassword,
     smtp,

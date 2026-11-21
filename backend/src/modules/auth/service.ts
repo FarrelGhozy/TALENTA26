@@ -296,7 +296,7 @@ export async function requestPasswordReset(
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
 
   // Simpan token reset ke database
-  await prisma.passwordResetToken.create({
+  const resetRecord = await prisma.passwordResetToken.create({
     data: {
       userId: user.id,
       tokenHash,
@@ -304,7 +304,14 @@ export async function requestPasswordReset(
     },
   });
 
-  const mailResult = await sendPasswordResetEmail(user.email, plainToken);
+  let mailResult;
+  try {
+    mailResult = await sendPasswordResetEmail(user.email, plainToken);
+  } catch {
+    await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } });
+    console.error('[MAILER] Pengiriman email pemulihan akun gagal');
+    return genericResponse;
+  }
 
   await recordAuditEvent({
     institutionId: user.institutionId,

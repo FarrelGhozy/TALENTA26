@@ -53,14 +53,10 @@ export class ApiRequestError extends Error {
 
 // Helper fetcher terpadu dengan standar docs/16
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('talenta-token');
   const headers = new Headers(options.headers || {});
 
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
-  }
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -211,9 +207,6 @@ export const userApiService: IUserService & {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (res.token) {
-      localStorage.setItem('talenta-token', res.token);
-    }
     return {
       user: mapBackendUserToFrontend(res.user),
       token: res.token,
@@ -224,9 +217,6 @@ export const userApiService: IUserService & {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    if (res.token) {
-      localStorage.setItem('talenta-token', res.token);
-    }
     return {
       user: mapBackendUserToFrontend(res.user),
       token: res.token,
@@ -236,7 +226,7 @@ export const userApiService: IUserService & {
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
     } finally {
-      localStorage.removeItem('talenta-token');
+      // Cookie HttpOnly dihapus oleh backend.
     }
   },
   forgotPassword: (email: string) =>
@@ -481,8 +471,7 @@ export const achievementApiService: IAchievementService = {
   },
 
   getEvidenceDownloadUrl: (evidenceId: string): string => {
-    const token = localStorage.getItem('talenta-token');
-    return `${API_BASE_URL}/evidence/${evidenceId}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    return `${API_BASE_URL}/evidence/${evidenceId}/download`;
   },
 
   getRanking: async (periodId?: string): Promise<RankingResponse> => {
@@ -582,13 +571,9 @@ export const dashboardApiService: IDashboardService = {
     if (filters?.category) params.set('category', filters.category);
 
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const token = localStorage.getItem('talenta-token');
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     const res = await fetch(`${API_BASE_URL}/admin/export${qs}`, {
       method: 'GET',
-      headers,
+      credentials: 'include',
     });
 
     if (!res.ok) {

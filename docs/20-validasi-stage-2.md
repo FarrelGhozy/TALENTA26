@@ -1,5 +1,13 @@
 # 20 — Bukti validasi Stage 2
 
+## Validasi ulang perbaikan audit — 21 November 2026
+
+- Reset password produksi memakai Nodemailer/SMTP nyata. Production tanpa SMTP gagal tertutup, token dan alamat tidak dicetak ke log, dan kegagalan pengiriman membatalkan token yang baru dibuat. Unit test menyuntikkan transport SMTP dan membuktikan pesan dikirim ke alamat tujuan; integrasi tetap memakai preview token hanya pada lingkungan test.
+- Frontend produksi hanya memakai cookie sesi `HttpOnly`; penyimpanan bearer token di `localStorage` dan token pada query unduhan dihapus. Backend tetap menerima bearer untuk klien/test kompatibel, tetapi UI tidak menyimpannya.
+- Mutasi sesi cookie dibatasi ke `PUBLIC_ORIGIN`; origin lain dan cookie tanpa `Origin` ditolak. Header proxy hanya dipakai ketika `TRUST_PROXY=true` dan format alamat diperiksa.
+- Keputusan O-04 ditutup melalui K-13. Rilis pertama dibatasi satu instance API sesuai K-14; rate limit terdistribusi wajib dirancang ulang sebelum skala multi-instance.
+- Suite Stage 2 setelah perbaikan: 20 uji auth dan 4 uji RBAC lulus pada `talenta_test`; unit keamanan mencakup spoofing proxy, CSRF, SMTP, dan larangan fallback token production.
+
 Tanggal pemeriksaan: 20 November 2026. Cakupan: fondasi backend Bun + Elysia, model data dan migrasi Prisma MySQL, sistem autentikasi manual, RBAC backend, sesi aman, token pemulihan password, health checks, audit log, serta integrasi frontend auth dan profil. Tidak mencakup RustFS, storage bukti prestasi, atau deployment container server (tahapan Stage 4 dan Stage 6).
 
 ---
@@ -74,4 +82,4 @@ grep -rn "andi@mock\.ac\.id" frontend/dist
 
 - Fitur katalog kompetisi berulang, pengelolaan target lomba mahasiswa, pembentukan tim, dan roadmap persiapan adalah ruang lingkup **Stage 3**.
 - Penyimpanan file bukti prestasi privat di RustFS dan ledger verifikasi adalah ruang lingkup **Stage 4**.
-- Pengiriman email reset password di produksi memerlukan pengisian variabel `SMTP_*` pada `.env` root server (saat ini fallback ke server log dev).
+- Pengiriman email reset password di production memerlukan `SMTP_*`; tidak ada fallback log/token pada production.

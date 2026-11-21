@@ -110,7 +110,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Ignore network error on logout
     }
-    localStorage.removeItem('talenta-token');
     localStorage.removeItem('talenta-user-id');
     localStorage.removeItem('talenta-role');
     setCurrentUser(null);
