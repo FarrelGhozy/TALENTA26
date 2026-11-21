@@ -5,7 +5,7 @@ import { Role } from '../../../types';
 import { assetUrl } from '../../../lib/asset';
 
 interface RoleCardLoginProps {
-  onSelectRole: (role: Role, userId: string) => void;
+  onSelectRole: (role: Role, userId: string, credentials?: { email: string; pass: string }) => void;
   isLoading?: boolean;
 }
 
@@ -14,56 +14,64 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
     {
       role: 'mahasiswa' as Role,
       userId: 'u-01',
+      email: 'mhs@unida.gontor.ac.id',
+      pass: 'Mahasiswa2026!',
       title: 'Mahasiswa (Riset / PKM)',
-      name: 'Andi Pratama',
-      subtitle: 'Informatika 2023 • Target: PKM-RE',
+      name: 'Ahmad Fauzan',
+      subtitle: 'Informatika 2024 • Target: PKM-RE',
       badge: 'Mahasiswa Binaan',
       avatar: '/images/avatar-andi.jpg',
       color: 'from-blue-600 to-indigo-800',
       bgColor: 'bg-blue-50 border-blue-200/80',
       iconColor: 'text-blue-700',
       icon: GraduationCap,
-      highlights: ['Cari partner tim', 'Roadmap mingguan', 'Ajukan prestasi'],
+      highlights: ['Katalog kompetisi', 'Roadmap mingguan', 'Ajukan prestasi'],
     },
     {
       role: 'mahasiswa' as Role,
       userId: 'u-02',
+      email: 'zaidan@unida.gontor.ac.id',
+      pass: 'Mahasiswa2026!',
       title: 'Mahasiswa (Desain / GEMASTIK)',
-      name: 'Rina Kartika',
-      subtitle: 'DKV 2022 • Target: GEMASTIK',
+      name: 'Zaidan Mahasiswa',
+      subtitle: 'Informatika 2024 • Target: GEMASTIK',
       badge: 'Mahasiswa Binaan',
       avatar: '/images/avatar-rina.jpg',
       color: 'from-sky-600 to-blue-800',
       bgColor: 'bg-sky-50 border-sky-200/80',
       iconColor: 'text-sky-700',
       icon: GraduationCap,
-      highlights: ['Portofolio UI/UX', 'Undangan tim masuk', 'Kontak konsultasi'],
+      highlights: ['Portofolio karya', 'Undangan tim masuk', 'Papan peringkat'],
+    },
+    {
+      role: 'validator' as Role,
+      userId: 'u-11',
+      email: 'validator@unida.gontor.ac.id',
+      pass: 'Validator2026!',
+      title: 'Validator Program',
+      name: 'Tim Validator',
+      subtitle: 'validator@unida.gontor.ac.id',
+      badge: 'Pengelola Prestasi',
+      color: 'from-emerald-500 to-teal-800',
+      bgColor: 'bg-emerald-50 border-emerald-200/80',
+      iconColor: 'text-emerald-700',
+      icon: ShieldCheck,
+      highlights: ['Kelola lomba dan roadmap', 'Verifikasi berkas', 'Pengesahan poin lomba'],
     },
     {
       role: 'super_admin' as Role,
       userId: 'u-10',
+      email: 'admin@unida.gontor.ac.id',
+      pass: 'AdminGontor2026!',
       title: 'Super Admin',
-      name: 'Budi Santoso',
-      subtitle: 'Pengelola program demo',
+      name: 'Super Administrator',
+      subtitle: 'admin@unida.gontor.ac.id',
       badge: 'Pengelola Sistem',
       color: 'from-amber-500 to-indigo-900',
       bgColor: 'bg-amber-50 border-amber-200/80',
       iconColor: 'text-amber-700',
       icon: Settings,
-      highlights: ['Kelola peran staf', 'Atur periode dan poin', 'Pantau audit sistem'],
-    },
-    {
-      role: 'validator' as Role,
-      userId: 'u-11',
-      title: 'Validator Program',
-      name: 'Dr. Sari Verifikator',
-      subtitle: 'Tim verifikasi demo',
-      badge: 'Pengelola Data',
-      color: 'from-emerald-500 to-teal-800',
-      bgColor: 'bg-emerald-50 border-emerald-200/80',
-      iconColor: 'text-emerald-700',
-      icon: ShieldCheck,
-      highlights: ['Kelola lomba dan roadmap', 'Verifikasi prestasi', 'Kelola kontak konsultasi'],
+      highlights: ['Kelola staf validator', 'Aturan poin & periode', 'Analitik & ekspor data'],
     },
   ];
 
@@ -91,11 +99,11 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
               type="button"
               role="listitem"
               disabled={isLoading}
-              onClick={() => onSelectRole(acc.role, acc.userId)}
+              onClick={() => onSelectRole(acc.role, acc.userId, { email: acc.email, pass: acc.pass })}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  onSelectRole(acc.role, acc.userId);
+                  onSelectRole(acc.role, acc.userId, { email: acc.email, pass: acc.pass });
                 }
               }}
               className="text-left p-5 rounded-2xl border bg-white border-slate-200/90 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer disabled:opacity-60 min-h-[140px] focus-visible:ring-2 focus-visible:ring-blue-600 group relative overflow-hidden flex flex-col justify-between"

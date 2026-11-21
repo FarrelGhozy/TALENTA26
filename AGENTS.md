@@ -36,13 +36,20 @@
 - Dokumentasikan apa yang selesai, bukti verifikasi, serta sisa risiko. Jangan menandai TODO selesai hanya karena UI tampak jadi.
 - Segera perbarui TODO.md setiap kali satu butir pekerjaan selesai dan diverifikasi, tanpa menunggu seluruh stage selesai. Tandai [x] hanya jika kriteria butir terpenuhi; catat bukti pemeriksaan dan bagian yang masih terbuka atau terhalang. Jika baru sebagian, biarkan [ ] dan jelaskan progresnya.
 
-## Commit Git lokal per stage
-- Setelah seluruh pekerjaan dan gate suatu stage di TODO.md selesai, buat minimal satu commit Git **lokal** untuk hasil stage tersebut. Jangan menggabungkan perubahan dari dua stage dalam satu commit.
-- Sebelum commit, periksa git status dan git diff, jalankan pemeriksaan yang relevan, lalu stage hanya file yang termasuk pekerjaan stage itu. Jangan memakai git add -A jika ada perubahan lain yang belum diperiksa.
-- Perbarui TODO.md dan dokumentasi yang terdampak dalam commit stage yang sama agar status, keputusan, dan implementasi tetap sinkron.
-- Tulis pesan commit yang menyebut stage dan hasilnya, misalnya docs(stage-d0): kunci rancangan produksi atau feat(stage-2): bangun fondasi auth dan database.
-- Jika satu stage memerlukan beberapa commit kecil, setiap commit tetap harus fokus dan dapat diverifikasi; commit terakhir menutup gate stage. Jangan menandai stage selesai atau membuat commit penutup saat gate masih terbuka.
-- Commit ini hanya di repository lokal. Jangan push, membuat tag rilis, atau men-deploy sebagai bagian dari aturan commit ini; lakukan hanya bila ada instruksi terpisah.
+## Commit Git lokal pada setiap perubahan (Stage besar maupun stage kecil/tugas mandiri)
+- Setiap kali menyelesaikan pekerjaan, perbaikan bug, penambahan fitur, pembaruan konfigurasi, atau penyelesaian butir pekerjaan (baik stage besar maupun stage kecil/tugas mandiri), **langsung buat commit Git lokal**. Jangan menumpuk perubahan tanpa commit.
+- Sebelum melakukan commit:
+  1. Jalankan `git status` dan `git diff` untuk meninjau perubahan secara teliti.
+  2. Pastikan pemeriksaan mutu yang relevan (seperti `bun run typecheck`, `bun run lint`, dan tes terkait) telah lulus tanpa kesalahan.
+  3. Lakukan staging secara presisi (`git add <file>`) hanya untuk file-file yang berkaitan dengan perubahan tersebut. Hindari `git add -A` jika terdapat file atau eksperimen lain yang belum diperiksa.
+- Selaraskan `TODO.md` dan dokumentasi terkait dalam commit yang sama jika ada kriteria atau progres yang diselesaikan.
+- Gunakan format pesan commit Conventional Commits yang deskriptif dan mencerminkan perubahan nyata, misalnya:
+  - `feat(auth): login kartu instan pada mode development`
+  - `fix(e2e): perbaiki selektor antrean verifikasi validator`
+  - `docs(env): lengkapi panduan parameter .env.example untuk pemula`
+  - `docs(agents): wajibkan commit lokal pada setiap perubahan kecil`
+- Jika perubahan merupakan bagian penutup suatu stage besar di TODO.md, commit penutup menandai gate stage tersebut.
+- **PENTING**: Semua commit hanya dilakukan di repositori **lokal** (`git commit`). Jangan pernah melakukan `git push`, membuat tag rilis remote, atau melakukan deploy ke remote/server produksi tanpa instruksi tertulis terpisah dari pengguna.
 
 ## Operasi dan penamaan
 - Bahasa UI dan dokumen Indonesia; identifier kode Inggris. Paket dikelola dengan Bun dan lockfile terkunci.

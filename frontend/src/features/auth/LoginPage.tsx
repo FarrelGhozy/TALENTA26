@@ -4,7 +4,7 @@ import { Zap, KeyRound, Info, ShieldCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { RoleCardLogin } from './components/RoleCardLogin';
 import { FormLogin } from './components/FormLogin';
-import { APP_ENV, USE_MOCK } from '../../config/env';
+import { USE_MOCK, APP_ENV } from '../../config/env';
 import { Role } from '../../types';
 
 export const LoginPage: React.FC = () => {
@@ -12,9 +12,13 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
+
+  // Mode development (VITE_APP_ENV=DEPLOYMENT) atau mock mengaktifkan login berbasis kartu secara default
+  const isDevelopment = APP_ENV === 'DEPLOYMENT' || USE_MOCK;
   const [authMode, setAuthMode] = useState<'demo' | 'manual'>(
-    APP_ENV === 'DEPLOYMENT' ? 'demo' : 'manual'
+    isDevelopment ? 'demo' : 'manual'
   );
+  const [loginError, setLoginError] = useState<string>('');
 
   const getSafeRedirect = (role: Role) => {
     const roleHome = role === 'super_admin'
@@ -43,16 +47,39 @@ export const LoginPage: React.FC = () => {
     return roleHome;
   };
 
-  const handleSelectRole = async (role: Role, userId: string) => {
-    await loginAsRole(role, userId);
-    navigate(getSafeRedirect(role), { replace: true });
+  const handleSelectRole = async (
+    role: Role,
+    userId: string,
+    credentials?: { email: string; pass: string }
+  ) => {
+    setLoginError('');
+    try {
+      if (USE_MOCK) {
+        await loginAsRole(role, userId);
+        navigate(getSafeRedirect(role), { replace: true });
+      } else if (credentials) {
+        const user = await loginWithCredentials(credentials.email, credentials.pass);
+        const userRole = user.role[0] || role;
+        navigate(getSafeRedirect(userRole), { replace: true });
+      } else {
+        await loginAsRole(role, userId);
+        navigate(getSafeRedirect(role), { replace: true });
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'Gagal login instan dengan peran ini. Silakan coba login manual.');
+    }
   };
 
   const handleFormSubmit = async (email: string, pass: string) => {
-    await loginWithCredentials(email, pass);
-    const users = await import('@talenta/services').then((services) => services.userService.getAll());
-    const role = users.find((user) => user.email.toLowerCase() === email.toLowerCase())?.role[0] || 'mahasiswa';
-    navigate(getSafeRedirect(role), { replace: true });
+    setLoginError('');
+    try {
+      const user = await loginWithCredentials(email, pass);
+      const role = user.role[0] || 'mahasiswa';
+      navigate(getSafeRedirect(role), { replace: true });
+    } catch (err: any) {
+      setLoginError(err.message || 'Login gagal. Periksa kembali email dan kata sandi Anda.');
+      throw err;
+    }
   };
 
   return (
@@ -75,35 +102,43 @@ export const LoginPage: React.FC = () => {
         </div>
       )}
 
-      {/* Mode Switcher Tabs */}
-      {USE_MOCK ? <div className="flex justify-center">
-        <div className="inline-flex p-1 bg-slate-200/80 rounded-2xl border border-slate-200 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setAuthMode('demo')}
-            className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
-              authMode === 'demo'
-                ? 'bg-white text-blue-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-blue-700" />
-            Mode Demo Instan (1-Klik)
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode('manual')}
-            className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
-              authMode === 'manual'
-                ? 'bg-white text-blue-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <KeyRound className="w-3.5 h-3.5 text-slate-600" />
-            Login manual
-          </button>
+      {loginError && (
+        <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
+          {loginError}
         </div>
-      </div> : null}
+      )}
+
+      {/* Mode Switcher Tabs (Hanya ditampilkan pada mode development / demo) */}
+      {isDevelopment && (
+        <div className="flex justify-center">
+          <div className="inline-flex p-1 bg-slate-200/80 rounded-2xl border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setAuthMode('demo')}
+              className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
+                authMode === 'demo'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-blue-700" />
+              Pilih Peran Instan (1-Klik)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode('manual')}
+              className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
+                authMode === 'manual'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5 text-slate-600" />
+              Login Manual (Email/Password)
+            </button>
+          </div>
+        </div>
+      )}
 
       {authMode === 'demo' ? (
         <RoleCardLogin onSelectRole={handleSelectRole} isLoading={isLoading} />
