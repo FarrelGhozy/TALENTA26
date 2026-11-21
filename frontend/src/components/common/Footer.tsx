@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
                   className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
                 >
                   <Trophy className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
-                  Katalog Kompetisi Belmawa
+                  Katalog Kompetisi
                 </Link>
               </li>
               <li>

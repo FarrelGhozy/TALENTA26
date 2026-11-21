@@ -1,5 +1,4 @@
 import React from 'react';
-import { USE_MOCK } from '../../../config/env';
 import { Camera, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
 import { User } from '../../../types';
@@ -55,7 +54,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
           </div>
 
           <p className="text-xs text-slate-500 leading-relaxed max-w-md">
-            Foto ini digunakan pada kartu pencocokan tim Belmawa, portofolio prestasi, dan antrean verifikasi.
+            Foto ini digunakan pada kartu rekomendasi tim, profil prestasi, dan antrean verifikasi.
           </p>
 
           {/* Quick Avatar Preset Selector */}
@@ -105,13 +104,13 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({ user, onChange }) 
             placeholder="contoh: Informatika"
             required
           />
-          {USE_MOCK && <Input
+          <Input
             label="Angkatan"
             type="number"
             value={user.angkatan || ''}
             onChange={(e) => onChange('angkatan', Number(e.target.value))}
             required
-          />}
+          />
         </div>
 
         <Input

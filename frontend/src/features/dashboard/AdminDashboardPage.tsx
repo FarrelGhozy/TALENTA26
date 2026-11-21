@@ -42,7 +42,7 @@ export const AdminDashboardPage: React.FC = () => {
     setExporting(true);
     try {
       await dashboardService.downloadAchievementsCsv();
-      notify('Laporan rekapitulasi prestasi resmi berhasil diunduh.', 'success');
+      notify('Laporan rekapitulasi prestasi berhasil diunduh.', 'success');
     } catch (err: any) {
       notify(err.message || 'Gagal mengunduh rekapitulasi prestasi.', 'error');
     } finally {

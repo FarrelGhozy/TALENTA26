@@ -10,7 +10,7 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
       <CardHeader className="py-3.5">
         <CardTitle level={2} className="text-xs flex items-center gap-2">
           <UserCheck className="w-4 h-4 text-blue-700" />
-          <span>Dosen Pembimbing & Konsultan</span>
+          <span>Kontak Konsultasi</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-3 text-xs">
@@ -25,7 +25,7 @@ export const ConsultantCard: React.FC<{ consultants: Consultant[] }> = ({ consul
         {consultants.map((c) => {
           const isVerified = c.isVerifiedContact && c.assignmentApproved;
           const waMessage = encodeURIComponent(
-            `Assalamu'alaikum Wr. Wb. Bapak/Ibu ${c.nama}, perkenalkan saya mahasiswa binaan Belmawa UNIDA Gontor. Mohon izin berkonsultasi mengenai bimbingan proposal kompetisi kami.`
+            `Assalamu'alaikum Wr. Wb. Bapak/Ibu ${c.nama}, perkenalkan saya mahasiswa UNIDA Gontor. Mohon izin berkonsultasi mengenai persiapan proposal kompetisi kami.`
           );
 
           return (

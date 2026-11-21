@@ -16,7 +16,7 @@ export const StatCards: React.FC<{ stats: AdminStats }> = ({ stats }) => {
     {
       label: 'Tim Terbentuk Sah',
       value: stats.totalTimTerbentuk,
-      sub: 'Memenuhi aturan Belmawa',
+      sub: 'Memenuhi aturan kompetisi',
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50 border-emerald-100 text-emerald-600',
       icon: ShieldCheck,

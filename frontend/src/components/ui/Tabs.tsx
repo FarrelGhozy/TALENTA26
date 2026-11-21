@@ -23,7 +23,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
             role="tab"
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
-            aria-controls={isActive ? `panel-${tab.id}` : undefined}
+            aria-controls={`panel-${tab.id}`}
             id={`tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             onKeyDown={(e) => {

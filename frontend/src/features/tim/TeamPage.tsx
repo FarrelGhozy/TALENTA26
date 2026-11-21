@@ -175,13 +175,13 @@ export const TeamPage: React.FC = () => {
         competitionSlug={team.competitionSlug}
       />
 
-      {/* Belmawa Rule Compliance Audit Card */}
+      {/* Competition rule summary */}
       <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-700" />
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Audit Kelayakan Formasi Tim Belmawa
+              Pemeriksaan Formasi Tim
             </h3>
           </div>
           <span className="text-[11px] text-slate-400">Aturan kompetisi</span>

@@ -63,7 +63,7 @@ export const VerificationDetailPage: React.FC = () => {
       await achievementService.verify(id, status, catatan, achievement.version);
       notify(
         status === 'disetujui'
-          ? 'Prestasi resmi disetujui. Poin lomba telah dicatat ke buku besar.'
+          ? 'Prestasi disetujui validator. Poin lomba telah dicatat ke buku besar.'
           : status === 'perlu_perbaikan'
           ? 'Catatan revisi berhasil dikirimkan ke mahasiswa.'
           : 'Pengajuan prestasi ditolak.',

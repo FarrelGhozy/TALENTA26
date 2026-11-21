@@ -37,7 +37,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       bgColor: 'bg-sky-50 border-sky-200/80',
       iconColor: 'text-sky-700',
       icon: GraduationCap,
-      highlights: ['Portofolio UI/UX', 'Undangan tim masuk', 'Bimbingan dosen'],
+      highlights: ['Portofolio UI/UX', 'Undangan tim masuk', 'Kontak konsultasi'],
     },
     {
       role: 'super_admin' as Role,

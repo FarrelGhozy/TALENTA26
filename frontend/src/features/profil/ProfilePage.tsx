@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { USE_MOCK } from '../../config/env';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, ArrowRight, ArrowLeft, AlertCircle, UserCheck, Target, Layers, Check } from 'lucide-react';
 import { Competition, User } from '../../types';
@@ -63,7 +62,7 @@ export const ProfilePage: React.FC = () => {
     if (s === 1) {
       if (!userData.nama || userData.nama.trim().length < 3) return 'Nama lengkap minimal 3 karakter.';
       if (!userData.prodi || !userData.prodi.trim()) return 'Program studi wajib diisi.';
-      if (USE_MOCK && (!userData.angkatan || userData.angkatan < 1900 || userData.angkatan > new Date().getFullYear() + 1))
+      if (!userData.angkatan || userData.angkatan < 1900 || userData.angkatan > new Date().getFullYear() + 1)
         return 'Masukkan tahun angkatan yang valid.';
       if (!userData.email || !EMAIL_RE.test(userData.email)) return 'Email kampus tidak valid.';
     }
@@ -150,7 +149,7 @@ export const ProfilePage: React.FC = () => {
           Profil, Keahlian & Target Kompetisi
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Data ini menjadi dasar algoritma matching rekan tim dan rekomendasi kurikulum persiapan Belmawa.
+          Data ini dipakai oleh fitur rekomendasi rekan tim dan roadmap persiapan pada demo.
         </p>
       </div>
 

@@ -26,7 +26,7 @@ const heroSlides = [
     title1: 'Menembus',
     title2: 'Batas Potensi,',
     titleHighlight: 'Menginspirasi Dunia',
-    desc: 'Platform akselerasi mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan meraih kejayaan di panggung kompetisi Belmawa nasional.',
+    desc: 'Demo pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan mencatat proses mengikuti kompetisi.',
     tags: ['PKM BELMAWA', 'GEMASTIK & KRI', 'RISET & INOVASI', 'PRESTASI GLOBAL'],
   },
   {
@@ -34,7 +34,7 @@ const heroSlides = [
     title1: 'Satukan Visi,',
     title2: 'Bentuk Tim Tangguh,',
     titleHighlight: 'Raih Juara Bersama',
-    desc: 'Algoritma matching cerdas mempertemukan mahasiswa dengan keahlian komplementer: koding, penulisan proposal, analisis data, hingga desain presentasi visual.',
+    desc: 'Fitur rekomendasi demo membantu menemukan mahasiswa dengan variasi keahlian: koding, penulisan proposal, analisis data, hingga desain presentasi visual.',
     tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SIMULASI PITCH'],
   },
   {
@@ -290,21 +290,21 @@ export const LandingPage: React.FC = () => {
             {
               step: '01',
               title: 'Tentukan Target',
-              desc: 'Eksplorasi katalog kompetisi Belmawa dan tentukan target lomba yang selaras dengan minatmu.',
+              desc: 'Eksplorasi katalog kompetisi dan tentukan target lomba yang selaras dengan minatmu.',
               icon: Target,
               color: 'text-blue-700 bg-blue-50 border-blue-200/80',
             },
             {
               step: '02',
               title: 'Cari Partner Tim',
-              desc: 'Algoritma matching mencarikan rekan yang melengkapi keahlian teknis dan peran dalam tim.',
+              desc: 'Fitur rekomendasi demo membantu mencari rekan dengan keahlian dan peran yang berbeda.',
               icon: Users,
               color: 'text-blue-800 bg-blue-50 border-blue-200/80',
             },
             {
               step: '03',
-              title: 'Roadmap & Bimbingan',
-              desc: 'Ikuti fase persiapan mandiri, pantau jadwal tenggat, dan konsultasikan kendala ke dosen pembimbing.',
+              title: 'Roadmap & Konsultasi',
+              desc: 'Ikuti fase persiapan mandiri, pantau jadwal tenggat, dan hubungi kontak konsultasi yang dikelola validator.',
               icon: Layers,
               color: 'text-sky-700 bg-sky-50 border-sky-200/80',
             },
@@ -359,7 +359,7 @@ export const LandingPage: React.FC = () => {
               Temukan Partner Sesuai Kebutuhan Tim Tanpa Canggung
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-              Sering kesulitan mencari rekan yang bisa koding, riset data, desain, atau menulis proposal? Algoritma kami memperhitungkan kombinasi minat, variasi keahlian teknis, dan jadwal waktu untuk merekomendasikan partner yang saling melengkapi.
+              Sering kesulitan mencari rekan yang bisa koding, riset data, desain, atau menulis proposal? Rekomendasi demo membandingkan target, minat, variasi keahlian, dan ketersediaan yang diisi mahasiswa.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
@@ -390,7 +390,7 @@ export const LandingPage: React.FC = () => {
                   Kombinasi Tim Ideal
                 </span>
                 <span className="text-[11px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full">
-                  95% Match Score
+                  Contoh rekomendasi
                 </span>
               </div>
 
@@ -417,7 +417,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <div className="text-[10px] text-blue-300/80 text-center pt-1 italic">
-                *Algoritma menghitung komplementaritas keahlian untuk memaksimalkan potensi juara.
+                *Hasil pada mode demo adalah simulasi dan bukan jaminan kecocokan atau prestasi.
               </div>
             </div>
           </div>
@@ -433,7 +433,7 @@ export const LandingPage: React.FC = () => {
               Daftar Kompetisi
             </div>
             <h2 id="kompetisi-preview" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Pilihan Lomba Paling Populer
+              Pilihan Kompetisi
             </h2>
             <p className="text-xs text-slate-500">
               Terbuka untuk mahasiswa Universitas Darussalam Gontor di berbagai cabang lomba.
