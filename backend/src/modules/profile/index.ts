@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import * as profileService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
+import { resolveClientIp } from '../../app/middleware/client-ip';
 
 export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
   .use(authPlugin)
@@ -18,7 +19,7 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
 
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+      const clientIp = resolveClientIp(headers);
       const userAgent = headers['user-agent'] || '';
 
       const updated = await profileService.updateStudentProfile(
@@ -35,6 +36,7 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
         fullName: t.Optional(t.String()),
         studyProgram: t.Optional(t.String()),
         faculty: t.Optional(t.String()),
+        enrollmentYear: t.Optional(t.Number()),
         phone: t.Optional(t.String()),
         bio: t.Optional(t.String()),
         skills: t.Optional(t.Any()),

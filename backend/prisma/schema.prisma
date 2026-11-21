@@ -105,6 +105,7 @@ model Institution {
   achievements    Achievement[]
   pointRules      PointRule[]
   pointLedgers    PointLedger[]
+  selections      InternalSelection[]
 
   @@map("institutions")
 }
@@ -165,6 +166,7 @@ model StudentProfile {
   fullName     String
   studyProgram String
   faculty      String
+  enrollmentYear Int?     @map("enrollment_year")
   phone        String?
   bio          String?  @db.Text
   skills       Json?
@@ -211,6 +213,7 @@ model Competition {
   roadmaps           Roadmap[]
   consultantContacts ConsultantContact[]
   achievements       Achievement[]
+  selections         InternalSelection[]
 
   @@index([institutionId, status])
   @@index([academicPeriodId])
@@ -248,6 +251,7 @@ model Team {
   creator     User         @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
   members     TeamMember[]
   invites     TeamInvite[]
+  selections  InternalSelection[]
 
   @@index([competitionId, status])
   @@index([creatorId])
@@ -370,6 +374,26 @@ model ConsultantContact {
 
   @@index([competitionId, isApproved, status])
   @@map("consultant_contacts")
+}
+
+model InternalSelection {
+  id                String   @id @default(cuid())
+  institutionId     String
+  competitionId     String
+  teamId             String
+  stage              String
+  result             String   @default("menunggu")
+  organizerVerified Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id])
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, teamId, stage])
+  @@index([institutionId, result])
+  @@map("internal_selections")
 }
 
 model AuthSession {

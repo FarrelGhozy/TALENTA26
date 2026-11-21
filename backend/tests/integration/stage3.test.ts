@@ -168,6 +168,9 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
       await prisma.teamInvite.deleteMany({
         where: { OR: [{ senderId: { in: userIds } }, { receiverId: { in: userIds } }] },
       });
+      if (createdTeamId) {
+        await prisma.internalSelection.deleteMany({ where: { teamId: createdTeamId } });
+      }
       await prisma.teamMember.deleteMany({ where: { userId: { in: userIds } } });
       await prisma.team.deleteMany({ where: { creatorId: { in: userIds } } });
       await prisma.studentTarget.deleteMany({ where: { userId: { in: userIds } } });
@@ -659,6 +662,33 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
       expect(res.status).toBe(200);
       const json = (await res.json()) as any;
       expect(json.data.name).toBe('Dosen Pembimbing Uji Coba');
+    });
+  });
+
+  describe('10. Seleksi Internal', () => {
+    it('Validator mencatat hasil seleksi dan mengunci tim yang lolos setelah konfirmasi panitia', async () => {
+      const competition = await prisma.competition.findUniqueOrThrow({ where: { slug: 'gemastik-2026' } });
+      const res = await app.handle(new Request('http://localhost/api/v1/admin/selections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${validatorToken}` },
+        body: JSON.stringify({
+          competitionId: competition.id,
+          teamId: createdTeamId,
+          stage: 'Presentasi',
+          result: 'lolos',
+          organizerVerified: true,
+        }),
+      }));
+      expect(res.status).toBe(200);
+      const team = await prisma.team.findUniqueOrThrow({ where: { id: createdTeamId } });
+      expect(team.status).toBe('terkunci_seleksi');
+    });
+
+    it('Mahasiswa tidak dapat mengakses daftar seleksi internal', async () => {
+      const res = await app.handle(new Request('http://localhost/api/v1/admin/selections', {
+        headers: { Authorization: `Bearer ${student1Token}` },
+      }));
+      expect(res.status).toBe(403);
     });
   });
 });

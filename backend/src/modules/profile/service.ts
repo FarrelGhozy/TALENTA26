@@ -7,6 +7,7 @@ export interface UpdateStudentProfileDto {
   fullName?: string;
   studyProgram?: string;
   faculty?: string;
+  enrollmentYear?: number;
   phone?: string;
   bio?: string;
   skills?: any;
@@ -56,6 +57,7 @@ export async function updateStudentProfile(
     fullName?: string;
     studyProgram?: string;
     faculty?: string;
+    enrollmentYear?: number | null;
     phone?: string | null;
     bio?: string | null;
   } = {};
@@ -79,6 +81,16 @@ export async function updateStudentProfile(
       throw new ValidationError('Fakultas tidak boleh kosong');
     }
     updateData.faculty = dto.faculty.trim();
+  }
+
+  if (dto.enrollmentYear !== undefined) {
+    const currentYear = Number(
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())
+    );
+    if (!Number.isInteger(dto.enrollmentYear) || dto.enrollmentYear < 1900 || dto.enrollmentYear > currentYear + 1) {
+      throw new ValidationError('Tahun angkatan tidak valid');
+    }
+    updateData.enrollmentYear = dto.enrollmentYear;
   }
 
   if (dto.phone !== undefined) {

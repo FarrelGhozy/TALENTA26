@@ -66,6 +66,42 @@ export interface IConsultantService {
   getByCompetition(slug: string): Promise<Consultant[]>;
 }
 
+export interface ValidatorCompetitionItem {
+  id: string;
+  slug: string;
+  name: string;
+  organizer: string;
+  category: string;
+  level: string;
+  format: 'individu' | 'beregu';
+  minTeamMembers: number;
+  maxTeamMembers: number;
+  description: string;
+  status: 'draft' | 'published' | 'archived';
+}
+
+export interface IValidatorContentService {
+  getCompetitions(): Promise<ValidatorCompetitionItem[]>;
+  createCompetition(data: Omit<ValidatorCompetitionItem, 'id' | 'slug' | 'status'>): Promise<ValidatorCompetitionItem>;
+  setCompetitionStatus(id: string, status: 'published' | 'archived'): Promise<ValidatorCompetitionItem>;
+  saveRoadmap(competitionSlug: string, phases: Array<{
+    orderIndex: number;
+    title: string;
+    description?: string;
+    targetDays?: number;
+    tasks: Array<{ orderIndex: number; title: string; description?: string; isRequired?: boolean }>;
+  }>): Promise<unknown>;
+  createConsultant(data: {
+    competitionSlug: string;
+    name: string;
+    field: string;
+    whatsappNumber: string;
+    capacityNote?: string;
+  }): Promise<unknown>;
+  getSelections(): Promise<Array<{ id: string; stage: string; result: string; organizerVerified: boolean; competition?: { name: string }; team?: { name: string } }>>;
+  saveSelection(data: { competitionId: string; teamId: string; stage: string; result: 'menunggu' | 'lolos' | 'tidak'; organizerVerified: boolean }): Promise<unknown>;
+}
+
 export interface AdminStats {
   totalMahasiswa: number;
   pesertaPerKompetisi: Record<string, number>;

@@ -74,12 +74,14 @@ export const Navbar: React.FC = () => {
         { to: '/super-admin', label: 'Super Admin', icon: Settings2 },
         { to: '/super-admin/analitik', label: 'Analitik', icon: LayoutDashboard },
         { to: '/validator', label: 'Ruang Validator', icon: CheckCheck },
+        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
         { to: '/super-admin/design-system', label: 'UI System', icon: Compass },
       ];
     }
     if (currentRole === 'validator') {
       return [
         { to: '/validator', label: 'Ruang Validator', icon: LayoutDashboard },
+        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
         { to: '/validator/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
       ];

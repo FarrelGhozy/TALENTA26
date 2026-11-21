@@ -23,7 +23,7 @@ export interface User {
   nama: string;
   email: string;
   prodi: string;
-  angkatan: number;
+  angkatan?: number;
   avatar?: string;
   role: Role[];
   skill: Skill[];

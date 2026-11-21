@@ -71,6 +71,8 @@ export const competitionRoutes = new Elysia()
         description: t.String(),
         registrationDeadline: t.Optional(t.String()),
         competitionDate: t.Optional(t.String()),
+        requirements: t.Optional(t.Array(t.String())),
+        scheduleTimeline: t.Optional(t.Array(t.Object({ label: t.String(), tanggal: t.String() }))),
       }),
     }
   )
@@ -100,6 +102,8 @@ export const competitionRoutes = new Elysia()
         description: t.String(),
         registrationDeadline: t.Optional(t.String()),
         competitionDate: t.Optional(t.String()),
+        requirements: t.Optional(t.Array(t.String())),
+        scheduleTimeline: t.Optional(t.Array(t.Object({ label: t.String(), tanggal: t.String() }))),
       }),
     }
   )

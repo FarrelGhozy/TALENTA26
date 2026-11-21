@@ -24,6 +24,7 @@ import {
   IStatsService,
   ISystemService,
   ITeamService,
+  IValidatorContentService,
   IUserService,
   PointRuleItem,
   StudentDashboardData,
@@ -87,7 +88,7 @@ function mapBackendUserToFrontend(raw: any): User {
     nama: profile?.fullName || raw.fullName || raw.email?.split('@')[0] || 'Pengguna',
     email: raw.email || '',
     prodi: profile?.studyProgram || 'Teknik Informatika',
-    angkatan: 0,
+    angkatan: profile?.enrollmentYear,
     role: [role],
     skill: Array.isArray(profile?.skills) ? profile.skills : [],
     minat: Array.isArray(profile?.interests) ? profile.interests : [],
@@ -124,7 +125,7 @@ function mapBackendCandidateToFrontend(c: any): MatchCandidate {
       nama: c.nama || c.user?.nama || 'Mahasiswa',
       email: '', // Zero PII in matching
       prodi: c.prodi || c.user?.prodi || '',
-      angkatan: 0,
+      angkatan: c.enrollmentYear || c.user?.angkatan,
       role: ['mahasiswa'],
       skill: c.skill || c.user?.skill || [],
       minat: c.minat || c.user?.minat || [],
@@ -242,9 +243,22 @@ export const userApiService: IUserService & {
   updateProfile: async (_userId, data) => {
     const res = await apiFetch<any>('/me/profile', {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        fullName: data.nama,
+        studyProgram: data.prodi,
+        enrollmentYear: data.angkatan,
+        skills: data.skill,
+        interests: data.minat,
+        availability: data.ketersediaan,
+        rolesCapable: data.peranBisa,
+      }),
     });
-    return mapBackendUserToFrontend(res);
+    return mapBackendUserToFrontend({
+      id: res.userId || _userId,
+      role: 'mahasiswa',
+      studentProfile: res,
+      email: data.email,
+    });
   },
   getProfile: async (userId: string): Promise<Profile | null> => {
     try {
@@ -488,6 +502,20 @@ export const consultantApiService: IConsultantService = {
     const res = await apiFetch<any[]>(`/consultants?slug=${slug}`);
     return Array.isArray(res) ? res.map(mapBackendConsultantToFrontend) : [];
   },
+};
+
+export const validatorContentApiService: IValidatorContentService = {
+  getCompetitions: () => apiFetch('/admin/competitions'),
+  createCompetition: (data) =>
+    apiFetch('/admin/competitions', { method: 'POST', body: JSON.stringify(data) }),
+  setCompetitionStatus: (id, status) =>
+    apiFetch(`/admin/competitions/${id}/${status === 'published' ? 'publish' : 'archive'}`, { method: 'POST' }),
+  saveRoadmap: (competitionSlug, phases) =>
+    apiFetch(`/admin/roadmaps/${competitionSlug}`, { method: 'POST', body: JSON.stringify({ phases }) }),
+  createConsultant: (data) =>
+    apiFetch('/admin/consultants', { method: 'POST', body: JSON.stringify(data) }),
+  getSelections: () => apiFetch('/admin/selections'),
+  saveSelection: (data) => apiFetch('/admin/selections', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const statsApiService: IStatsService = {

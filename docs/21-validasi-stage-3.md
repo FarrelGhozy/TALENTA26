@@ -1,5 +1,13 @@
 # 21 — Bukti validasi Stage 3
 
+## Validasi ulang perbaikan audit — 21 November 2026
+
+- UI `/validator/konten` menyediakan pengelolaan draft/publikasi/arsip kompetisi, roadmap, kontak konsultasi, dan pencatatan seleksi internal. Navigasi tersedia bagi validator dan super admin.
+- Kontrak frontend diselaraskan ke endpoint admin. Model `InternalSelection` dan migrasi `20261121123000_add_internal_selections` menyimpan cakupan seleksi per tim dan kompetisi; tim hanya dikunci setelah status lolos dikonfirmasi.
+- `StudentProfile.enrollmentYear` ditambahkan melalui migrasi `20261121120000_add_student_enrollment_year`; adapter tidak lagi mengarang angkatan. Nilai bersifat opsional sampai mahasiswa mengisinya.
+- Suite Stage 3 berisi 24 uji integrasi dan lulus, termasuk RBAC seleksi serta penguncian tim yang lolos. Smoke UI validator lulus pada viewport 390, 768, dan 1440 px; tab dapat dipindah dengan panah dan memiliki relasi tab/panel.
+- Istilah “resmi” pada kontak di laporan historis di bawah tidak berarti verifikasi atau penetapan kampus; kontak adalah data terkurasi yang dikelola validator.
+
 Tanggal pemeriksaan: 21 November 2026. Cakupan: domain kompetisi, target kompetisi mahasiswa, pencarian rekan tim (matching) transparan tanpa PII, pembentukan tim dengan jaminan *concurrency safety*, kurikulum roadmap persiapan kompetisi, kontak konsultan WhatsApp resmi, serta integrasi frontend React dan backend Bun + Elysia + Prisma MySQL.
 
 ---

@@ -82,6 +82,7 @@ export const router = createBrowserRouter(
         element: <AppLayout />,
         children: [
           { index: true, lazy: lazyRoute(() => import('../features/validator/ValidatorDashboardPage'), 'ValidatorDashboardPage') },
+          { path: 'konten', lazy: lazyRoute(() => import('../features/validator/ValidatorContentPage'), 'ValidatorContentPage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/verifikasi/VerificationListPage'), 'VerificationListPage') },
           { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/verifikasi/VerificationDetailPage'), 'VerificationDetailPage') },
         ],

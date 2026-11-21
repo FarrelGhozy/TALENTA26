@@ -8,3 +8,4 @@ export { statsMockService as statsService } from './mock/statsMock';
 export { systemMockService as systemService } from './mock/systemMock';
 export { teamMockService as teamService } from './mock/teamMock';
 export { userMockService as userService } from './mock/userMock';
+export { validatorContentMockService as validatorContentService } from './mock/validatorContentMock';

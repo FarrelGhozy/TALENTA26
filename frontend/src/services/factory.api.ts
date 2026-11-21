@@ -9,4 +9,5 @@ export {
   systemApiService as systemService,
   teamApiService as teamService,
   userApiService as userService,
+  validatorContentApiService as validatorContentService,
 } from './api';

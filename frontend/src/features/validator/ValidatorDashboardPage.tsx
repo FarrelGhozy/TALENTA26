@@ -38,7 +38,7 @@ export const ValidatorDashboardPage: React.FC = () => {
     setExporting(true);
     try {
       await dashboardService.downloadAchievementsCsv();
-      notify('Rekapitulasi prestasi resmi berhasil diunduh.', 'success');
+      notify('Rekapitulasi prestasi berhasil diunduh.', 'success');
     } catch (err: any) {
       notify(err.message || 'Gagal mengunduh rekapitulasi prestasi', 'error');
     } finally {
@@ -52,13 +52,14 @@ export const ValidatorDashboardPage: React.FC = () => {
       description: 'Susun informasi lomba, syarat, aturan tim, jadwal, dan status publikasi.',
       icon: Trophy,
       status: stats?.competitions?.published ? `${stats.competitions.published} aktif` : 'Aktif',
-      to: '/kompetisi',
+      to: '/validator/konten',
     },
     {
       title: 'Roadmap',
       description: 'Kelola fase persiapan, tugas, tenggat, dan sumber belajar mahasiswa.',
       icon: BookOpenCheck,
       status: 'Terstruktur',
+      to: '/validator/konten',
     },
     {
       title: 'Kontak konsultasi',
@@ -67,6 +68,7 @@ export const ValidatorDashboardPage: React.FC = () => {
       status: stats?.users?.approvedConsultants
         ? `${stats.users.approvedConsultants} kontak`
         : 'Disetujui',
+      to: '/validator/konten',
     },
     {
       title: 'Seleksi internal',
@@ -99,7 +101,7 @@ export const ValidatorDashboardPage: React.FC = () => {
       <PageHeader
         eyebrow="Ruang kerja validator"
         title="Kelola data lomba dan prestasi"
-        description="Gunakan satu ruang kerja untuk memperbarui program pembinaan, mengunduh rekapitulasi resmi, dan memeriksa pengajuan prestasi mahasiswa."
+        description="Gunakan satu ruang kerja untuk memperbarui program pembinaan, mengunduh rekapitulasi, dan memeriksa pengajuan prestasi mahasiswa."
         actions={
           <Button
             size="sm"
