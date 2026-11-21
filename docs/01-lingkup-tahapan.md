@@ -4,9 +4,9 @@
 | Area | Wajib siap | Di luar rilis |
 |---|---|---|
 | Publik | landing, kompetisi terbit, ranking prestasi lomba sah | statistik nasional, klaim kebijakan kampus yang belum disahkan |
-| Mahasiswa | akun manual, profil, target, tim, roadmap, pengajuan/revisi prestasi | Google login, SSO, AI |
-| Validator | kelola konten lomba/seleksi/konsultan, verifikasi prestasi | konfigurasi teknis/rahasia |
-| Super admin | akun staf, peran, periode, aturan poin, audit, operasi | multi-kampus |
+| Mahasiswa | akun manual (langsung aktif), profil + avatar privat RustFS, target, tim (beregu) / langsung persiapan (individu), roadmap, pengajuan prestasi individu/kelompok (jenis & sub-lomba), revisi penuh, pembatalan | Google login, SSO, verifikasi email saat daftar, simpan draft prestasi, AI |
+| Validator | kelola konten lomba/sub-lomba/poin perlombaan/roadmap/seleksi (individu & beregu)/konsultan, verifikasi prestasi + override poin beralasan & teraudit | konfigurasi teknis/rahasia |
+| Super admin | akun staf bernamakan asli, peran, manajemen pergantian periode, template poin berversi, master jenis/sub-lomba, audit, operasi | multi-kampus |
 | Platform | MySQL, RustFS, API, CI GHCR, Compose, backup/restore | otomatisasi deploy langsung ke server tanpa gate |
 
 Katalog, roadmap, tim, dan prestasi harus mendukung periode baru. Data lama diarsip, dapat dibaca sesuai akses, dan tidak direset. Prestasi di luar lomba tetap diterima namun tidak mendapat poin ranking.

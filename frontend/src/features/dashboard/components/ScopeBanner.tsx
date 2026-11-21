@@ -15,12 +15,12 @@ export const ScopeBanner: React.FC = () => {
       <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
         <span className="flex items-center gap-1">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          Periode: <strong className="text-slate-800">2026 Belmawa</strong>
+          <strong className="text-slate-800">Pembinaan mahasiswa</strong>
         </span>
         <span aria-hidden="true">•</span>
         <span className="flex items-center gap-1">
-          <Database className="w-3.5 h-3.5 text-emerald-600" />
-          Pangkalan Data: <strong className="text-emerald-700">Simulasi Sinkron</strong>
+          <Database className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+          Pangkalan Data: <strong className="text-emerald-700">Terhubung & Sinkron</strong>
         </span>
       </div>
     </div>

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Info, SearchX } from 'lucide-react';
-import { Invite, MatchCandidate, Team, User } from '../../types';
-import { matchingService, teamService, userService } from '@talenta/services';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Info, SearchX, User as UserIcon } from 'lucide-react';
+import { Competition, Invite, MatchCandidate, Team, User } from '../../types';
+import { competitionService, matchingService, teamService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { Tabs } from '../../components/ui/Tabs';
@@ -32,12 +32,22 @@ export { formatInviteStatus };
 export const PartnerPage: React.FC = () => {
   const { currentUser } = useAuth();
   const { notify } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [candidates, setCandidates] = useState<MatchCandidate[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [targetSlug, setTargetSlug] = useState('');
-  const [activeTab, setActiveTab] = useState('rekomendasi');
+  const [targetCompetition, setTargetCompetition] = useState<Competition | null>(null);
+  const rawTab = searchParams.get('tab');
+  const activeTab = rawTab === 'undangan' ? 'undangan' : 'rekomendasi';
+  const setActiveTab = (tabId: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tabId);
+      return next;
+    });
+  };
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -52,11 +62,14 @@ export const PartnerPage: React.FC = () => {
         teamService.getTeamByUserId(currentUser.id),
         userService.getProfile(currentUser.id),
       ]);
+      const resolvedSlug = profile?.targetKompetisiSlug || team?.competitionSlug || '';
+      const comp = resolvedSlug ? await competitionService.getBySlug(resolvedSlug).catch(() => null) : null;
       setCandidates(cands);
       setInvites(invs);
       setAllUsers(users);
       setMyTeam(team);
-      setTargetSlug(profile?.targetKompetisiSlug || team?.competitionSlug || '');
+      setTargetSlug(resolvedSlug);
+      setTargetCompetition(comp);
       setLoading(false);
     } catch {
       setLoadError('Gagal memuat data partner. Coba muat ulang.');
@@ -94,7 +107,11 @@ export const PartnerPage: React.FC = () => {
     const inv = invites.find((i) => i.dari === currentUser?.id && i.ke === targetUserId && i.status === 'diajukan');
     if (!inv) return;
     try {
-      await matchingService.respondInvite(inv.id, 'ditolak');
+      if (matchingService.cancelInvite) {
+        await matchingService.cancelInvite(inv.id);
+      } else {
+        await matchingService.respondInvite(inv.id, 'ditolak');
+      }
       notify('Undangan dibatalkan. Kamu bisa mengundang ulang nanti.', 'info');
       await loadData();
     } catch {
@@ -136,6 +153,11 @@ export const PartnerPage: React.FC = () => {
     });
 
   const incomingCount = invites.filter((i) => i.ke === currentUser?.id && i.status === 'diajukan').length;
+  const isIndividualTarget =
+    targetCompetition?.format === 'individu' ||
+    (targetCompetition &&
+      targetCompetition.komposisi.min === 1 &&
+      targetCompetition.komposisi.max === 1);
 
   return (
     <div className="space-y-6">
@@ -146,9 +168,11 @@ export const PartnerPage: React.FC = () => {
             <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
               Modul Kolaborasi
             </span>
-            <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-              {candidates.length} Rekomendasi
-            </span>
+            {!isIndividualTarget && (
+              <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
+                {candidates.length} Rekomendasi
+              </span>
+            )}
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
             Rekomendasi Partner Tim
@@ -159,24 +183,47 @@ export const PartnerPage: React.FC = () => {
         </div>
 
         <Link to="/app/tim">
-          <Button size="sm" variant="outline" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+          <Button size="sm" variant="outline" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
             Status Tim Saya
           </Button>
         </Link>
       </div>
 
-      {/* Algorithm Transparency Pill Box */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-sky-50/40 to-slate-50 border border-blue-100 flex items-start gap-3">
-        <Info className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-        <div className="text-xs text-slate-600 space-y-1">
-          <span className="font-bold text-slate-800 block">
-            Prinsip Kecocokan Partner:
-          </span>
-          <p className="leading-relaxed text-[11px] text-slate-500">
-            Skor kecocokan dihitung secara adil berdasarkan: <strong>Kesesuaian Target Kompetisi (40%)</strong>, <strong>Komplementaritas Peran & Skill (30%)</strong>, <strong>Sinkronisasi Hari Belajar (20%)</strong>, dan <strong>Diversitas Angkatan/Prodi (10%)</strong>. Skor ini adalah alat bantu pencarian, bukan penilaian mutlak kecerdasan.
+      {isIndividualTarget && targetCompetition ? (
+        <div className="p-6 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-3">
+          <div className="flex items-center gap-2 text-blue-900 font-extrabold text-sm">
+            <UserIcon className="w-4 h-4 text-blue-700" aria-hidden="true" />
+            <span>Target Kompetisi Anda Bersifat Individu ({targetCompetition.namaResmi})</span>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">
+            Kompetisi ini diikuti secara perseorangan sehingga tidak memerlukan pembentukan tim atau pencarian partner. Anda dapat langsung melanjutkan ke Ruang Persiapan atau meninjau undangan tim dari kompetisi lain bila ada.
           </p>
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            <Link to={`/app/kompetisi/${targetCompetition.slug}/persiapan`}>
+              <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
+                Buka Ruang Persiapan
+              </Button>
+            </Link>
+            <Link to="/app/profil?need=target">
+              <Button size="sm" variant="outline">
+                Ganti ke Lomba Beregu
+              </Button>
+            </Link>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-sky-50/40 to-slate-50 border border-blue-100 flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="text-xs text-slate-600 space-y-1">
+            <span className="font-bold text-slate-800 block">
+              Prinsip Kecocokan Partner:
+            </span>
+            <p className="leading-relaxed text-[11px] text-slate-500">
+              Label kesesuaian membantu menemukan calon rekan. Lihat alasan pada setiap rekomendasi untuk memahami faktor yang dipertimbangkan.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs

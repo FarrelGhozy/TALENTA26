@@ -74,12 +74,14 @@ export const Navbar: React.FC = () => {
         { to: '/super-admin', label: 'Super Admin', icon: Settings2 },
         { to: '/super-admin/analitik', label: 'Analitik', icon: LayoutDashboard },
         { to: '/validator', label: 'Ruang Validator', icon: CheckCheck },
+        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
         { to: '/super-admin/design-system', label: 'UI System', icon: Compass },
       ];
     }
     if (currentRole === 'validator') {
       return [
         { to: '/validator', label: 'Ruang Validator', icon: LayoutDashboard },
+        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
         { to: '/validator/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
       ];
@@ -90,12 +92,15 @@ export const Navbar: React.FC = () => {
   const navLinks = getNavLinks();
 
   const isActive = (to: string) => {
-    if (to === '/') return strippedPath === '/';
-    return strippedPath === to || strippedPath.startsWith(`${to}/`);
+    const cleanTarget = to.split('?')[0];
+    if (cleanTarget === '/' || cleanTarget === '/validator' || cleanTarget === '/super-admin') {
+      return strippedPath === cleanTarget;
+    }
+    return strippedPath === cleanTarget || strippedPath.startsWith(`${cleanTarget}/`);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setMobileOpen(false);
     navigate('/masuk');
   };
@@ -107,13 +112,13 @@ export const Navbar: React.FC = () => {
     return role || 'Pengguna';
   };
 
-  const getAvatarSrc = (user?: { nama?: string; avatar?: string } | null) => {
-    if (user?.avatar) return assetUrl(user.avatar);
-    const name = (user?.nama || '').toLowerCase();
-    if (name.includes('rina') || name.includes('sari') || name.includes('maya')) {
-      return assetUrl('images/avatar-rina.jpg');
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return assetUrl('images/avatar-andi.jpg');
+    return name.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -134,7 +139,7 @@ export const Navbar: React.FC = () => {
           <Link to="/" className="flex items-center gap-3 group">
             <img
               src={assetUrl('images/logo-icon.png')}
-              alt="Logo Resmi TALENTA UNIDA Gontor"
+              alt="Logo TALENTA UNIDA Gontor"
               className="w-9 h-9 rounded-xl shadow-xs group-hover:scale-105 transition-transform object-cover border border-white/20"
             />
             <div>
@@ -199,11 +204,20 @@ export const Navbar: React.FC = () => {
                   isLanding ? 'border-white/20' : 'border-slate-200/80'
                 }`}
               >
-                <img
-                  src={getAvatarSrc(currentUser)}
-                  alt={currentUser.nama}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-                />
+                {currentUser.avatar ? (
+                  <img
+                    src={assetUrl(currentUser.avatar)}
+                    alt={currentUser.nama}
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
+                  >
+                    {getInitials(currentUser.nama)}
+                  </div>
+                )}
                 <div className="text-right hidden md:block">
                   <span
                     className={`text-xs font-bold block leading-tight truncate max-w-[140px] ${
@@ -297,11 +311,20 @@ export const Navbar: React.FC = () => {
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <img
-                src={getAvatarSrc(currentUser)}
-                alt={currentUser.nama}
-                className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-              />
+              {currentUser.avatar ? (
+                <img
+                  src={assetUrl(currentUser.avatar)}
+                  alt={currentUser.nama}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
+                >
+                  {getInitials(currentUser.nama)}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <span
                   className={`text-xs font-bold block truncate ${

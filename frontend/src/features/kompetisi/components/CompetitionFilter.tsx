@@ -7,6 +7,10 @@ interface CompetitionFilterProps {
   category: string;
   onCategoryChange: (val: string) => void;
   categories: string[];
+  level?: string;
+  onLevelChange?: (val: string) => void;
+  format?: string;
+  onFormatChange?: (val: string) => void;
   resultCount?: number;
   onReset?: () => void;
 }
@@ -17,6 +21,10 @@ export const CompetitionFilter: React.FC<CompetitionFilterProps> = ({
   category,
   onCategoryChange,
   categories,
+  level = 'semua',
+  onLevelChange,
+  format = 'semua',
+  onFormatChange,
   resultCount,
   onReset,
 }) => {
@@ -39,12 +47,12 @@ export const CompetitionFilter: React.FC<CompetitionFilterProps> = ({
         {typeof resultCount === 'number' && (
           <div className="flex items-center gap-2 text-xs text-slate-500" aria-live="polite">
             <span className="font-semibold text-slate-800">{resultCount}</span> kompetisi ditemukan
-            {onReset && (search || category !== 'semua') && (
+            {onReset && (search || category !== 'semua' || level !== 'semua' || format !== 'semua') && (
               <button
                 onClick={onReset}
                 className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900 font-semibold ml-1 cursor-pointer"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3 h-3" aria-hidden="true" />
                 Reset
               </button>
             )}
@@ -83,6 +91,42 @@ export const CompetitionFilter: React.FC<CompetitionFilterProps> = ({
           </button>
         ))}
       </div>
+
+      {(onLevelChange || onFormatChange) && (
+        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100 text-xs">
+          {onLevelChange && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Tingkat:</span>
+              <select
+                aria-label="Filter tingkat lomba"
+                value={level}
+                onChange={(e) => onLevelChange(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+              >
+                <option value="semua">Semua Tingkat</option>
+                <option value="lokal">Lokal</option>
+                <option value="nasional">Nasional</option>
+                <option value="internasional">Internasional</option>
+              </select>
+            </div>
+          )}
+          {onFormatChange && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Format:</span>
+              <select
+                aria-label="Filter format lomba"
+                value={format}
+                onChange={(e) => onFormatChange(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+              >
+                <option value="semua">Semua Format</option>
+                <option value="individu">Individu</option>
+                <option value="beregu">Beregu</option>
+              </select>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

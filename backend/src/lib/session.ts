@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { prisma } from './prisma';
+import { loadConfig } from './config';
 import type { User, StudentProfile } from '@prisma/client';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari
@@ -12,14 +13,18 @@ export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+export function hashSessionToken(token: string): string {
+  const secret = loadConfig().sessionSecret;
+  return crypto.createHmac('sha256', secret).update(token).digest('hex');
+}
+
 export interface SessionData {
   session: {
     id: string;
-    sessionToken: string;
     expiresAt: Date;
     userId: string;
   };
-  user: User & {
+  user: Omit<User, 'passwordHash'> & {
     studentProfile: StudentProfile | null;
   };
 }
@@ -30,12 +35,13 @@ export async function createSession(
   userAgent?: string
 ): Promise<{ token: string; expiresAt: Date }> {
   const token = generateSecureToken(32);
+  const tokenDigest = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
   await prisma.authSession.create({
     data: {
       userId,
-      sessionToken: token,
+      sessionToken: tokenDigest,
       ipAddress: ipAddress || null,
       userAgent: userAgent || null,
       expiresAt,
@@ -47,12 +53,21 @@ export async function createSession(
 
 export async function validateSession(token: string): Promise<SessionData | null> {
   if (!token) return null;
+  const tokenDigest = hashSessionToken(token);
 
   const session = await prisma.authSession.findUnique({
-    where: { sessionToken: token },
+    where: { sessionToken: tokenDigest },
     include: {
       user: {
-        include: {
+        select: {
+          id: true,
+          institutionId: true,
+          email: true,
+          fullName: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
           studentProfile: true,
         },
       },
@@ -67,7 +82,6 @@ export async function validateSession(token: string): Promise<SessionData | null
   return {
     session: {
       id: session.id,
-      sessionToken: session.sessionToken,
       expiresAt: session.expiresAt,
       userId: session.userId,
     },
@@ -77,9 +91,10 @@ export async function validateSession(token: string): Promise<SessionData | null
 
 export async function revokeSession(token: string): Promise<boolean> {
   if (!token) return false;
+  const tokenDigest = hashSessionToken(token);
   try {
     await prisma.authSession.updateMany({
-      where: { sessionToken: token, revokedAt: null },
+      where: { sessionToken: tokenDigest, revokedAt: null },
       data: { revokedAt: new Date() },
     });
     return true;

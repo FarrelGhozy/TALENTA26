@@ -3,13 +3,15 @@ import * as authService from './service';
 import { assertAuthenticated, extractToken, authPlugin } from '../../app/middleware/auth';
 import { authRateLimiter } from '../../app/middleware/rate-limit';
 import { loadConfig } from '../../lib/config';
+import { resolveClientIp } from '../../app/middleware/client-ip';
 
 export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   .use(authPlugin)
   .post(
     '/register',
-    async ({ body, headers, cookie }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+    async ({ body, headers, cookie, request, server }) => {
+      const remoteAddress = server?.requestIP?.(request)?.address;
+      const clientIp = resolveClientIp(headers, remoteAddress);
       const userAgent = headers['user-agent'] || '';
 
       authRateLimiter.check(clientIp);
@@ -28,6 +30,10 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         });
       }
 
+      if (currentConfig.nodeEnv === 'production') {
+        return { data: { user: result.user, expiresAt: result.expiresAt } };
+      }
+
       return { data: result };
     },
     {
@@ -38,14 +44,16 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         fullName: t.String(),
         studyProgram: t.String(),
         faculty: t.String(),
+        enrollmentYear: t.Optional(t.Number()),
         phone: t.Optional(t.String()),
       }),
     }
   )
   .post(
     '/login',
-    async ({ body, headers, cookie }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+    async ({ body, headers, cookie, request, server }) => {
+      const remoteAddress = server?.requestIP?.(request)?.address;
+      const clientIp = resolveClientIp(headers, remoteAddress);
       const userAgent = headers['user-agent'] || '';
 
       authRateLimiter.check(clientIp);
@@ -64,6 +72,10 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
         });
       }
 
+      if (currentConfig.nodeEnv === 'production') {
+        return { data: { user: result.user, expiresAt: result.expiresAt } };
+      }
+
       return { data: result };
     },
     {
@@ -73,17 +85,18 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       }),
     }
   )
-  .post('/logout', async ({ headers, cookie, auth }) => {
+  .post('/logout', async ({ headers, cookie, auth, request, server }) => {
     const rawCookie = cookie.talenta_session?.value;
     const cookieStr = typeof rawCookie === 'string' ? rawCookie : null;
     const token = extractToken(headers['authorization'], cookieStr);
+    const remoteAddress = server?.requestIP?.(request)?.address;
 
     if (token) {
       await authService.logout(
         token,
         auth?.user?.id,
         auth?.user?.institutionId,
-        headers['x-forwarded-for'] || '127.0.0.1',
+        resolveClientIp(headers, remoteAddress),
         headers['user-agent']
       );
     }
@@ -96,22 +109,25 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   })
   .get('/me', async ({ auth }) => {
     assertAuthenticated(auth);
-    const me = await authService.getMe(auth.user.id);
+    const { user, activePeriod } = await authService.getMeWithPeriod(auth.user.id, auth.user.institutionId);
     return {
       data: {
-        id: me.id,
-        email: me.email,
-        role: me.role,
-        status: me.status,
-        institutionId: me.institutionId,
-        studentProfile: me.studentProfile,
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName || user.studentProfile?.fullName || null,
+        role: user.role,
+        status: user.status,
+        institutionId: user.institutionId,
+        studentProfile: user.studentProfile,
+        activePeriod,
       },
     };
   })
   .post(
     '/forgot-password',
-    async ({ body, headers }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+    async ({ body, headers, request, server }) => {
+      const remoteAddress = server?.requestIP?.(request)?.address;
+      const clientIp = resolveClientIp(headers, remoteAddress);
       authRateLimiter.check(clientIp);
 
       const result = await authService.requestPasswordReset(
@@ -129,8 +145,9 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
   )
   .post(
     '/reset-password',
-    async ({ body, headers }) => {
-      const clientIp = headers['x-forwarded-for'] || '127.0.0.1';
+    async ({ body, headers, request, server }) => {
+      const remoteAddress = server?.requestIP?.(request)?.address;
+      const clientIp = resolveClientIp(headers, remoteAddress);
       authRateLimiter.check(clientIp);
 
       const result = await authService.resetPasswordWithToken(

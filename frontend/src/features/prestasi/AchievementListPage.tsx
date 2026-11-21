@@ -1,39 +1,61 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Award, CheckCircle2, Clock, Plus, Search, Filter } from 'lucide-react';
 import { Achievement } from '../../types';
 import { achievementService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { AchievementTable } from './components/AchievementTable';
 
-type StatusFilter = 'semua' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak';
+type StatusFilter = 'semua' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak' | 'dibatalkan';
 
 export const AchievementListPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { notify } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [query, setQuery] = useState('');
 
-  useEffect(() => {
+  const [cancelTarget, setCancelTarget] = useState<Achievement | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const fetchAchievements = () => {
     if (!currentUser) return;
-    let cancelled = false;
     achievementService
       .getAll(currentUser.id)
       .then((data) => {
-        if (cancelled) return;
         setAchievements(data);
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+  };
+
+  useEffect(() => {
+    fetchAchievements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget || !achievementService.cancel) return;
+    setCancelling(true);
+    try {
+      await achievementService.cancel(cancelTarget.id);
+      notify('Pengajuan prestasi berhasil dibatalkan.');
+      setCancelTarget(null);
+      fetchAchievements();
+    } catch (err: any) {
+      notify(err?.message || 'Gagal membatalkan pengajuan.', 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) return <PageLoading message="Memuat rekap data prestasi..." />;
 
@@ -52,8 +74,9 @@ export const AchievementListPage: React.FC = () => {
     { id: 'semua', label: 'Semua Status' },
     { id: 'menunggu', label: 'Menunggu Verifikasi' },
     { id: 'perlu_perbaikan', label: 'Perlu Perbaikan' },
-    { id: 'disetujui', label: 'Telah Disahkan' },
+    { id: 'disetujui', label: 'Telah Disetujui' },
     { id: 'ditolak', label: 'Ditolak' },
+    { id: 'dibatalkan', label: 'Dibatalkan' },
   ];
 
   return (
@@ -94,7 +117,7 @@ export const AchievementListPage: React.FC = () => {
             <div className="text-3xl font-black text-emerald-600 mt-1" aria-label={`${verifiedCount} terverifikasi`}>
               {verifiedCount}
             </div>
-            <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">Sah masuk SK dan transkrip</p>
+            <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">Terverifikasi oleh validator TALENTA</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />
@@ -180,8 +203,33 @@ export const AchievementListPage: React.FC = () => {
             Daftar Riwayat Pengajuan
           </h2>
         </div>
-        <AchievementTable achievements={filtered} />
+        <AchievementTable
+          achievements={filtered}
+          studentDetailBasePath="/app/prestasi"
+          onRevise={(item) => navigate(`/app/prestasi/${item.id}`)}
+          onCancel={achievementService.cancel ? (item) => setCancelTarget(item) : undefined}
+        />
       </div>
+
+      <Modal
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        title="Batalkan Pengajuan Prestasi"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCancelTarget(null)}>
+              Kembali
+            </Button>
+            <Button variant="danger" size="sm" isLoading={cancelling} onClick={handleConfirmCancel}>
+              Ya, Batalkan Pengajuan
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Apakah Anda yakin ingin membatalkan pengajuan <strong className="text-slate-900">{cancelTarget?.nama}</strong>? Pengajuan yang dibatalkan tidak akan diproses oleh validator.
+        </p>
+      </Modal>
     </div>
   );
 };

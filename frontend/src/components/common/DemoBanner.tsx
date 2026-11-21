@@ -17,7 +17,7 @@ export const DemoBanner: React.FC = () => {
           Data simulasi (Mock: {USE_MOCK ? 'Aktif' : 'Nonaktif'}).
         </span>
         <span className="text-blue-200/90 text-[11px]">
-          Uji coba pembinaan Belmawa dan prestasi mahasiswa tanpa batas.
+          Uji coba alur pembinaan dan pencatatan prestasi dengan data simulasi.
         </span>
       </div>
       <button

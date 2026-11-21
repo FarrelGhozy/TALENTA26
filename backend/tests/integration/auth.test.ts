@@ -176,6 +176,45 @@ describe('Stage 2 — Backend Auth, RBAC & Profile Test Suite', () => {
       mhsToken = json.data.token;
     });
 
+    it('Cookie HttpOnly dari login dapat dipakai tanpa bearer token', async () => {
+      const loginRes = await app.handle(new Request('http://localhost/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, password: testPassword }),
+      }));
+      expect(loginRes.status).toBe(200);
+      const setCookie = loginRes.headers.get('set-cookie') || '';
+      expect(setCookie).toContain('talenta_session=');
+      expect(setCookie.toLowerCase()).toContain('httponly');
+      const cookie = setCookie.split(';')[0];
+      const meRes = await app.handle(new Request('http://localhost/api/v1/auth/me', {
+        headers: { Cookie: cookie },
+      }));
+      expect(meRes.status).toBe(200);
+    });
+
+    it('Mutasi dari origin lain ditolak walaupun sesi valid', async () => {
+      const res = await app.handle(new Request('http://localhost/api/v1/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, Origin: 'https://evil.example' },
+      }));
+      expect(res.status).toBe(403);
+    });
+
+    it('Mutasi dengan cookie tanpa Origin ditolak', async () => {
+      const login = await app.handle(new Request('http://localhost/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, password: testPassword }),
+      }));
+      const cookie = (login.headers.get('set-cookie') || '').split(';')[0];
+      const res = await app.handle(new Request('http://localhost/api/v1/auth/logout', {
+        method: 'POST',
+        headers: { Cookie: cookie },
+      }));
+      expect(res.status).toBe(403);
+    });
+
     it('Harus menolak login dengan password salah (401)', async () => {
       const res = await app.handle(
         new Request('http://localhost/api/v1/auth/login', {

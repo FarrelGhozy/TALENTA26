@@ -8,6 +8,7 @@ export function formatDate(dateString: string): string {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      timeZone: 'Asia/Jakarta',
     });
   } catch {
     return dateString;
@@ -17,12 +18,11 @@ export function formatDate(dateString: string): string {
 export function formatAchievementType(type: AchievementType): string {
   const map: Record<AchievementType, string> = {
     partisipasi: 'Partisipasi',
-    nominasi: 'Nominasi',
-    penghargaan: 'Penghargaan',
+    finalis: 'Finalis / Nominasi',
     juara_1: 'Juara 1',
     juara_2: 'Juara 2',
     juara_3: 'Juara 3',
-    best_delegate: 'Best Delegate',
+    penghargaan_khusus: 'Penghargaan Khusus / Best Delegate',
   };
   return map[type] || type;
 }
@@ -59,6 +59,8 @@ export function formatAchievementStatus(status: AchievementStatus): { label: str
       return { label: 'Disetujui', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' };
     case 'ditolak':
       return { label: 'Ditolak', color: 'bg-rose-100 text-rose-800 border-rose-200' };
+    case 'dibatalkan':
+      return { label: 'Dibatalkan', color: 'bg-slate-100 text-slate-600 border-slate-200' };
     default:
       return { label: status, color: 'bg-slate-100 text-slate-700 border-slate-200' };
   }

@@ -26,7 +26,7 @@ const heroSlides = [
     title1: 'Menembus',
     title2: 'Batas Potensi,',
     titleHighlight: 'Menginspirasi Dunia',
-    desc: 'Platform akselerasi mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan meraih kejayaan di panggung kompetisi Belmawa nasional.',
+    desc: 'Platform pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan mencatat capaian prestasi kompetisi.',
     tags: ['PKM BELMAWA', 'GEMASTIK & KRI', 'RISET & INOVASI', 'PRESTASI GLOBAL'],
   },
   {
@@ -34,8 +34,8 @@ const heroSlides = [
     title1: 'Satukan Visi,',
     title2: 'Bentuk Tim Tangguh,',
     titleHighlight: 'Raih Juara Bersama',
-    desc: 'Algoritma matching cerdas mempertemukan mahasiswa dengan keahlian komplementer: koding, penulisan proposal, analisis data, hingga desain presentasi visual.',
-    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SIMULASI PITCH'],
+    desc: 'Fitur pencocokan partner membantu menemukan mahasiswa dengan variasi keahlian: pemrograman, penulisan proposal, analisis data, hingga desain presentasi.',
+    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SELEKSI INTERNAL'],
   },
   {
     kicker: 'PENCATATAN PRESTASI',
@@ -161,7 +161,7 @@ export const LandingPage: React.FC = () => {
                   <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border border-white/40 flex items-center justify-center bg-white/10 group-hover/demo:bg-white/25 transition-colors shrink-0">
                     <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" />
                   </span>
-                  <span className="truncate">Coba Demo</span>
+                  <span className="truncate">Masuk Portal</span>
                 </Link>
               </div>
             </div>
@@ -257,8 +257,8 @@ export const LandingPage: React.FC = () => {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xl font-black text-emerald-800 leading-tight">Demo</div>
-            <div className="text-[11px] font-bold text-slate-500">Simulasi verifikasi</div>
+            <div className="text-xl font-black text-emerald-800 leading-tight">Tervalidasi</div>
+            <div className="text-[11px] font-bold text-slate-500">Verifikasi berjenjang</div>
           </div>
         </div>
 
@@ -290,21 +290,21 @@ export const LandingPage: React.FC = () => {
             {
               step: '01',
               title: 'Tentukan Target',
-              desc: 'Eksplorasi katalog kompetisi Belmawa dan tentukan target lomba yang selaras dengan minatmu.',
+              desc: 'Eksplorasi katalog kompetisi dan tentukan target lomba yang selaras dengan minatmu.',
               icon: Target,
               color: 'text-blue-700 bg-blue-50 border-blue-200/80',
             },
             {
               step: '02',
               title: 'Cari Partner Tim',
-              desc: 'Algoritma matching mencarikan rekan yang melengkapi keahlian teknis dan peran dalam tim.',
+              desc: 'Fitur pencocokan partner membantu mencari rekan dengan keahlian dan peran yang saling melengkapi.',
               icon: Users,
               color: 'text-blue-800 bg-blue-50 border-blue-200/80',
             },
             {
               step: '03',
-              title: 'Roadmap & Bimbingan',
-              desc: 'Ikuti fase persiapan mandiri, pantau jadwal tenggat, dan konsultasikan kendala ke dosen pembimbing.',
+              title: 'Roadmap & Konsultasi',
+              desc: 'Ikuti fase persiapan mandiri, pantau jadwal tenggat, dan hubungi kontak konsultasi yang dikelola validator.',
               icon: Layers,
               color: 'text-sky-700 bg-sky-50 border-sky-200/80',
             },
@@ -359,7 +359,7 @@ export const LandingPage: React.FC = () => {
               Temukan Partner Sesuai Kebutuhan Tim Tanpa Canggung
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-              Sering kesulitan mencari rekan yang bisa koding, riset data, desain, atau menulis proposal? Algoritma kami memperhitungkan kombinasi minat, variasi keahlian teknis, dan jadwal waktu untuk merekomendasikan partner yang saling melengkapi.
+              Sering kesulitan mencari rekan yang bisa pemrograman, riset data, desain, atau menulis proposal? Sistem pencocokan membandingkan target lomba, minat, variasi keahlian, dan ketersediaan waktu mahasiswa.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
@@ -390,7 +390,7 @@ export const LandingPage: React.FC = () => {
                   Kombinasi Tim Ideal
                 </span>
                 <span className="text-[11px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full">
-                  95% Match Score
+                  Contoh rekomendasi
                 </span>
               </div>
 
@@ -417,7 +417,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <div className="text-[10px] text-blue-300/80 text-center pt-1 italic">
-                *Algoritma menghitung komplementaritas keahlian untuk memaksimalkan potensi juara.
+                *Ilustrasi kombinasi peran tim. Ketersediaan dan kesesuaian mengikuti profil masing-masing mahasiswa.
               </div>
             </div>
           </div>
@@ -430,10 +430,10 @@ export const LandingPage: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 mb-1">
               <Trophy className="w-3.5 h-3.5" />
-              Agenda Utama Belmawa 2026
+              Daftar Kompetisi
             </div>
             <h2 id="kompetisi-preview" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Pilihan Lomba Paling Populer
+              Pilihan Kompetisi
             </h2>
             <p className="text-xs text-slate-500">
               Terbuka untuk mahasiswa Universitas Darussalam Gontor di berbagai cabang lomba.
@@ -485,13 +485,13 @@ export const LandingPage: React.FC = () => {
                       </span>
                     </div>
                     <span className="text-[11px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      Resmi Belmawa
+                      Informasi kompetisi
                     </span>
                   </div>
                 </CardContent>
 
                 <div className="px-5 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">Tahun 2026</span>
+                  <span className="text-slate-400 font-medium">Kompetisi</span>
                   <Link
                     to={`/kompetisi/${comp.slug}`}
                     aria-label={`Detail ${comp.namaResmi}`}
@@ -518,7 +518,7 @@ export const LandingPage: React.FC = () => {
         <div className="flex flex-wrap justify-center gap-3 pt-3">
           <Link to="/masuk">
             <Button size="lg" variant="white">
-              Masuk dengan Akun Demo
+              Masuk ke Portal TALENTA
             </Button>
           </Link>
           <Link to="/kompetisi">

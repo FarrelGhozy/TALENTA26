@@ -86,8 +86,13 @@ export const PreparationPage: React.FC = () => {
   }
 
   const totalTasks = roadmap?.fase.reduce((acc, f) => acc + f.latihan.length, 0) || 0;
-  const completedTasks = Object.values(checklist).filter(Boolean).length;
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const completedTasks =
+    roadmap?.fase.reduce(
+      (acc, f, pIdx) =>
+        acc + f.latihan.filter((_, lIdx) => Boolean(checklist[`p${pIdx}-l${lIdx}`])).length,
+      0
+    ) || 0;
+  const progressPercent = totalTasks > 0 ? Math.min(100, Math.round((completedTasks / totalTasks) * 100)) : 0;
 
   return (
     <div className="space-y-6">
@@ -114,7 +119,7 @@ export const PreparationPage: React.FC = () => {
               Ruang Belajar & Persiapan Mandiri
             </span>
             <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-              Belmawa 2026
+              Persiapan
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
@@ -144,7 +149,7 @@ export const PreparationPage: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-2 font-medium flex items-center justify-between">
             <span>{completedTasks} dari {totalTasks} tugas selesai</span>
             {progressPercent === 100 && (
-              <span className="text-emerald-600 font-bold">Lengkap! 🎉</span>
+              <span className="text-emerald-600 font-bold">Lengkap</span>
             )}
           </div>
         </div>

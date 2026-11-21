@@ -1,14 +1,40 @@
 import { API_BASE_URL } from '../../config/env';
-import type { Role, User } from '../../types';
+import type {
+  Achievement,
+  AchievementProof,
+  Competition,
+  Consultant,
+  Invite,
+  MatchCandidate,
+  Profile,
+  RankingResponse,
+  Role,
+  Team,
+  User,
+} from '../../types';
 import {
+  AcademicPeriodActivationPreview,
+  AcademicPeriodItem,
+  AuditLogItem,
+  CompetitionParticipantOption,
   IAchievementService,
   ICompetitionService,
   IConsultantService,
+  IDashboardService,
   IMatchingService,
   IRoadmapService,
   IStatsService,
+  ISystemService,
   ITeamService,
+  IValidatorContentService,
   IUserService,
+  PointRuleItem,
+  PointTemplateItem,
+  StudentDashboardData,
+  SystemHealthSummary,
+  ValidatorCompetitionItem,
+  ValidatorConsultantItem,
+  ValidatorRoadmapDetail,
 } from '../types';
 
 export interface ApiError {
@@ -34,14 +60,10 @@ export class ApiRequestError extends Error {
 
 // Helper fetcher terpadu dengan standar docs/16
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('talenta-token');
   const headers = new Headers(options.headers || {});
 
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
-  }
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -66,25 +88,139 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 function mapBackendUserToFrontend(raw: any): User {
   const role = (raw.role || 'mahasiswa') as Role;
   const profile = raw.studentProfile;
+  let nama = profile?.fullName || raw.fullName;
+  if (!nama) {
+    if (role === 'super_admin') {
+      nama = 'Super Administrator';
+    } else if (role === 'validator') {
+      nama = 'Tim Validator';
+    } else {
+      nama = raw.email?.split('@')[0] || 'Pengguna';
+    }
+  }
+
   return {
     id: raw.id,
     institutionId: raw.institutionId || 'unida-gontor',
-    nama: profile?.fullName || raw.fullName || raw.email?.split('@')[0] || 'Pengguna',
+    nama,
     email: raw.email || '',
-    prodi: profile?.studyProgram || 'Teknik Informatika',
-    angkatan: 2026,
+    nim: profile?.nim,
+    prodi: profile?.studyProgram || (role === 'mahasiswa' ? 'Teknik Informatika' : '-'),
+    fakultas: profile?.faculty,
+    angkatan: profile?.enrollmentYear,
+    phone: profile?.phone,
+    bio: profile?.bio,
+    pengalaman: profile?.experience,
+    avatar: profile?.avatarUrl || raw?.avatarUrl || raw?.avatar || undefined,
     role: [role],
-    skill: [],
-    minat: [],
-    ketersediaan: { hari: ['Senin', 'Rabu'], jam: 4 },
-    peranBisa: ['Anggota'],
+    skill: Array.isArray(profile?.skills) ? profile.skills : [],
+    minat: Array.isArray(profile?.interests) ? profile.interests : [],
+    ketersediaan: profile?.availability || { hari: ['Senin', 'Rabu'], jam: 4 },
+    peranBisa: Array.isArray(profile?.rolesCapable) ? profile.rolesCapable : ['Anggota'],
+  };
+}
+
+function mapBackendCompetitionToFrontend(raw: any): Competition {
+  return {
+    id: raw.id,
+    slug: raw.slug,
+    institutionId: raw.institutionId || 'unida-gontor',
+    namaResmi: raw.name || raw.namaResmi || '',
+    penyelenggara: raw.organizer || raw.penyelenggara || '',
+    kategori: raw.category || raw.kategori || '',
+    tingkat: raw.level || raw.tingkat || '',
+    format: raw.format,
+    deskripsi: raw.description || raw.deskripsi || '',
+    syarat: Array.isArray(raw.requirements) ? raw.requirements : raw.syarat || [],
+    komposisi: {
+      min: raw.minTeamMembers ?? raw.komposisi?.min ?? 1,
+      max: raw.maxTeamMembers ?? raw.komposisi?.max ?? 3,
+      peranWajib: Array.isArray(raw.requiredRoles) ? raw.requiredRoles : raw.komposisi?.peranWajib || [],
+    },
+    tahapan: raw.tahapan || [],
+    jadwal: Array.isArray(raw.scheduleTimeline) ? raw.scheduleTimeline : raw.jadwal || [],
+    seleksiInternal: raw.seleksiInternal || [],
+    competitionCategoryId: raw.competitionCategoryId,
+    pointTemplateId: raw.pointTemplateId,
+    pointDescription: raw.pointDescription,
+  };
+}
+
+function mapBackendCandidateToFrontend(c: any): MatchCandidate {
+  return {
+    user: {
+      id: c.userId || c.user?.id || '',
+      institutionId: 'unida-gontor',
+      nama: c.nama || c.user?.nama || 'Mahasiswa',
+      email: '', // Zero PII in matching
+      prodi: c.prodi || c.user?.prodi || '',
+      angkatan: c.enrollmentYear || c.user?.angkatan,
+      role: ['mahasiswa'],
+      skill: c.skill || c.user?.skill || [],
+      minat: c.minat || c.user?.minat || [],
+      ketersediaan: c.ketersediaan || c.user?.ketersediaan || { hari: ['Fleksibel'], jam: 4 },
+      peranBisa: c.peranBisa || c.user?.peranBisa || ['Anggota'],
+    },
+    matchScore: c.skorKecocokan ?? c.matchScore ?? 50,
+    labelKesesuaian: c.labelKesesuaian,
+    reasons: c.alasanKecocokan || c.reasons || [],
+    isOverlapTime: true,
+  };
+}
+
+function mapBackendInviteToFrontend(inv: any): Invite {
+  return {
+    id: inv.id,
+    institutionId: 'unida-gontor',
+    dari: inv.senderId || inv.dari,
+    ke: inv.receiverId || inv.ke,
+    teamId: inv.teamId,
+    status: inv.status,
+    createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString().split('T')[0] : '',
+  };
+}
+
+function mapBackendTeamToFrontend(raw: any): Team | null {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    institutionId: raw.institutionId || 'unida-gontor',
+    competitionSlug: raw.competition?.slug || raw.competitionSlug || '',
+    nama: raw.name || raw.nama || '',
+    anggota: (raw.members || raw.anggota || []).map((m: any) => ({
+      userId: m.userId,
+      status: m.status === 'active' || m.status === 'diterima' ? 'diterima' : 'diajukan',
+    })),
+    isFormed: raw.status === 'terbentuk' || raw.status === 'terkunci_seleksi',
+    status: raw.status,
+  };
+}
+
+function mapBackendConsultantToFrontend(c: any): Consultant {
+  return {
+    id: c.id,
+    institutionId: c.institutionId || 'unida-gontor',
+    nama: c.nama || c.name || '',
+    bidang: Array.isArray(c.bidang) ? c.bidang : [c.field || 'Konsultan'],
+    assignmentApproved: Boolean(c.assignmentApproved ?? c.isApproved),
+    isVerifiedContact: Boolean(c.isVerifiedContact ?? c.isApproved),
+    waMock: c.waMock || c.whatsappNumber || '',
   };
 }
 
 export const competitionApiService: ICompetitionService = {
-  getAll: () => apiFetch('/competitions'),
-  getBySlug: (slug) => apiFetch(`/competitions/${slug}`),
-  save: (competition) => apiFetch('/competitions', { method: 'POST', body: JSON.stringify(competition) }),
+  getAll: async () => {
+    const list = await apiFetch<any[]>('/competitions');
+    return Array.isArray(list) ? list.map(mapBackendCompetitionToFrontend) : [];
+  },
+  getBySlug: async (slug) => {
+    const raw = await apiFetch<any>(`/competitions/${slug}`);
+    return raw ? mapBackendCompetitionToFrontend(raw) : null;
+  },
+  save: (competition) =>
+    competition.id
+      ? apiFetch(`/admin/competitions/${competition.id}`, { method: 'PATCH', body: JSON.stringify(competition) })
+      : apiFetch('/admin/competitions', { method: 'POST', body: JSON.stringify(competition) }),
 };
 
 export const userApiService: IUserService & {
@@ -94,8 +230,22 @@ export const userApiService: IUserService & {
   forgotPassword?: (email: string) => Promise<{ message: string }>;
   resetPassword?: (token: string, pass: string) => Promise<{ message: string }>;
 } = {
-  getAll: () => apiFetch('/users'),
-  getById: (id) => apiFetch(`/users/${id}`),
+  getAll: async () => {
+    try {
+      const res = await apiFetch<any[]>('/users');
+      return Array.isArray(res) ? res.map(mapBackendUserToFrontend) : [];
+    } catch {
+      return [];
+    }
+  },
+  getById: async (id: string) => {
+    try {
+      const res = await apiFetch<any>(`/users/${id}`);
+      return mapBackendUserToFrontend(res);
+    } catch {
+      return null;
+    }
+  },
   getCurrentUser: async () => {
     const raw = await apiFetch<any>('/auth/me');
     return mapBackendUserToFrontend(raw);
@@ -105,9 +255,6 @@ export const userApiService: IUserService & {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (res.token) {
-      localStorage.setItem('talenta-token', res.token);
-    }
     return {
       user: mapBackendUserToFrontend(res.user),
       token: res.token,
@@ -118,9 +265,6 @@ export const userApiService: IUserService & {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    if (res.token) {
-      localStorage.setItem('talenta-token', res.token);
-    }
     return {
       user: mapBackendUserToFrontend(res.user),
       token: res.token,
@@ -130,7 +274,7 @@ export const userApiService: IUserService & {
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
     } finally {
-      localStorage.removeItem('talenta-token');
+      // Cookie HttpOnly dihapus oleh backend.
     }
   },
   forgotPassword: (email: string) =>
@@ -146,51 +290,568 @@ export const userApiService: IUserService & {
   updateProfile: async (_userId, data) => {
     const res = await apiFetch<any>('/me/profile', {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        fullName: data.nama,
+        studyProgram: data.prodi,
+        faculty: data.fakultas,
+        enrollmentYear: data.angkatan,
+        phone: data.phone,
+        bio: data.bio,
+        experience: data.pengalaman,
+        skills: data.skill,
+        interests: data.minat,
+        availability: data.ketersediaan,
+        rolesCapable: data.peranBisa,
+      }),
     });
-    return mapBackendUserToFrontend(res);
+    return mapBackendUserToFrontend({
+      id: res.userId || _userId,
+      role: 'mahasiswa',
+      studentProfile: res,
+      email: data.email,
+    });
   },
-  getProfile: () => apiFetch('/me/profile'),
-  setTargetCompetition: (userId, slug) =>
-    apiFetch(`/users/${userId}/target`, { method: 'POST', body: JSON.stringify({ slug }) }),
+  uploadAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return apiFetch<{ avatarUrl: string }>('/me/profile/avatar', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+  deleteAvatar: async () => {
+    await apiFetch('/me/profile/avatar', { method: 'DELETE' });
+  },
+  getTargetHistory: () => apiFetch('/me/targets/history'),
+  searchStudents: (q?: string) =>
+    apiFetch(`/students/directory${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getProfile: async (userId: string): Promise<Profile | null> => {
+    try {
+      const [raw, target] = await Promise.all([
+        apiFetch<any>('/me/profile').catch(() => null),
+        apiFetch<any>('/me/target').catch(() => null),
+      ]);
+      if (!raw && !target) return null;
+      return {
+        userId: raw?.userId || userId,
+        institutionId: 'unida-gontor',
+        targetKompetisiSlug: target?.competition?.slug || target?.competitionSlug || raw?.targetKompetisiSlug || '',
+        kelengkapan: 100,
+      };
+    } catch {
+      return null;
+    }
+  },
+  setTargetCompetition: async (userId: string, slug: string): Promise<Profile> => {
+    await apiFetch('/me/target', { method: 'POST', body: JSON.stringify({ slug }) });
+    return {
+      userId,
+      institutionId: 'unida-gontor',
+      targetKompetisiSlug: slug,
+      kelengkapan: 100,
+    };
+  },
 };
 
 export const matchingApiService: IMatchingService = {
-  getMatchCandidates: (userId) => apiFetch(`/matching/candidates?userId=${userId}`),
-  getInvites: (userId) => apiFetch(`/matching/invites?userId=${userId}`),
-  sendInvite: (dari, ke, teamId) =>
-    apiFetch('/matching/invites', { method: 'POST', body: JSON.stringify({ dari, ke, teamId }) }),
-  respondInvite: (inviteId, status) =>
-    apiFetch(`/matching/invites/${inviteId}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getMatchCandidates: async (): Promise<MatchCandidate[]> => {
+    const res = await apiFetch<any[]>('/matching/candidates');
+    return Array.isArray(res) ? res.map(mapBackendCandidateToFrontend) : [];
+  },
+  getInvites: async (): Promise<Invite[]> => {
+    const res = await apiFetch<any>('/me/invites');
+    if (Array.isArray(res)) {
+      return res.map(mapBackendInviteToFrontend);
+    }
+    const incoming = Array.isArray(res?.incoming) ? res.incoming : [];
+    const outgoing = Array.isArray(res?.outgoing) ? res.outgoing : [];
+    return [...incoming, ...outgoing].map(mapBackendInviteToFrontend);
+  },
+  sendInvite: async (_dari: string, ke: string, teamId: string): Promise<Invite> => {
+    const res = await apiFetch<any>(`/teams/${teamId}/invites`, {
+      method: 'POST',
+      body: JSON.stringify({ receiverId: ke }),
+    });
+    return mapBackendInviteToFrontend(res);
+  },
+  respondInvite: async (inviteId: string, status: 'diterima' | 'ditolak'): Promise<void> => {
+    await apiFetch(`/invites/${inviteId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action: status }),
+    });
+  },
+  cancelInvite: async (inviteId: string): Promise<void> => {
+    await apiFetch(`/invites/${inviteId}/cancel`, {
+      method: 'POST',
+    });
+  },
 };
 
 export const teamApiService: ITeamService = {
-  getTeamByUserId: (userId) => apiFetch(`/teams/my?userId=${userId}`),
-  leaveTeam: (userId, teamId) =>
-    apiFetch(`/teams/${teamId}/leave`, { method: 'POST', body: JSON.stringify({ userId }) }),
-  createTeam: (competitionSlug, creatorId, teamName) =>
-    apiFetch('/teams', { method: 'POST', body: JSON.stringify({ competitionSlug, creatorId, teamName }) }),
+  getTeamByUserId: async (): Promise<Team | null> => {
+    const raw = await apiFetch<any>('/teams/my');
+    return mapBackendTeamToFrontend(raw);
+  },
+  leaveTeam: async (_userId: string, teamId: string): Promise<void> => {
+    await apiFetch(`/teams/${teamId}/leave`, {
+      method: 'POST',
+    });
+  },
+  createTeam: async (competitionSlug: string, _creatorId: string, teamName: string): Promise<Team> => {
+    const raw = await apiFetch<any>('/teams', {
+      method: 'POST',
+      body: JSON.stringify({ competitionSlug, teamName }),
+    });
+    return mapBackendTeamToFrontend(raw)!;
+  },
 };
 
 export const roadmapApiService: IRoadmapService = {
-  getByCompetition: (slug) => apiFetch(`/roadmaps/${slug}`),
-  getChecklist: (userId, slug) => apiFetch(`/roadmaps/${slug}/checklist?userId=${userId}`),
-  toggleChecklist: (userId, slug, taskId) =>
-    apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ userId, taskId }) }),
+  getByCompetition: async (slug: string) => {
+    const raw = await apiFetch<any>(`/roadmaps/${slug}`);
+    if (!raw) return null;
+    return {
+      competitionSlug: slug,
+      institutionId: raw.institutionId || 'unida-gontor',
+      fase: raw.fase || [],
+    };
+  },
+  getChecklist: (_userId, slug) => apiFetch(`/roadmaps/${slug}/checklist`),
+  toggleChecklist: (_userId, slug, taskId) =>
+    apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ taskId }) }),
 };
 
+function mapBackendAchievementToFrontend(raw: any): Achievement {
+  const evidences: AchievementProof[] = Array.isArray(raw.evidences)
+    ? raw.evidences.map((e: any) => ({
+        id: e.id,
+        nama: e.fileName || e.name || 'berkas.pdf',
+        size: e.fileSize || e.size || 0,
+        mimeType: e.mimeType,
+        uploadedAt: e.uploadedAt,
+        isActive: e.isActive !== false,
+        supersededByRevisionId: e.supersededByRevisionId || null,
+      }))
+    : Array.isArray(raw.bukti)
+    ? raw.bukti
+    : [];
+
+  return {
+    id: raw.id,
+    institutionId: raw.institutionId || 'unida-gontor',
+    userId: raw.userId,
+    nama: raw.name || raw.nama || '',
+    penyelenggara: raw.organizer || raw.penyelenggara || '',
+    kategori: raw.category || raw.kategori || 'kompetisi',
+    tanggal: raw.eventDate ? new Date(raw.eventDate).toISOString().split('T')[0] : (raw.tanggal || ''),
+    tingkat: raw.level || raw.tingkat || 'nasional',
+    jenisCapaian: raw.result || raw.jenisCapaian || 'juara_1',
+    deskripsi: raw.description || raw.deskripsi,
+    bukti: evidences,
+    status: raw.status || 'menunggu',
+    version: raw.version || 1,
+    catatan: raw.reviewNote || raw.catatan,
+    dariSeleksiInternal: Boolean(raw.isFromInternalSelection || raw.dariSeleksiInternal),
+    competitionId: raw.competitionId || raw.competition?.id || null,
+    competitionSlug: raw.competition?.slug || raw.competitionSlug,
+    competitionName: raw.competition?.name,
+    participationType: raw.participationType || 'individu',
+    teamId: raw.teamId || raw.team?.id || null,
+    teamName: raw.team?.name || null,
+    competitionCategoryId: raw.competitionCategoryId || raw.competitionCategory?.id || null,
+    competitionCategoryName: raw.competitionCategory?.name || null,
+    subCategoryId: raw.subCategoryId || raw.subCategory?.id || null,
+    subCategoryName: raw.subCategory?.name || null,
+    subCompetitionName: raw.subCompetitionName || null,
+    potentialDuplicateOfId: raw.potentialDuplicateOfId || null,
+    pointRecommendation: raw.pointRecommendation || null,
+    participants: Array.isArray(raw.participants)
+      ? raw.participants.map((p: any) => ({
+          id: p.id,
+          userId: p.userId,
+          fullName: p.user?.studentProfile?.fullName || p.user?.fullName || 'Mahasiswa',
+          nim: p.user?.studentProfile?.nim,
+          studyProgram: p.user?.studentProfile?.studyProgram,
+          roleInTeam: p.roleInTeam,
+          isSubmitter: Boolean(p.isSubmitter),
+        }))
+      : undefined,
+    decisions: Array.isArray(raw.decisions)
+      ? raw.decisions.map((d: any) => ({
+          id: d.id,
+          action: d.action,
+          previousStatus: d.previousStatus,
+          newStatus: d.newStatus,
+          reason: d.reason,
+          calculatedPoints: d.calculatedPoints,
+          awardedPoints: d.awardedPoints,
+          pointSource: d.pointSource,
+          overrideReason: d.overrideReason,
+          version: d.version,
+          createdAt: d.createdAt,
+          decidedBy: d.decidedBy
+            ? {
+                id: d.decidedBy.id,
+                fullName: d.decidedBy.fullName || d.decidedBy.email || 'Validator',
+                role: d.decidedBy.role,
+              }
+            : null,
+        }))
+      : undefined,
+    revisions: Array.isArray(raw.revisions) ? raw.revisions : undefined,
+    submitterName: raw.user?.studentProfile?.fullName || raw.user?.fullName || undefined,
+    submitterNim: raw.user?.studentProfile?.nim || undefined,
+    submitterProdi: raw.user?.studentProfile?.studyProgram || undefined,
+  };
+}
+
 export const achievementApiService: IAchievementService = {
-  getAll: (userId) => apiFetch(`/achievements${userId ? `?userId=${userId}` : ''}`),
-  getById: (id) => apiFetch(`/achievements/${id}`),
-  create: (data) => apiFetch('/achievements', { method: 'POST', body: JSON.stringify(data) }),
-  verify: (id, status, catatan) =>
-    apiFetch(`/achievements/${id}/verify`, { method: 'PATCH', body: JSON.stringify({ status, catatan }) }),
+  getAll: async (userId?: string, status?: string): Promise<Achievement[]> => {
+    const endpoint = userId
+      ? `/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`
+      : `/admin/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`;
+    const res = await apiFetch<any[]>(endpoint);
+    return Array.isArray(res) ? res.map(mapBackendAchievementToFrontend) : [];
+  },
+
+  getById: async (id: string): Promise<Achievement | null> => {
+    try {
+      const res = await apiFetch<any>(`/admin/achievements/${id}`);
+      return mapBackendAchievementToFrontend(res);
+    } catch (err: any) {
+      if (err?.status === 403 || err?.status === 401) {
+        const res = await apiFetch<any>(`/me/achievements/${id}`);
+        return mapBackendAchievementToFrontend(res);
+      }
+      throw err;
+    }
+  },
+
+  create: async (data: any, files?: File[]): Promise<Achievement> => {
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append('nama', data.nama || data.name);
+      formData.append('penyelenggara', data.penyelenggara || data.organizer);
+      formData.append('kategori', data.kategori || data.category);
+      formData.append('tingkat', data.tingkat || data.level);
+      formData.append('jenisCapaian', data.jenisCapaian || data.result);
+      formData.append('tanggal', data.tanggal || data.eventDate);
+      if (data.deskripsi || data.description) formData.append('deskripsi', data.deskripsi || data.description);
+      if (data.competitionId) formData.append('competitionId', data.competitionId);
+      if (data.competitionSlug) formData.append('competitionSlug', data.competitionSlug);
+      if (data.competitionCategoryId) formData.append('competitionCategoryId', data.competitionCategoryId);
+      if (data.subCategoryId) formData.append('subCategoryId', data.subCategoryId);
+      if (data.subCompetitionName) formData.append('subCompetitionName', data.subCompetitionName);
+      if (data.participationType) formData.append('participationType', data.participationType);
+      if (data.teamId) formData.append('teamId', data.teamId);
+      if (Array.isArray(data.participantUserIds) && data.participantUserIds.length > 0) {
+        formData.append('participantUserIds', JSON.stringify(data.participantUserIds));
+      }
+      formData.append('dariSeleksiInternal', String(Boolean(data.dariSeleksiInternal)));
+      for (const f of files) {
+        formData.append('evidence', f);
+      }
+      const res = await apiFetch<any>('/me/achievements', {
+        method: 'POST',
+        body: formData,
+      });
+      return mapBackendAchievementToFrontend(res);
+    }
+
+    const res = await apiFetch<any>('/me/achievements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  submitRevision: async (id: string, data: any, files?: File[]): Promise<Achievement> => {
+    if ((files && files.length > 0) || (Array.isArray(data.replaceEvidenceIds) && data.replaceEvidenceIds.length > 0)) {
+      const formData = new FormData();
+      if (data.nama || data.name) formData.append('nama', data.nama || data.name);
+      if (data.penyelenggara || data.organizer) formData.append('penyelenggara', data.penyelenggara || data.organizer);
+      if (data.kategori || data.category) formData.append('kategori', data.kategori || data.category);
+      if (data.tingkat || data.level) formData.append('tingkat', data.tingkat || data.level);
+      if (data.jenisCapaian || data.result) formData.append('jenisCapaian', data.jenisCapaian || data.result);
+      if (data.tanggal || data.eventDate) formData.append('tanggal', data.tanggal || data.eventDate);
+      if (data.deskripsi !== undefined || data.description !== undefined) {
+        formData.append('deskripsi', data.deskripsi ?? data.description ?? '');
+      }
+      if (data.catatan || data.note) formData.append('catatan', data.catatan || data.note);
+      if (data.competitionCategoryId !== undefined) formData.append('competitionCategoryId', data.competitionCategoryId || '');
+      if (data.subCategoryId !== undefined) formData.append('subCategoryId', data.subCategoryId || '');
+      if (data.subCompetitionName !== undefined) formData.append('subCompetitionName', data.subCompetitionName || '');
+      if (data.participationType) formData.append('participationType', data.participationType);
+      if (data.teamId !== undefined) formData.append('teamId', data.teamId || '');
+      if (Array.isArray(data.participantUserIds)) {
+        formData.append('participantUserIds', JSON.stringify(data.participantUserIds));
+      }
+      if (Array.isArray(data.replaceEvidenceIds) && data.replaceEvidenceIds.length > 0) {
+        formData.append('replaceEvidenceIds', JSON.stringify(data.replaceEvidenceIds));
+      }
+      for (const f of files || []) {
+        formData.append('evidence', f);
+      }
+      const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+        method: 'POST',
+        body: formData,
+      });
+      return mapBackendAchievementToFrontend(res);
+    }
+
+    const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  cancel: async (id: string): Promise<Achievement> => {
+    const res = await apiFetch<any>(`/me/achievements/${id}/cancel`, {
+      method: 'POST',
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  verify: async (
+    id: string,
+    statusOrAction: any,
+    catatan?: string,
+    version?: number,
+    options?: { overridePoints?: number; overrideReason?: string; idempotencyKey?: string }
+  ): Promise<Achievement> => {
+    let action = statusOrAction;
+    if (statusOrAction === 'disetujui') action = 'approve';
+    else if (statusOrAction === 'perlu_perbaikan') action = 'request_changes';
+    else if (statusOrAction === 'ditolak') action = 'reject';
+
+    const res = await apiFetch<any>(`/admin/achievements/${id}/decisions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        action,
+        reason: catatan,
+        version,
+        overridePoints: options?.overridePoints,
+        overrideReason: options?.overrideReason,
+        idempotencyKey: options?.idempotencyKey,
+      }),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  correct: async (id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement> => {
+    const res = await apiFetch<any>(`/admin/achievements/${id}/corrections`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, version, targetStatus }),
+    });
+    return mapBackendAchievementToFrontend(res);
+  },
+
+  getEvidenceDownloadUrl: (evidenceId: string): string => {
+    return `${API_BASE_URL}/evidence/${evidenceId}/download`;
+  },
+
+  getCompetitionCategories: () => apiFetch('/competition-categories'),
+  getCompetitionPointConfig: (slug: string) => apiFetch(`/competitions/${slug}/point-rules`),
+
+  getRanking: async (periodId?: string): Promise<RankingResponse> => {
+    return apiFetch<RankingResponse>(`/ranking${periodId ? `?periodId=${periodId}` : ''}`);
+  },
+
+  getLifetimeRanking: async (): Promise<RankingResponse> => {
+    return apiFetch<RankingResponse>('/ranking/lifetime');
+  },
 };
 
 export const consultantApiService: IConsultantService = {
-  getByCompetition: (slug) => apiFetch(`/consultants?slug=${slug}`),
+  getByCompetition: async (slug: string): Promise<Consultant[]> => {
+    const res = await apiFetch<any[]>(`/consultants?slug=${slug}`);
+    return Array.isArray(res) ? res.map(mapBackendConsultantToFrontend) : [];
+  },
+};
+
+export const validatorContentApiService: IValidatorContentService = {
+  getCompetitions: () => apiFetch<ValidatorCompetitionItem[]>('/admin/competitions'),
+  createCompetition: (data) =>
+    apiFetch<ValidatorCompetitionItem>('/admin/competitions', { method: 'POST', body: JSON.stringify(data) }),
+  updateCompetition: (id, data) =>
+    apiFetch<ValidatorCompetitionItem>(`/admin/competitions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  setCompetitionStatus: (id, status) =>
+    apiFetch<ValidatorCompetitionItem>(`/admin/competitions/${id}/${status === 'published' ? 'publish' : 'archive'}`, { method: 'POST' }),
+  getRoadmap: (competitionSlug) =>
+    apiFetch<ValidatorRoadmapDetail>(`/admin/roadmaps/${competitionSlug}`),
+  saveRoadmap: (competitionSlug, phases) =>
+    apiFetch(`/admin/roadmaps/${competitionSlug}`, { method: 'POST', body: JSON.stringify({ phases }) }),
+  getConsultants: () => apiFetch<ValidatorConsultantItem[]>('/admin/consultants'),
+  createConsultant: (data) =>
+    apiFetch<ValidatorConsultantItem>('/admin/consultants', { method: 'POST', body: JSON.stringify(data) }),
+  updateConsultant: (id, data) =>
+    apiFetch<ValidatorConsultantItem>(`/admin/consultants/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteConsultant: async (id) => {
+    await apiFetch(`/admin/consultants/${id}`, { method: 'DELETE' });
+  },
+  getCompetitionParticipants: (competitionId) =>
+    apiFetch<CompetitionParticipantOption>(`/admin/competitions/${competitionId}/participants`),
+  getSelections: () => apiFetch('/admin/selections'),
+  saveSelection: (data) => apiFetch('/admin/selections', { method: 'POST', body: JSON.stringify(data) }),
+  getCompetitionCategories: () => apiFetch('/admin/competition-categories'),
+  createCompetitionCategory: (data) =>
+    apiFetch('/admin/competition-categories', { method: 'POST', body: JSON.stringify(data) }),
+  updateCompetitionCategory: (id, data) =>
+    apiFetch(`/admin/competition-categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  createCompetitionSubCategory: (data) =>
+    apiFetch('/admin/competition-subcategories', { method: 'POST', body: JSON.stringify(data) }),
+  updateCompetitionSubCategory: (id, data) =>
+    apiFetch(`/admin/competition-subcategories/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  getCompetitionPointConfig: (competitionId) =>
+    apiFetch(`/admin/competitions/${competitionId}/point-rules`),
+  saveCompetitionPointConfig: (competitionId, data) =>
+    apiFetch(`/admin/competitions/${competitionId}/point-rules`, { method: 'PUT', body: JSON.stringify(data) }),
+  getPointTemplates: () => apiFetch<PointTemplateItem[]>('/system/point-templates').catch(() => []),
 };
 
 export const statsApiService: IStatsService = {
-  getAdminStats: () => apiFetch('/stats/admin'),
+  getAdminStats: async (): Promise<any> => {
+    const raw = await apiFetch<any>('/stats/admin');
+    const queue = raw?.queue || {};
+    const teams = raw?.teams || {};
+    const users = raw?.users || {};
+    const totalPengajuan =
+      (queue.pendingVerifications || 0) +
+      (queue.revisionNeededCount || 0) +
+      (queue.approvedCount || 0) +
+      (queue.rejectedCount || 0);
+
+    return {
+      totalMahasiswa: users.totalStudents || 0,
+      pesertaPerKompetisi: raw?.distribution?.participantsByCompetition || {},
+      totalTimTerbentuk: teams.terbentuk || 0,
+      pengajuanPrestasi: {
+        total: totalPengajuan,
+        menunggu: queue.pendingVerifications || 0,
+        perluPerbaikan: queue.revisionNeededCount || 0,
+        disetujui: queue.approvedCount || 0,
+        ditolak: queue.rejectedCount || 0,
+      },
+      delegasiTerkonfirmasi: raw?.selections?.confirmedPassed ?? 0,
+    };
+  },
+};
+
+export const systemApiService: ISystemService = {
+  getUsers: (params) => {
+    const qs = new URLSearchParams();
+    if (params?.role) qs.set('role', params.role);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.search) qs.set('q', params.search);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ users: any[]; total: number; page: number; totalPages: number }>(`/system/users${query}`);
+  },
+  updateUserStatus: (userId, status) => {
+    return apiFetch(`/system/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+  createStaff: (data) => {
+    return apiFetch('/system/users/staff', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateUserName: (userId, fullName) => {
+    return apiFetch(`/system/users/${userId}/name`, {
+      method: 'PATCH',
+      body: JSON.stringify({ fullName }),
+    });
+  },
+  updateStaffRole: (userId, role) => {
+    return apiFetch(`/system/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+  getAcademicPeriods: () => {
+    return apiFetch<AcademicPeriodItem[]>('/system/academic-periods');
+  },
+  createAcademicPeriod: (data) => {
+    return apiFetch<AcademicPeriodItem>('/system/academic-periods', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  getAcademicPeriodPreview: (id) => {
+    return apiFetch<AcademicPeriodActivationPreview>(`/system/academic-periods/${id}/activation-preview`);
+  },
+  activateAcademicPeriod: (id, archiveOldTargets = true) => {
+    return apiFetch<AcademicPeriodItem>(`/system/academic-periods/${id}/activate`, {
+      method: 'POST',
+      body: JSON.stringify({ archiveOldTargets }),
+    });
+  },
+  getPointRules: () => {
+    return apiFetch<{ activeVersion: number | null; activeRules: PointRuleItem[]; versions: any[] }>('/system/point-rules');
+  },
+  createPointRuleVersion: (rules) => {
+    return apiFetch('/system/point-rules/version', {
+      method: 'POST',
+      body: JSON.stringify({ rules }),
+    });
+  },
+  getPointTemplates: () => apiFetch<PointTemplateItem[]>('/system/point-templates'),
+  createPointTemplate: (data) =>
+    apiFetch<PointTemplateItem>('/system/point-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  activatePointTemplate: (id) =>
+    apiFetch<PointTemplateItem>(`/system/point-templates/${id}/activate`, {
+      method: 'POST',
+    }),
+  getAuditLogs: (params) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set('action', params.action);
+    if (params?.actorId) qs.set('actorId', params.actorId);
+    if (params?.targetType) qs.set('targetType', params.targetType);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return apiFetch<{ logs: AuditLogItem[]; total: number; page: number; totalPages: number }>(`/system/audit-logs${query}`);
+  },
+  getHealth: () => {
+    return apiFetch<SystemHealthSummary>('/system/health');
+  },
+};
+
+export const dashboardApiService: IDashboardService = {
+  getStudentDashboard: () => apiFetch<StudentDashboardData>('/me/dashboard'),
+  getAdminDashboard: () => apiFetch<any>('/admin/dashboard'),
+  downloadAchievementsCsv: async (filters): Promise<void> => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.academicPeriodId) params.set('academicPeriodId', filters.academicPeriodId);
+    if (filters?.category) params.set('category', filters.category);
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/admin/export${qs}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!res.ok) {
+      throw new Error(`Gagal mengunduh CSV: status ${res.status}`);
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rekap-prestasi-talenta-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
 };

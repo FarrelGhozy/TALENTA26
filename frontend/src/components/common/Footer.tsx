@@ -24,15 +24,15 @@ export const Footer: React.FC = () => {
                 TALENTA UNIDA Gontor
               </span>
               <span className="text-[10px] bg-blue-500/25 text-sky-300 font-bold px-2 py-0.5 rounded border border-blue-400/40">
-                2026
+                TALENTA
               </span>
             </div>
             <p className="text-xs text-slate-300/90 leading-relaxed max-w-md">
               Platform pembinaan dan pendataan prestasi mahasiswa Universitas Darussalam Gontor. Mengintegrasikan pemetaan potensi talenta, pembentukan tim komplementer, roadmap persiapan mandiri, dan pencatatan capaian prestasi.
             </p>
             <div className="flex items-center gap-2 text-xs text-sky-200 font-semibold bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-700/50 w-fit backdrop-blur-xs">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              Demo pembinaan dan pencatatan prestasi
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
+              Sistem Pembinaan dan Pencatatan Prestasi Kampus
             </div>
           </div>
 
@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
                   className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
                 >
                   <Trophy className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
-                  Katalog Kompetisi Belmawa
+                  Katalog Kompetisi
                 </Link>
               </li>
               <li>
@@ -56,8 +56,8 @@ export const Footer: React.FC = () => {
                   to="/masuk"
                   className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
                 >
-                  <GraduationCap className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
-                  Pilih Role Demo & Masuk
+                  <GraduationCap className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                  Masuk ke Portal TALENTA
                 </Link>
               </li>
               <li>
@@ -82,14 +82,14 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2 text-xs text-slate-300/80 leading-relaxed">
               <li>• Menjunjung tinggi nilai keislaman, keikhlasan, dan kesungguhan (*Mujahadah*).</li>
               <li>• Rekomendasi tim membantu menemukan keahlian yang saling melengkapi.</li>
-              <li>• Pengajuan prestasi pada demo menggunakan data simulasi.</li>
+              <li>• Pengesahan prestasi diverifikasi secara transparan oleh validator kampus.</li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-blue-900/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            © 2026 Universitas Darussalam Gontor — TALENTA Pembinaan Mahasiswa.
+            TALENTA — Pembinaan Mahasiswa.
           </div>
           <div className="flex items-center gap-1.5 text-slate-400">
             <span>Untuk generasi khaira ummah berprestasi</span>

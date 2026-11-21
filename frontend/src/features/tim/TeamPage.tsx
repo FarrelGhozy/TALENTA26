@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, LogOut, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck, XCircle, Trophy } from 'lucide-react';
+import { Users, LogOut, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck, Info, Trophy, Plus } from 'lucide-react';
 import { Competition, Team, User } from '../../types';
 import { competitionService, teamService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
@@ -10,6 +10,7 @@ import { TeamStatusBanner } from './components/TeamStatusBanner';
 import { MemberList } from './components/MemberList';
 import { LeaveTeamModal } from './components/LeaveTeamModal';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageLoading } from '../../components/ui/Skeleton';
@@ -19,18 +20,22 @@ export const TeamPage: React.FC = () => {
   const { notify } = useToast();
   const [team, setTeam] = useState<Team | null>(null);
   const [competition, setCompetition] = useState<Competition | null>(null);
+  const [targetCompetition, setTargetCompetition] = useState<Competition | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [creatingTeam, setCreatingTeam] = useState(false);
 
   const loadData = async () => {
     if (!currentUser) return;
     try {
-      const [t, users] = await Promise.all([
+      const [t, users, prof] = await Promise.all([
         teamService.getTeamByUserId(currentUser.id),
         userService.getAll(),
+        userService.getProfile(currentUser.id).catch(() => null),
       ]);
       setTeam(t);
       setAllUsers(users);
@@ -38,6 +43,14 @@ export const TeamPage: React.FC = () => {
       if (t) {
         const comp = await competitionService.getBySlug(t.competitionSlug);
         setCompetition(comp);
+      } else {
+        setCompetition(null);
+      }
+      if (prof?.targetKompetisiSlug) {
+        const targetComp = await competitionService.getBySlug(prof.targetKompetisiSlug).catch(() => null);
+        setTargetCompetition(targetComp);
+      } else {
+        setTargetCompetition(null);
       }
       setLoading(false);
     } catch {
@@ -50,6 +63,27 @@ export const TeamPage: React.FC = () => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
+
+  const handleCreateCustomTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !targetCompetition) return;
+    const cleanName = newTeamName.trim();
+    if (cleanName.length < 3) {
+      notify('Nama tim minimal 3 karakter.', 'error');
+      return;
+    }
+    setCreatingTeam(true);
+    try {
+      await teamService.createTeam(targetCompetition.slug, currentUser.id, cleanName);
+      setNewTeamName('');
+      notify(`Tim "${cleanName}" berhasil dibuat!`);
+      await loadData();
+    } catch (err: any) {
+      notify(err?.message || 'Gagal membuat tim baru.', 'error');
+    } finally {
+      setCreatingTeam(false);
+    }
+  };
 
   const handleLeaveConfirm = async () => {
     if (!currentUser || !team) return;
@@ -83,30 +117,100 @@ export const TeamPage: React.FC = () => {
   }
 
   if (!team || !competition) {
+    const isIndividualTarget =
+      targetCompetition?.format === 'individu' ||
+      (targetCompetition &&
+        targetCompetition.komposisi.min === 1 &&
+        targetCompetition.komposisi.max === 1);
+
+    if (isIndividualTarget && targetCompetition) {
+      return (
+        <EmptyState
+          icon={<Users className="w-8 h-8 text-blue-700" />}
+          title={`Target Kompetisi Individu (${targetCompetition.namaResmi})`}
+          description="Kompetisi target Anda bersifat perseorangan sehingga tidak membutuhkan tim. Lanjutkan persiapan Anda melalui Ruang Persiapan."
+          action={
+            <div className="flex flex-wrap gap-2.5 justify-center">
+              <Link to={`/app/kompetisi/${targetCompetition.slug}/persiapan`}>
+                <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
+                  Buka Ruang Persiapan
+                </Button>
+              </Link>
+              <Link to="/app/profil?need=target">
+                <Button size="sm" variant="outline">
+                  Ubah Target Kompetisi
+                </Button>
+              </Link>
+            </div>
+          }
+        />
+      );
+    }
+
     return (
-      <EmptyState
-        icon={<Users className="w-8 h-8 text-blue-700" />}
-        title="Kamu Belum Memiliki Tim Kompetisi"
-        description="Pilih salah satu kompetisi Belmawa dan undang calon partner untuk membentuk tim yang solid."
-        action={
-          <div className="flex flex-wrap gap-2.5 justify-center">
-            <Link to="/app/partner">
-              <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                Cari Partner Tim
+      <div className="max-w-2xl mx-auto space-y-6">
+        <EmptyState
+          icon={<Users className="w-8 h-8 text-blue-700" />}
+          title="Kamu Belum Memiliki Tim Kompetisi"
+          description={
+            targetCompetition
+              ? `Buat tim dengan nama pilihanmu untuk lomba ${targetCompetition.namaResmi}, atau cari calon partner tim terlebih dahulu.`
+              : 'Pilih salah satu kompetisi beregu dan undang calon partner untuk membentuk tim yang solid.'
+          }
+          action={
+            <div className="flex flex-wrap gap-2.5 justify-center">
+              <Link to="/app/partner">
+                <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
+                  Cari Partner Tim
+                </Button>
+              </Link>
+              <Link to="/kompetisi">
+                <Button size="sm" variant="outline">
+                  Lihat Katalog Lomba
+                </Button>
+              </Link>
+            </div>
+          }
+        />
+
+        {targetCompetition && (
+          <form
+            onSubmit={handleCreateCustomTeam}
+            className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4"
+          >
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900">Buat Tim Baru ({targetCompetition.namaResmi})</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Tentukan nama tim sebelum mengundang rekan dari halaman Partner.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+              <div className="flex-1">
+                <Input
+                  label="Nama Tim"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  placeholder="contoh: Tim Gontor Tech"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                size="md"
+                isLoading={creatingTeam}
+                leftIcon={<Plus className="w-4 h-4" aria-hidden="true" />}
+              >
+                Buat Tim
               </Button>
-            </Link>
-            <Link to="/kompetisi">
-              <Button size="sm" variant="outline">
-                Lihat Katalog Lomba
-              </Button>
-            </Link>
-          </div>
-        }
-      />
+            </div>
+          </form>
+        )}
+      </div>
     );
   }
 
   const validation = validateTeamFormation(team, allUsers, competition);
+  const isLocked = team.status === 'terkunci_seleksi';
 
   // Prodis represented in team
   const acceptedUsers = team.anggota
@@ -119,7 +223,7 @@ export const TeamPage: React.FC = () => {
     {
       label: `Kuantitas Anggota (${validation.acceptedCount}/${validation.minNeeded}–${validation.maxAllowed} org)`,
       satisfied: validation.acceptedCount >= validation.minNeeded && validation.acceptedCount <= validation.maxAllowed,
-      desc: validation.acceptedCount < validation.minNeeded ? `Kurang ${validation.minNeeded - validation.acceptedCount} anggota lagi` : 'Sesuai batas resmi',
+      desc: validation.acceptedCount < validation.minNeeded ? `Kurang ${validation.minNeeded - validation.acceptedCount} anggota lagi` : 'Sesuai batas kompetisi',
     },
     {
       label: 'Penetapan Ketua Tim',
@@ -127,12 +231,15 @@ export const TeamPage: React.FC = () => {
       desc: acceptedUsers[0] ? `Ketua: ${acceptedUsers[0].nama}` : 'Belum ditetapkan',
     },
     {
-      label: `Kelengkapan Peran Wajib (${competition.komposisi.peranWajib.join(', ')})`,
+      label: `Kelengkapan Peran Disarankan (${competition.komposisi.peranWajib.join(', ')})`,
       satisfied: validation.missingRoles.length === 0,
-      desc: validation.missingRoles.length === 0 ? 'Semua peran kunci terisi' : `Kurang: ${validation.missingRoles.join(', ')}`,
+      desc:
+        validation.missingRoles.length === 0
+          ? 'Semua peran yang disarankan terisi'
+          : `Saran pelengkap: ${validation.missingRoles.join(', ')}`,
     },
     {
-      label: 'Keberagaman Lintas Program Studi',
+      label: 'Keberagaman Lintas Program Studi (Disarankan)',
       satisfied: uniqueProdis.length >= 2,
       desc: `${uniqueProdis.length} program studi (${uniqueProdis.join(', ') || 'Belum ada'})`,
     },
@@ -160,31 +267,33 @@ export const TeamPage: React.FC = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 self-start sm:self-center"
+          disabled={isLocked}
+          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50 self-start sm:self-center"
           onClick={() => setIsLeaveModalOpen(true)}
-          leftIcon={<LogOut className="w-3.5 h-3.5" />}
+          leftIcon={<LogOut className="w-3.5 h-3.5" aria-hidden="true" />}
         >
-          Keluar dari Tim
+          {isLocked ? 'Terkunci Seleksi' : 'Keluar dari Tim'}
         </Button>
       </div>
 
       {/* Team Status Banner */}
       <TeamStatusBanner
         isFormed={validation.isFormed}
+        isLocked={isLocked}
         statusText={validation.statusText}
         competitionSlug={team.competitionSlug}
       />
 
-      {/* Belmawa Rule Compliance Audit Card */}
+      {/* Competition rule summary */}
       <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-700" />
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-              Audit Kelayakan Formasi Tim Belmawa
+              Pemeriksaan Formasi Tim
             </h3>
           </div>
-          <span className="text-[11px] text-slate-400">Pedoman Dikti 2026</span>
+          <span className="text-[11px] text-slate-400">Aturan kompetisi</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -198,9 +307,9 @@ export const TeamPage: React.FC = () => {
               }`}
             >
               {rule.satisfied ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
               ) : (
-                <XCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
               )}
               <div className="min-w-0">
                 <div className="font-extrabold truncate">{rule.label}</div>
@@ -252,7 +361,7 @@ export const TeamPage: React.FC = () => {
               Lanjutkan ke Katalog Perlombaan
             </h3>
             <p className="text-xs text-blue-100/85 leading-relaxed">
-              Tim Anda membidik <strong className="text-white font-bold">{competition.namaResmi}</strong>. Kunjungi katalog lomba untuk menyimak 3 tahapan pembinaan (Pembinaan, Seleksi Internal, dan Input Prestasi), jadwal kegiatan, serta pedoman teknis resmi Belmawa.
+              Tim Anda membidik <strong className="text-white font-bold">{competition.namaResmi}</strong>. Kunjungi katalog lomba untuk menyimak 3 tahapan pembinaan (Pembinaan, Seleksi Internal, dan Input Prestasi), jadwal kegiatan, serta informasi kompetisi.
             </p>
           </div>
 

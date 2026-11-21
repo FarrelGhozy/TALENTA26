@@ -46,6 +46,7 @@ export const router = createBrowserRouter(
           { path: 'tim', lazy: lazyRoute(() => import('../features/tim/TeamPage'), 'TeamPage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/prestasi/AchievementListPage'), 'AchievementListPage') },
           { path: 'prestasi/baru', lazy: lazyRoute(() => import('../features/prestasi/AchievementNewPage'), 'AchievementNewPage') },
+          { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/prestasi/AchievementDetailPage'), 'AchievementDetailPage') },
           {
             element: <RequireTarget />,
             children: [{ path: 'kompetisi/:slug/persiapan', lazy: lazyRoute(() => import('../features/roadmap/PreparationPage'), 'PreparationPage') }],
@@ -82,6 +83,7 @@ export const router = createBrowserRouter(
         element: <AppLayout />,
         children: [
           { index: true, lazy: lazyRoute(() => import('../features/validator/ValidatorDashboardPage'), 'ValidatorDashboardPage') },
+          { path: 'konten', lazy: lazyRoute(() => import('../features/validator/ValidatorContentPage'), 'ValidatorContentPage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/verifikasi/VerificationListPage'), 'VerificationListPage') },
           { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/verifikasi/VerificationDetailPage'), 'VerificationDetailPage') },
         ],
@@ -91,6 +93,10 @@ export const router = createBrowserRouter(
 
   { path: '/admin', element: <Navigate to="/super-admin" replace /> },
   { path: '/verifikasi', element: <Navigate to="/validator/prestasi" replace /> },
+  { path: '/login', element: <Navigate to="/masuk" replace /> },
+  { path: '/auth/login', element: <Navigate to="/masuk" replace /> },
+  { path: '/register', element: <Navigate to="/daftar" replace /> },
+  { path: '/auth/register', element: <Navigate to="/daftar" replace /> },
   { path: '/404', element: <NotFoundPage /> },
   { path: '*', element: <NotFoundPage /> },
   ],

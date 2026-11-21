@@ -9,6 +9,15 @@ interface MemberListProps {
   currentUserId: string;
 }
 
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return '??';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export const MemberList: React.FC<MemberListProps> = ({ members, allUsers, currentUserId }) => {
   return (
     <div className="space-y-3.5">
@@ -45,7 +54,7 @@ export const MemberList: React.FC<MemberListProps> = ({ members, allUsers, curre
                       aria-hidden="true"
                       className="w-10 h-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 to-blue-900 text-white font-black text-xs flex items-center justify-center shadow-xs"
                     >
-                      {user ? user.nama.substring(0, 2).toUpperCase() : '??'}
+                      {getInitials(user?.nama)}
                     </div>
                   )}
                   <div className="min-w-0">

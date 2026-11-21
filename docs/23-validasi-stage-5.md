@@ -1,0 +1,127 @@
+# 23 — Bukti validasi Stage 5
+
+## Validasi Ulang Gate Stage 5 (Pasca Fase 1–3) — 21 November 2026
+
+Seluruh temuan audit keamanan, bug poin/ledger, fitur keputusan `K-15`–`K-22`, pembersihan teks/klaim terlarang (`BAAK`, `SK dan transkrip`, `PDDIKTI`, emoji UI, nomor WA dummy), dan optimasi skrip cadangan telah ditutup dan diverifikasi ulang secara teknis:
+
+- **Pemeriksaan tipe & lint**: `bun run typecheck` (`0` error di frontend & backend) dan `bun run lint` (`0` warning, `0` error pada 136 file) lulus.
+- **Build Produksi Fail-Safe & Demo**: `bun run build` (`vite build --mode production`, pemindaian bundle `frontend/dist/` mengonfirmasi nol kredensial demo, nol preset PDF palsu, nol `RoleCardLogin`) dan `bun run build:demo` keduanya lulus tanpa galat.
+- **Uji Unit & Integrasi**:
+  - `bun test backend/tests/unit`: 13 uji unit lulus (`security`, `achievement-files`, `csv`, `storage-archive`).
+  - `bun run test:integration`: seluruh 7 suite integrasi pada `talenta_test` lulus (`auth` 20/20, `rbac`, `stage3`, `stage4`, `stage5` 18/18, `fase1-security-points` 7/7, `fase2-features` 7/7).
+- **Uji End-to-End Playwright (`bun tests/e2e/runner.ts`)**:
+  - Seluruh 4 skenario alur nyata (Publik & Responsif 390×844 / 768×1024 / 1440×900, Mahasiswa registrasi + pengajuan prestasi + detail `/app/prestasi/:id`, Validator `Kalkulasi Poin Otomatis` + approve + tampil di `/ranking`, serta Super Admin 5 tab + analitik + ekspor CSV) lulus penuh dalam ~8.91 detik terhadap server dev & database/storage lokal nyata.
+- **Cadangan & Pemulihan (Backup/Restore)**:
+  - `backend/src/lib/storage-archive.ts` diperbarui menggunakan `HeadObjectCommand` saat `listObjects` sehingga menghindari pengunduhan ganda objek; unit test `storage-archive.test.ts` lulus.
+  - `infra/scripts/backup-db.sh` kini memvalidasi nama DB `--test-restore` (`^[A-Za-z0-9_]{1,64}$` dan menolak menimpa DB sumber). Uji nyata `--test-restore talenta_restore_check` berhasil memulihkan **30 tabel** dengan verifikasi SHA-256 `OK`, serta menolak argumen tidak valid `'bad;drop'`.
+- **Hal yang tetap jujur menunggu pengesahan eksternal/server**:
+  - Sesi pengujian pembaca layar (*screen reader*) oleh pengguna manusia, penetapan angka kapasitas `O-06`, penetapan retensi/RTO/RPO `O-03`, uji restore bucket RustFS pada server produksi/staging nyata, dan pengesahan publikasi ranking `O-01`/`O-02` tetap menjadi gate operasional non-kode sebelum go-live data mahasiswa nyata.
+
+---
+
+## Ringkasan historis Stage 5 awal (21 November 2026)
+
+Catatan historis pemeriksaan Stage 5 sebelumnya: (bagian `PDDIKTI`/`SK dan transkrip` pada narasi lama telah diselaraskan dengan cakupan rilis awal UNIDA Gontor; `BAAK` dan `PDDIKTI` bukan bagian rilis awal).
+
+---
+
+## 1. Hasil Gate Stage 5
+
+Stage 5 dinyatakan **selesai dan memenuhi seluruh kriteria Definition of Done (DoD) serta Gate 5** karena:
+
+1. **Operasi Sistem Super Admin (`/api/v1/system/*`)**:
+   - **Pengelolaan Staf & Status Akun**:
+     - Super admin dapat membuat akun staf baru (peran `validator` atau `super_admin`) via `POST /api/v1/system/users/staff` dengan validasi email unik dan enkripsi argon2id.
+     - Super admin dapat mengubah peran staf via `PATCH /api/v1/system/users/:id/role`.
+     - Super admin dapat menangguhkan (`suspended`) atau mengaktifkan kembali akun via `PATCH /api/v1/system/users/:id/status`.
+     - **Pencabutan Sesi Instan (*Instant Session Invalidation*)**: Saat akun ditangguhkan, sistem secara otomatis memanggil `revokeAllUserSessions(userId)` yang mencabut seluruh token sesi aktif pengguna seketika itu juga; permintaan berikutnya dengan token tersebut langsung ditolak dengan `401 Unauthorized`.
+   - **Siklus & Transisi Atomik Periode Akademik**:
+     - Super admin dapat mendaftarkan periode akademik baru via `POST /api/v1/system/academic-periods`.
+     - Aktivasi periode via `POST /api/v1/system/academic-periods/:id/activate` berjalan dalam transaksi atomik (`prisma.$transaction`), memastikan seluruh periode lain dinonaktifkan (`isActive: false`) dan hanya periode terpilih yang aktif (`isActive: true`) tanpa menghapus atau merusak riwayat prestasi dari periode sebelumnya.
+   - **Pengelolaan Aturan Poin Terversi (`PointRule`)**:
+     - Endpoint `GET /api/v1/system/point-rules` menampilkan matriks bobot aktif serta riwayat seluruh versi aturan.
+     - Penerbitan versi aturan baru via `POST /api/v1/system/point-rules/version` secara atomik menonaktifkan aturan lama dan menetapkan nomor versi berikutnya (`v(n+1)`), memastikan integritas historis capaian lama tetap terpelihara.
+   - **Jejak Audit Terstruktur & Redaksi Data Sensitif**:
+     - Seluruh aktivitas administratif (`STAFF_CREATED`, `STAFF_ROLE_UPDATED`, `USER_STATUS_UPDATED`, `ACADEMIC_PERIOD_ACTIVATED`, `POINT_RULE_VERSION_CREATED`) tercatat otomatis dalam tabel `audit_events`.
+     - Fungsi pencatatan audit secara otomatis meredaksi kunci rahasia (*redacted keys* seperti `password`, `token`, `sessionToken`) sebelum disimpan.
+   - **Telemetri Kesehatan Sistem Tanpa Kebocoran Rahasia**:
+     - Endpoint `GET /api/v1/system/health` memverifikasi status konektivitas basis data MySQL dan RustFS S3 storage (`isAvailable()`), menghitung metrik penggunaan memori proses (Heap/RSS), waktu aktif (*uptime*), antrean pengajuan menunggu, dan total audit event.
+     - **Keamanan Informasi**: Respons sistem tidak membocorkan kredensial, string koneksi, atau kata sandi apa pun.
+
+2. **Dashboard Terpadu Lintas Peran**:
+   - **Dashboard Mahasiswa (`GET /api/v1/me/dashboard` & `BerandaPage`)**:
+     - Menyajikan persentase kelengkapan profil, target kompetisi aktif, status pembentukan tim, progres tugas *roadmap*, rincian status pengajuan prestasi, dan akumulasi poin periode berjalan.
+     - **Langkah Tindak Lanjut (*Actionable Steps*)**: Rekomendasi dinamis berdasar status mahasiswa (melengkapi profil jika < 80%, memperbaiki dokumen bukti jika ada permintaan revisi, menentukan target lomba, membentuk tim, dan menyelesaikan tugas persiapan).
+     - **Banner Peringatan Revisi Prestasi**: Banner oranye muncul di bagian atas beranda mahasiswa ketika terdapat pengajuan berstatus `perlu_perbaikan`, mengarahkan mahasiswa untuk segera memperbarui dokumen bukti sesuai catatan validator.
+   - **Dashboard Validator & Admin (`GET /api/v1/admin/dashboard` & `GET /api/v1/stats/admin`)**:
+     - Menyajikan ringkasan antrean verifikasi (`menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`), status publikasi kompetisi, rasio tim terbentuk vs mencari rekan, sebaran kategori capaian, dan kalender tenggat pendaftaran lomba terdekat.
+     - `ValidatorDashboardPage` dan `AdminDashboardPage` menampilkan data metrik riil dari layanan backend.
+
+3. **Ekspor Rekapitulasi Prestasi Resmi (`GET /api/v1/admin/export`)**:
+   - Menghasilkan berkas CSV resmi bertanda tangan UTF-8 BOM (`\uFEFF`) agar kompatibel langsung dengan Microsoft Excel tanpa masalah encoding (*mojibake*).
+   - Memuat kolom lengkap untuk pelaporan internal kampus: ID, Nama Mahasiswa, NIM, Program Studi, Fakultas, Nama Prestasi/Lomba, Penyelenggara, Kategori, Tingkat, Hasil Capaian, Tanggal Capaian, Periode Akademik, Status Verifikasi, dan Poin Sah.
+   - Dilindungi oleh pemeriksaan RBAC (hanya peran `validator` dan `super_admin` yang diizinkan mengunduh; mahasiswa ditolak `403 Forbidden`).
+
+4. **Kontrol Akses Ketat (Strict RBAC Barrier)**:
+   - Mahasiswa yang mencoba mengakses endpoint `/api/v1/system/*`, `/api/v1/admin/dashboard`, maupun `/api/v1/admin/export` secara konsisten ditolak dengan `403 Forbidden`.
+   - Validator yang mencoba mengakses operasi super admin (`/api/v1/system/*`) secara konsisten ditolak dengan `403 Forbidden`.
+
+5. **Ketahanan Operasional, Cadangan & Pemulihan (Disaster Recovery)**:
+   - Skrip `infra/scripts/backup-db.sh` dibuat dengan dukungan pencadangan konsisten via `mysqldump` dengan kompresi `gzip`, pembuatan *checksum* SHA-256 otomatis, dan penanganan kesalahan.
+   - **Uji Pemulihan (*Test Restore*) Terverifikasi**: Menjalankan `./infra/scripts/backup-db.sh --test-restore talenta_test` sukses memverifikasi integritas checksum, melakukan *restore* data dari arsip terkompresi ke basis data uji terisolasi `talenta_test`, dan memastikan seluruh 24 tabel terpulihkan secara utuh.
+   - Folder cadangan `backups/` dan arsip `.sql.gz` telah diamankan dalam `.gitignore` sehingga data dump tidak akan pernah bocor ke repositori git.
+
+6. **Frontend Super Admin & Kualitas Aksesibilitas**:
+   - `SuperAdminDashboardPage` diimplementasikan secara interaktif dengan 5 tab operasional: Staf & Akun, Periode Akademik, Aturan Poin, Jejak Audit, dan Kesehatan Sistem.
+   - Dilengkapi dialog modal untuk pembuatan staf baru, periode akademik, dan penyesuaian matriks poin berversi.
+   - Standar WCAG AA terpenuhi: navigasi keyboard penuh, kontras warna memadai, target sentuh minimal 44px, teks alternatif, dan penanganan keadaan loading/kosong/gagal/sukses.
+   - Dual build mode lulus 100%: `bun run build` (mode produksi) dan `bun run build:demo` (mode demo mock) berhasil dibangun tanpa galat.
+
+---
+
+## 2. Pemeriksaan Otomatis
+
+Seluruh pengujian dan pemeriksaan kualitas lulus pada repositori lokal:
+
+```bash
+bun test backend/tests/integration/   # 86 uji integrasi lulus across 5 test suites (3.91s)
+bun run typecheck                     # 0 error pada frontend & backend (tsc -p)
+bun run lint                          # 0 error, 0 warning pada 126 file (oxlint)
+bun run build                         # Mode produksi Vite berhasil (241ms)
+bun run build:demo                    # Mode demo Vite berhasil (235ms)
+./infra/scripts/backup-db.sh --test-restore talenta_test # Backup & restore 24 tabel sukses
+```
+
+### Rincian Uji Integrasi Suite `stage5.test.ts` (18 Uji):
+1. Mahasiswa dilarang mengakses API sistem super admin (`/api/v1/system/*`) -> `403 Forbidden`
+2. Validator dilarang mengakses API sistem super admin (`/api/v1/system/*`) -> `403 Forbidden`
+3. Mahasiswa dilarang mengakses dashboard analitik admin (`/api/v1/admin/dashboard`) -> `403 Forbidden`
+4. Mahasiswa dilarang mengunduh ekspor CSV resmi (`/api/v1/admin/export`) -> `403 Forbidden`
+5. Super admin dapat mengakses API sistem super admin -> `200 OK`
+6. Super admin dapat membuat akun staf validator baru -> `201 Created`
+7. Super admin dapat memperbarui peran staf dari validator ke super_admin -> `200 OK`
+8. Menangguhkan (*suspend*) akun secara instan mencabut sesi aktif pengguna -> Sesi lama ditolak `401 Unauthorized`
+9. Super admin dapat melihat daftar periode akademik -> `200 OK`
+10. Super admin dapat membuat periode akademik baru -> `201 Created`
+11. Super admin dapat mengaktifkan periode akademik secara atomik -> `200 OK`
+12. Super admin dapat melihat ringkasan versi aturan poin -> `200 OK`
+13. Super admin dapat menerbitkan versi aturan poin baru -> `201 Created`
+14. Super admin dapat menelusuri jejak audit sistem -> `200 OK`
+15. Super admin dapat memantau kesehatan sistem tanpa kebocoran rahasia -> `200 OK`
+16. Mahasiswa menerima data dashboard lengkap dengan langkah tindak lanjut aksi nyata -> `200 OK`
+17. Validator & Super Admin menerima statistik dashboard admin lengkap -> `200 OK`
+18. Ekspor CSV prestasi resmi (`/api/v1/admin/export`) menghasilkan file valid dengan UTF-8 BOM -> `200 OK`
+
+---
+
+## 3. Status Gate 5
+
+Kriteria Gate 5 sesuai [TODO.md](file:///home/fazy/projek/STACK2026/TODO.md) dan [docs/18-rencana-pengujian.md](file:///home/fazy/projek/STACK2026/docs/18-rencana-pengujian.md):
+- Operasi sistem super admin & validator: **LULUS**
+- Dashboard terpadu mahasiswa, validator, dan super admin: **LULUS**
+- Ekspor CSV resmi terotorisasi: **LULUS**
+- Kontrol akses ketat (RBAC) & pencabutan sesi instan: **LULUS**
+- Skrip cadangan & uji restore basis data terisolasi: **LULUS**
+- Kualitas kode, linter, typecheck, dan dual build produksi/demo: **LULUS**
+
+Status Gate teknis Stage 5 pasca Fase 1–3 dinyatakan **LULUS** (menunggu pengesahan operasional non-kode `O-01`, `O-02`, `O-03`, `O-06`, sesi pembaca layar manusia, serta uji restore RustFS nyata di staging server pada Stage 6).

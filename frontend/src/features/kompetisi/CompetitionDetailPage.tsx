@@ -6,9 +6,10 @@ import {
   ChevronRight,
   ShieldCheck,
   ListOrdered,
+  Award,
 } from 'lucide-react';
 import { Competition, Profile } from '../../types';
-import { competitionService, userService } from '@talenta/services';
+import { achievementService, competitionService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
@@ -17,8 +18,9 @@ import { Tabs } from '../../components/ui/Tabs';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { ScheduleTimeline } from './components/ScheduleTimeline';
 import { TeamRuleBox } from './components/TeamRuleBox';
+import { formatAchievementType } from '../../lib/format';
 
-const VALID_TABS = ['ringkasan', 'syarat', 'jadwal'] as const;
+const VALID_TABS = ['ringkasan', 'syarat', 'jadwal', 'poin'] as const;
 
 export const CompetitionDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,6 +29,7 @@ export const CompetitionDetailPage: React.FC = () => {
   const { currentUser } = useAuth();
   const { notify } = useToast();
   const [competition, setCompetition] = useState<Competition | null>(null);
+  const [pointConfig, setPointConfig] = useState<Awaited<ReturnType<NonNullable<typeof achievementService.getCompetitionPointConfig>>> | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,12 +48,14 @@ export const CompetitionDetailPage: React.FC = () => {
     let cancelled = false;
     Promise.all([
       competitionService.getBySlug(slug),
-      currentUser ? userService.getProfile(currentUser.id) : Promise.resolve(null),
+      currentUser && currentUser.role.includes('mahasiswa') ? userService.getProfile(currentUser.id) : Promise.resolve(null),
+      achievementService.getCompetitionPointConfig ? achievementService.getCompetitionPointConfig(slug).catch(() => null) : Promise.resolve(null),
     ])
-      .then(([comp, prof]) => {
+      .then(([comp, prof, pConf]) => {
         if (cancelled) return;
         setCompetition(comp);
         setProfile(prof);
+        setPointConfig(pConf);
         setLoading(false);
       })
       .catch(() => {
@@ -115,7 +120,7 @@ export const CompetitionDetailPage: React.FC = () => {
           </Badge>
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider inline-flex items-center gap-1">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            Tingkat {competition.tingkat} • Belmawa 2026
+            Tingkat {competition.tingkat}
           </span>
         </div>
 
@@ -128,29 +133,31 @@ export const CompetitionDetailPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="pt-2 flex flex-wrap items-center gap-3">
-          {isCurrentTarget ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge color="emerald" size="lg" dot>
-                Target Pembinaan Aktif Kamu
-              </Badge>
-              <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
-                <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Buka Ruang Persiapan
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <Button
-              size="md"
-              onClick={handleSelectAsTarget}
-              isLoading={saving}
-              leftIcon={<Target className="w-4 h-4" />}
-            >
-              Pilih sebagai Target Kompetisi Saya
-            </Button>
-          )}
-        </div>
+        {(!currentUser || currentUser.role.includes('mahasiswa')) && (
+          <div className="pt-2 flex flex-wrap items-center gap-3">
+            {isCurrentTarget ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge color="emerald" size="lg" dot>
+                  Target Pembinaan Aktif Kamu
+                </Badge>
+                <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
+                  <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
+                    Buka Ruang Persiapan
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <Button
+                size="md"
+                onClick={handleSelectAsTarget}
+                isLoading={saving}
+                leftIcon={<Target className="w-4 h-4" aria-hidden="true" />}
+              >
+                Pilih sebagai Target Kompetisi Saya
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabs & Content */}
@@ -160,6 +167,7 @@ export const CompetitionDetailPage: React.FC = () => {
             { id: 'ringkasan', label: 'Tahapan Perlombaan' },
             { id: 'syarat', label: 'Syarat & Ketentuan Tim' },
             { id: 'jadwal', label: 'Jadwal & Seleksi Internal' },
+            { id: 'poin', label: 'Keterangan & Bobot Poin' },
           ]}
           activeTab={currentTab}
           onChange={setActiveTab}
@@ -174,7 +182,7 @@ export const CompetitionDetailPage: React.FC = () => {
                   <h2 className="font-bold text-slate-900 text-sm">Alur Tahapan Pelaksanaan Lomba</h2>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Siklus persiapan delegasi UNIDA Gontor hingga pengajuan rekognisi prestasi resmi di TALENTA.
+                  Siklus persiapan delegasi UNIDA Gontor hingga pengajuan prestasi di TALENTA.
                 </p>
               </div>
 
@@ -246,6 +254,52 @@ export const CompetitionDetailPage: React.FC = () => {
               jadwalResmi={competition.jadwal}
               seleksiInternal={competition.seleksiInternal}
             />
+          )}
+
+          {currentTab === 'poin' && (
+            <div className="space-y-4 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-blue-700" aria-hidden="true" />
+                <h2 className="font-bold text-slate-900 text-sm">Ketentuan Bobot Poin Kompetisi</h2>
+              </div>
+              <p className="text-slate-600 leading-relaxed bg-slate-50 border border-slate-200 rounded-xl p-4">
+                {pointConfig?.pointDescription ||
+                  competition.pointDescription ||
+                  'Kompetisi ini menggunakan template bobot poin kampus aktif berdasarkan tingkat dan capaian, kecuali diatur khusus oleh validator per sub-lomba.'}
+              </p>
+              {pointConfig?.customRules && pointConfig.customRules.length > 0 ? (
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                      <tr>
+                        <th className="py-2.5 px-3">Sub-Lomba</th>
+                        <th className="py-2.5 px-3">Tingkat</th>
+                        <th className="py-2.5 px-3">Capaian</th>
+                        <th className="py-2.5 px-3">Poin</th>
+                        <th className="py-2.5 px-3">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pointConfig.customRules.map((rule, idx) => (
+                        <tr key={rule.id || idx} className="hover:bg-slate-50/70">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                            {rule.subCategory?.name || 'Semua sub-lomba'}
+                          </td>
+                          <td className="py-2.5 px-3 capitalize">{rule.level}</td>
+                          <td className="py-2.5 px-3">{formatAchievementType(rule.result)}</td>
+                          <td className="py-2.5 px-3 font-extrabold text-blue-700">{rule.points} poin</td>
+                          <td className="py-2.5 px-3 text-slate-500">{rule.description || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500">
+                  Belum ada pengecualian poin khusus; sistem akan menerapkan aturan template standar atau default sub-lomba saat verifikasi.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>

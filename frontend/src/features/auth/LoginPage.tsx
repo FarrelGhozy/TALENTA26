@@ -1,20 +1,29 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap, KeyRound, Info, ShieldCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthContext';
-import { RoleCardLogin } from './components/RoleCardLogin';
 import { FormLogin } from './components/FormLogin';
-import { APP_ENV, USE_MOCK } from '../../config/env';
+import { USE_MOCK, APP_ENV } from '../../config/env';
 import { Role } from '../../types';
+
+// Lazy-load kartu login demo agar di build produksi (MODE === 'production') tidak ikut masuk bundle utama
+const LazyRoleCardLogin =
+  import.meta.env.MODE !== 'production'
+    ? lazy(() => import('./components/RoleCardLogin').then((m) => ({ default: m.RoleCardLogin })))
+    : null;
 
 export const LoginPage: React.FC = () => {
   const { loginAsRole, loginWithCredentials, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
+
+  const isDevelopment =
+    import.meta.env.MODE !== 'production' && (APP_ENV === 'DEPLOYMENT' || USE_MOCK);
   const [authMode, setAuthMode] = useState<'demo' | 'manual'>(
-    APP_ENV === 'DEPLOYMENT' ? 'demo' : 'manual'
+    isDevelopment ? 'demo' : 'manual'
   );
+  const [loginError, setLoginError] = useState<string>('');
 
   const getSafeRedirect = (role: Role) => {
     const roleHome = role === 'super_admin'
@@ -43,16 +52,39 @@ export const LoginPage: React.FC = () => {
     return roleHome;
   };
 
-  const handleSelectRole = async (role: Role, userId: string) => {
-    await loginAsRole(role, userId);
-    navigate(getSafeRedirect(role), { replace: true });
+  const handleSelectRole = async (
+    role: Role,
+    userId: string,
+    credentials?: { email: string; pass: string }
+  ) => {
+    setLoginError('');
+    try {
+      if (USE_MOCK) {
+        await loginAsRole(role, userId);
+        navigate(getSafeRedirect(role), { replace: true });
+      } else if (credentials) {
+        const user = await loginWithCredentials(credentials.email, credentials.pass);
+        const userRole = user.role[0] || role;
+        navigate(getSafeRedirect(userRole), { replace: true });
+      } else {
+        await loginAsRole(role, userId);
+        navigate(getSafeRedirect(role), { replace: true });
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'Gagal login instan dengan peran ini. Silakan coba login manual.');
+    }
   };
 
   const handleFormSubmit = async (email: string, pass: string) => {
-    await loginWithCredentials(email, pass);
-    const users = await import('@talenta/services').then((services) => services.userService.getAll());
-    const role = users.find((user) => user.email.toLowerCase() === email.toLowerCase())?.role[0] || 'mahasiswa';
-    navigate(getSafeRedirect(role), { replace: true });
+    setLoginError('');
+    try {
+      const user = await loginWithCredentials(email, pass);
+      const role = user.role[0] || 'mahasiswa';
+      navigate(getSafeRedirect(role), { replace: true });
+    } catch (err: any) {
+      setLoginError(err.message || 'Login gagal. Periksa kembali email dan kata sandi Anda.');
+      throw err;
+    }
   };
 
   return (
@@ -64,49 +96,59 @@ export const LoginPage: React.FC = () => {
           Universitas Darussalam Gontor
         </div>
         <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
-          Portal Prestasi & Akselerasi Belmawa 2026
+          Portal Pembinaan dan Prestasi Mahasiswa
         </h1>
       </div>
 
       {redirect && (
         <div className="p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
           <Info className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Kamu perlu memilih peran terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
+          <span>Kamu perlu masuk terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
         </div>
       )}
 
-      {/* Mode Switcher Tabs */}
-      {USE_MOCK ? <div className="flex justify-center">
-        <div className="inline-flex p-1 bg-slate-200/80 rounded-2xl border border-slate-200 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setAuthMode('demo')}
-            className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
-              authMode === 'demo'
-                ? 'bg-white text-blue-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-blue-700" />
-            Mode Demo Instan (1-Klik)
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode('manual')}
-            className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
-              authMode === 'manual'
-                ? 'bg-white text-blue-800 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <KeyRound className="w-3.5 h-3.5 text-slate-600" />
-            Login manual
-          </button>
+      {loginError && isDevelopment && authMode === 'demo' && (
+        <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">
+          {loginError}
         </div>
-      </div> : null}
+      )}
 
-      {authMode === 'demo' ? (
-        <RoleCardLogin onSelectRole={handleSelectRole} isLoading={isLoading} />
+      {/* Mode Switcher Tabs (Hanya ditampilkan pada mode development / demo) */}
+      {isDevelopment && LazyRoleCardLogin && (
+        <div className="flex justify-center">
+          <div className="inline-flex p-1 bg-slate-200/80 rounded-2xl border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setAuthMode('demo')}
+              className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
+                authMode === 'demo'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5 text-blue-700" />
+              Pilih Peran Instan (1-Klik)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMode('manual')}
+              className={`px-4.5 py-2 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-2 cursor-pointer ${
+                authMode === 'manual'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5 text-slate-600" />
+              Login Manual (Email/Password)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isDevelopment && LazyRoleCardLogin && authMode === 'demo' ? (
+        <Suspense fallback={<div className="text-center text-xs text-slate-500 py-8">Menyiapkan pilihan peran...</div>}>
+          <LazyRoleCardLogin onSelectRole={handleSelectRole} isLoading={isLoading} />
+        </Suspense>
       ) : (
         <FormLogin onSubmit={handleFormSubmit} isLoading={isLoading} />
       )}
@@ -114,7 +156,7 @@ export const LoginPage: React.FC = () => {
       {/* Trust mark footer */}
       <div className="pt-6 border-t border-slate-200/80 text-center flex items-center justify-center gap-2 text-xs text-slate-400">
         <ShieldCheck className="w-4 h-4 text-slate-400" />
-        <span>Terhubung dengan kurikulum pembinaan nasional Belmawa Kemdiktisaintek 2026</span>
+        <span>Pembinaan dan pencatatan prestasi mahasiswa</span>
       </div>
     </div>
   );

@@ -2,6 +2,15 @@ import { Elysia } from 'elysia';
 import { prisma } from '../../lib/prisma';
 
 export const healthRoutes = new Elysia({ prefix: '/health' })
+  .get('/', () => {
+    return {
+      data: {
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+      },
+    };
+  })
   .get('/live', () => {
     return {
       data: {

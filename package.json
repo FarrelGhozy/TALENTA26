@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
     "dev": "vite frontend --config frontend/vite.config.ts",
     "dev:backend": "bun --watch backend/src/index.ts",
@@ -12,31 +15,37 @@
     "typecheck:frontend": "tsc -p frontend --noEmit",
     "typecheck:backend": "tsc -p backend --noEmit",
     "typecheck": "tsc -p frontend --noEmit && tsc -p backend --noEmit",
-    "test": "bun test backend/tests",
+    "test": "bun test backend/tests/unit && bun backend/tests/run-integration.ts",
+    "test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage backend/tests/unit backend/tests/integration/*.test.ts",
+    "test:integration": "bun backend/tests/run-integration.ts",
+    "test:e2e": "bash run-e2e.sh",
     "lint": "oxlint frontend/src backend/src"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1174.0",
     "@elysiajs/cors": "1.4.3",
     "@prisma/adapter-mariadb": "7.10.1",
     "@prisma/client": "7.10.1",
     "elysia": "1.4.32",
-    "lucide-react": "^1.63.0",
-    "mariadb": "^3.5.5",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.5"
+    "lucide-react": "1.63.0",
+    "mariadb": "3.5.5",
+    "nodemailer": "10.6.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router-dom": "7.18.5"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/bun": "^1.4.5",
-    "@types/node": "^26.6.6",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "oxlint": "^1.90.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "1.4.5",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "oxlint": "1.90.0",
+    "playwright": "1.65.1",
     "prisma": "7.10.1",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.5"
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
   }
 }

@@ -35,8 +35,14 @@ export const VerificationListPage: React.FC = () => {
 
   const filtered = achievements.filter((a) => {
     const matchTab = filterTab === 'semua' || a.status === filterTab;
-    const q = query.toLowerCase();
-    const matchQuery = !q || a.nama.toLowerCase().includes(q) || a.penyelenggara.toLowerCase().includes(q);
+    const q = query.trim().toLowerCase();
+    const matchQuery =
+      !q ||
+      a.nama.toLowerCase().includes(q) ||
+      a.penyelenggara.toLowerCase().includes(q) ||
+      (a.submitterName || '').toLowerCase().includes(q) ||
+      (a.submitterNim || '').toLowerCase().includes(q) ||
+      (a.subCategoryName || '').toLowerCase().includes(q);
     return matchTab && matchQuery;
   });
 
@@ -74,7 +80,7 @@ export const VerificationListPage: React.FC = () => {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama kegiatan atau penyelenggara..."
+            placeholder="Cari nama lomba, penyelenggara, nama/NIM mahasiswa..."
             aria-label="Cari antrean verifikasi"
             className="w-full pl-9 pr-3 py-2 min-h-[40px] text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
           />

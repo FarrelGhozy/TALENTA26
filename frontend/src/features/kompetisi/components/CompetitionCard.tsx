@@ -102,7 +102,7 @@ export const CompetitionCard: React.FC<{ competition: Competition }> = ({ compet
       <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
           <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
-          Resmi Belmawa Dikti
+          Informasi kompetisi
         </span>
         <Link
           to={`/kompetisi/${competition.slug}`}

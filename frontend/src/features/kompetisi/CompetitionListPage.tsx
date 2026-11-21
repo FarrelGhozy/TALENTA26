@@ -12,6 +12,8 @@ export const CompetitionListPage: React.FC = () => {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('semua');
+  const [level, setLevel] = useState('semua');
+  const [format, setFormat] = useState('semua');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -41,7 +43,11 @@ export const CompetitionListPage: React.FC = () => {
     const matchSearch =
       c.namaResmi.toLowerCase().includes(q) || c.deskripsi.toLowerCase().includes(q);
     const matchCat = category === 'semua' || c.kategori === category;
-    return matchSearch && matchCat;
+    const matchLevel = level === 'semua' || c.tingkat.toLowerCase() === level;
+    const compFormat =
+      c.format || (c.komposisi.min === 1 && c.komposisi.max === 1 ? 'individu' : 'beregu');
+    const matchFormat = format === 'semua' || compFormat === format;
+    return matchSearch && matchCat && matchLevel && matchFormat;
   });
 
   return (
@@ -50,17 +56,17 @@ export const CompetitionListPage: React.FC = () => {
       <div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-            Kurikulum Pembinaan Nasional
+            Pembinaan Mahasiswa
           </span>
           <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-            Tahun 2026
+            Katalog
           </span>
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
           Katalog Kompetisi Pembinaan Mahasiswa
         </h1>
         <p className="text-xs text-slate-500 mt-1" aria-live="polite">
-          {loading ? 'Memuat daftar kompetisi…' : `${filtered.length} dari ${competitions.length} kompetisi Belmawa siap diikuti.`}
+          {loading ? 'Memuat daftar kompetisi…' : `${filtered.length} dari ${competitions.length} kompetisi tersedia.`}
         </p>
       </div>
 
@@ -70,10 +76,16 @@ export const CompetitionListPage: React.FC = () => {
         category={category}
         onCategoryChange={setCategory}
         categories={categories}
+        level={level}
+        onLevelChange={setLevel}
+        format={format}
+        onFormatChange={setFormat}
         resultCount={filtered.length}
         onReset={() => {
           setSearch('');
           setCategory('semua');
+          setLevel('semua');
+          setFormat('semua');
         }}
       />
 

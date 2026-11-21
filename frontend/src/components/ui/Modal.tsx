@@ -13,19 +13,43 @@ export interface ModalProps {
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!isOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    const selector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(selector) || [])
+      .filter((element) => element.getClientRects().length > 0);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+      } else if (e.key === 'Tab') {
+        const items = focusable();
+        if (!items.length) {
+          e.preventDefault();
+          dialogRef.current?.focus();
+        } else if (e.shiftKey && (document.activeElement === items[0] || !dialogRef.current?.contains(document.activeElement))) {
+          e.preventDefault();
+          items[items.length - 1].focus();
+        } else if (!e.shiftKey && (document.activeElement === items[items.length - 1] || !dialogRef.current?.contains(document.activeElement))) {
+          e.preventDefault();
+          items[0].focus();
+        }
+      }
     };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
-    dialogRef.current?.querySelector<HTMLElement>('button, [href], input, select, textarea')?.focus();
+    (focusable()[0] || dialogRef.current)?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -39,18 +63,19 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
       <div
         ref={dialogRef}
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-label={title}
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in zoom-in-95 duration-150"
       >
         <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between">
           <h3 id="modal-title" className="font-bold text-slate-900 text-base tracking-tight">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Tutup dialog"
-            className="text-slate-400 hover:text-slate-600 rounded-xl p-2 hover:bg-slate-100 min-h-[36px] min-w-[36px] flex items-center justify-center transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 rounded-xl p-2 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
         <div className="p-6 text-xs text-slate-600 space-y-4">{children}</div>

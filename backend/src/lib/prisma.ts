@@ -14,7 +14,7 @@ export function getPrisma(): PrismaClient {
     host: db.host,
     port: db.port,
     user: db.user,
-    password: db.password,
+    ...(db.password ? { password: db.password } : {}),
     database: db.name,
     connectionLimit: currentConfig.nodeEnv === 'test' ? 5 : 15,
   });
@@ -30,4 +30,13 @@ export async function closeDatabase(): Promise<void> {
   }
 }
 
-export const prisma = getPrisma();
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const instance = getPrisma();
+    const val = (instance as any)[prop];
+    if (typeof val === 'function') {
+      return val.bind(instance);
+    }
+    return val;
+  },
+});

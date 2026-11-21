@@ -15,10 +15,10 @@
 - Jangan menaruh rahasia, kredensial, nomor pribadi, NIM, atau data mahasiswa nyata di repo, fixture, log, dan screenshot.
 
 ## Arsitektur tujuan
-- Monorepo: frontend/ (React, Vite, TypeScript), backend/ (Bun, Elysia, Prisma), infra/ (Compose, proxy dan contoh konfigurasi), docs/, compose.yaml, .env.example, bun.lock. Pisahkan domain, aplikasi HTTP, akses data, dan integrasi storage di backend.
+- Monorepo: frontend/ (React, Vite, TypeScript), backend/ (Bun, Elysia, Prisma), infra/ (docker-compose.yaml khusus production pull GHCR, nginx proxy, dan skrip operasional), docs/, .env.example, bun.lock. Pisahkan domain, aplikasi HTTP, akses data, dan integrasi storage di backend.
 - MySQL yang sudah ada di home server adalah database rilis pertama; RustFS yang sudah ada adalah storage S3 compatible. Aplikasi tidak menjalankan MySQL/RustFS baru secara otomatis di Compose produksi.
-- Semua permintaan browser menuju satu origin: frontend di / dan API di /api. Konfigurasi runtime di root .env; jangan menggantungkan alamat API produksi pada VITE_* saat build.
-- GitHub Actions: pemeriksaan kualitas, build image frontend dan backend, push ke GHCR public dengan tag commit SHA dan rilis. Server melakukan docker compose pull lalu docker compose up -d. Migrations, health check, backup, rollback, dan observabilitas wajib sesuai docs/15 dan docs/17.
+- Semua permintaan browser menuju satu origin: frontend di / dan API di /api. Konfigurasi runtime produksi di `infra/.env` (disalin dari `.env.example`); jangan menggantungkan alamat API produksi pada VITE_* saat build.
+- GitHub Actions (`.github/workflows/ci-publish.yml`): pada push/merge ke `main` atau push tag langsung menjalankan 2 job berurutan (semua test + coverage + E2E + build verification, lalu build & push image production frontend & backend ke GHCR dengan tag `latest`/tag rilis/`sha-<commit>`). Server masuk ke `infra/`, menyiapkan `infra/.env`, lalu menjalankan `docker compose pull` dan `docker compose up -d`. Migrations, health check, backup, rollback, dan observabilitas wajib sesuai docs/15 dan docs/17.
 - Gunakan versi dependensi terkunci. Pilih versi Prisma yang dukungan MySQL-nya stabil ketika implementasi; verifikasi Elysia + Bun + Prisma + MySQL dalam stage fondasi sebelum mengunci prosedur migrasi.
 
 ## Produk dan akses
@@ -36,13 +36,20 @@
 - Dokumentasikan apa yang selesai, bukti verifikasi, serta sisa risiko. Jangan menandai TODO selesai hanya karena UI tampak jadi.
 - Segera perbarui TODO.md setiap kali satu butir pekerjaan selesai dan diverifikasi, tanpa menunggu seluruh stage selesai. Tandai [x] hanya jika kriteria butir terpenuhi; catat bukti pemeriksaan dan bagian yang masih terbuka atau terhalang. Jika baru sebagian, biarkan [ ] dan jelaskan progresnya.
 
-## Commit Git lokal per stage
-- Setelah seluruh pekerjaan dan gate suatu stage di TODO.md selesai, buat minimal satu commit Git **lokal** untuk hasil stage tersebut. Jangan menggabungkan perubahan dari dua stage dalam satu commit.
-- Sebelum commit, periksa git status dan git diff, jalankan pemeriksaan yang relevan, lalu stage hanya file yang termasuk pekerjaan stage itu. Jangan memakai git add -A jika ada perubahan lain yang belum diperiksa.
-- Perbarui TODO.md dan dokumentasi yang terdampak dalam commit stage yang sama agar status, keputusan, dan implementasi tetap sinkron.
-- Tulis pesan commit yang menyebut stage dan hasilnya, misalnya docs(stage-d0): kunci rancangan produksi atau feat(stage-2): bangun fondasi auth dan database.
-- Jika satu stage memerlukan beberapa commit kecil, setiap commit tetap harus fokus dan dapat diverifikasi; commit terakhir menutup gate stage. Jangan menandai stage selesai atau membuat commit penutup saat gate masih terbuka.
-- Commit ini hanya di repository lokal. Jangan push, membuat tag rilis, atau men-deploy sebagai bagian dari aturan commit ini; lakukan hanya bila ada instruksi terpisah.
+## Commit Git lokal pada setiap perubahan (Stage besar maupun stage kecil/tugas mandiri)
+- Setiap kali menyelesaikan pekerjaan, perbaikan bug, penambahan fitur, pembaruan konfigurasi, atau penyelesaian butir pekerjaan (baik stage besar maupun stage kecil/tugas mandiri), **langsung buat commit Git lokal**. Jangan menumpuk perubahan tanpa commit.
+- Sebelum melakukan commit:
+  1. Jalankan `git status` dan `git diff` untuk meninjau perubahan secara teliti.
+  2. Pastikan pemeriksaan mutu yang relevan (seperti `bun run typecheck`, `bun run lint`, dan tes terkait) telah lulus tanpa kesalahan.
+  3. Lakukan staging secara presisi (`git add <file>`) hanya untuk file-file yang berkaitan dengan perubahan tersebut. Hindari `git add -A` jika terdapat file atau eksperimen lain yang belum diperiksa.
+- Selaraskan `TODO.md` dan dokumentasi terkait dalam commit yang sama jika ada kriteria atau progres yang diselesaikan.
+- Gunakan format pesan commit Conventional Commits yang deskriptif dan mencerminkan perubahan nyata, misalnya:
+  - `feat(auth): login kartu instan pada mode development`
+  - `fix(e2e): perbaiki selektor antrean verifikasi validator`
+  - `docs(env): lengkapi panduan parameter .env.example untuk pemula`
+  - `docs(agents): wajibkan commit lokal pada setiap perubahan kecil`
+- Jika perubahan merupakan bagian penutup suatu stage besar di TODO.md, commit penutup menandai gate stage tersebut.
+- **PENTING**: Semua commit hanya dilakukan di repositori **lokal** (`git commit`). Jangan pernah melakukan `git push`, membuat tag rilis remote, atau melakukan deploy ke remote/server produksi tanpa instruksi tertulis terpisah dari pengguna.
 
 ## Operasi dan penamaan
 - Bahasa UI dan dokumen Indonesia; identifier kode Inggris. Paket dikelola dengan Bun dan lockfile terkunci.

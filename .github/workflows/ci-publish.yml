@@ -1,0 +1,218 @@
+name: CI & Publish Production Images (GHCR)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags:
+      - '*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-publish-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test-and-build:
+    name: Job 1 — Test, Coverage & Build Verification
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: talenta_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Prepare test databases (talenta_test & talenta_e2e)
+        run: |
+          bun -e "
+            const mariadb = require('mariadb');
+            const conn = await mariadb.createConnection({ host: '127.0.0.1', port: 3306, user: 'root' });
+            await conn.query('CREATE DATABASE IF NOT EXISTS talenta_test');
+            await conn.query('CREATE DATABASE IF NOT EXISTS talenta_e2e');
+            await conn.end();
+          "
+          DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD="" DB_NAME=talenta_test bunx prisma migrate deploy
+          DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD="" DB_NAME=talenta_e2e bunx prisma migrate deploy
+          DB_HOST=127.0.0.1 DB_PORT=3306 DB_USER=root DB_PASSWORD="" DB_NAME=talenta_e2e NODE_ENV=development bun backend/prisma/seed.ts
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run all backend tests (unit & integration) with coverage
+        run: |
+          mkdir -p coverage
+          bun run test:coverage | tee coverage/test-output.txt
+
+      - name: Publish coverage summary
+        if: always() && hashFiles('coverage/test-output.txt') != ''
+        run: |
+          {
+            echo "## Hasil Uji Unit, Integrasi & Coverage"
+            echo ""
+            echo '```'
+            tail -n 60 coverage/test-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifacts
+        if: always() && hashFiles('coverage/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+      - name: Install Playwright Chromium for E2E
+        run: bunx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E suite
+        env:
+          DB_HOST: "127.0.0.1"
+          DB_PORT: "3306"
+          DB_USER: "root"
+          DB_PASSWORD: ""
+          DB_NAME: "talenta_e2e"
+          NODE_ENV: "development"
+          PORT: "3001"
+          PUBLIC_ORIGIN: "http://localhost:5173"
+          VITE_APP_ENV: "DEPLOYMENT"
+          VITE_USE_MOCK: "false"
+          VITE_API_BASE_URL: "/api/v1"
+          VITE_API_PROXY_TARGET: "http://127.0.0.1:3001"
+          E2E_BASE_URL: "http://localhost:5173"
+          E2E_API_URL: "http://localhost:3001"
+          HEADLESS: "true"
+        run: |
+          bun backend/src/index.ts > /tmp/talenta-be.log 2>&1 &
+          BE_PID=$!
+          bun run dev > /tmp/talenta-fe.log 2>&1 &
+          FE_PID=$!
+
+          cleanup() {
+            kill "$BE_PID" "$FE_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3001/health/ready >/dev/null && curl -sf http://localhost:5173/ >/dev/null; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Server gagal siap dalam 30 detik:"
+              cat /tmp/talenta-be.log || true
+              cat /tmp/talenta-fe.log || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          bun tests/e2e/runner.ts
+
+      - name: Upload E2E failure screenshots
+        if: failure() && hashFiles('tests/e2e/screenshots/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-screenshots
+          path: tests/e2e/screenshots/
+          retention-days: 7
+
+      - name: Production build check (no mock / no VITE API secrets)
+        run: bun run build
+
+      - name: Scan production bundle, git tracked files & validate infra/docker-compose.yaml
+        run: |
+          if grep -rnE "sertifikat-juara-1-pkm|AdminGontor2026|RoleCardLogin" frontend/dist/; then
+            echo "ERROR: Kebocoran artifact demo/mock di frontend/dist!"
+            exit 1
+          fi
+          if git ls-files | grep -E "(^|/)\.env($|\.)" | grep -v "^\.env\.example$"; then
+            echo "ERROR: File .env ter-track oleh git!"
+            exit 1
+          fi
+          trap 'rm -f infra/.env' EXIT
+          cp .env.example infra/.env
+          (cd infra && docker compose config -q)
+
+  publish:
+    name: Job 2 — Build & Push Production Images (GHCR)
+    needs: test-and-build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: talenta-frontend
+            dockerfile: frontend/Dockerfile
+          - image: talenta-backend
+            dockerfile: backend/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase repository owner
+        id: owner
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata (latest on main, tag on tag push, + commit SHA)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.owner.outputs.value }}/${{ matrix.image }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Build and push production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

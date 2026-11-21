@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Target, Send, X, RotateCcw, Clock } from 'lucide-react';
-import { MatchCandidate } from '../../../types';
+import { Invite, MatchCandidate } from '../../../types';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -9,14 +9,26 @@ import { assetUrl } from '../../../lib/asset';
 
 interface PartnerCardProps {
   candidate: MatchCandidate;
-  inviteStatus?: 'diajukan' | 'diterima' | 'ditolak' | 'kedaluwarsa';
+  inviteStatus?: Invite['status'];
   onInvite: (userId: string) => Promise<void>;
   onCancel?: (userId: string) => Promise<void>;
 }
 
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return 'M';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatus, onInvite, onCancel }) => {
   const [loading, setLoading] = useState(false);
-  const { user, matchScore, reasons, isOverlapTime } = candidate;
+  const { user, matchScore, labelKesesuaian, reasons, isOverlapTime } = candidate;
+  const displayLabel =
+    labelKesesuaian ||
+    (matchScore >= 80 ? 'Sangat Cocok' : matchScore >= 60 ? 'Cocok' : 'Cukup Cocok');
 
   const handleInvite = async () => {
     setLoading(true);
@@ -51,7 +63,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
                 aria-hidden="true"
                 className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-blue-900 text-white font-black text-sm flex items-center justify-center shadow-xs"
               >
-                {user.nama.substring(0, 2).toUpperCase()}
+                {getInitials(user.nama)}
               </div>
             )}
             <div className="min-w-0">
@@ -59,7 +71,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
                 {user.nama}
               </h4>
               <p className="text-[11px] text-slate-500 font-medium">
-                {user.prodi} • Angkatan {user.angkatan}
+                {user.prodi}{user.angkatan ? ` • Angkatan ${user.angkatan}` : ''}
               </p>
             </div>
           </div>
@@ -69,10 +81,10 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border shadow-2xs ${getScoreColor(
                 matchScore
               )}`}
-              aria-label={`Skor kecocokan ${matchScore} persen`}
+              aria-label={`Tingkat kesesuaian ${displayLabel}`}
             >
-              <Target className="w-3.5 h-3.5 text-blue-700" />
-              {matchScore}% Cocok
+              <Target className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
+              {displayLabel}
             </div>
             <div className="mt-1 flex justify-end">
               <MatchReasonTooltip reasons={reasons} score={matchScore} />

@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, XCircle, MessageSquare } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, MessageSquare, Award, Edit2 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { PointRecommendation } from '../../../types';
 
 interface DecisionPanelProps {
-  onDecision: (status: 'disetujui' | 'perlu_perbaikan' | 'ditolak', catatan: string) => Promise<void>;
+  pointRecommendation?: PointRecommendation | null;
+  isCompetition?: boolean;
+  isGroup?: boolean;
+  participantsCount?: number;
+  onDecision: (
+    status: 'disetujui' | 'perlu_perbaikan' | 'ditolak',
+    catatan: string,
+    override?: { overridePoints: number; overrideReason: string }
+  ) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -14,10 +23,24 @@ const TEMPLATE_REASONS = [
   'Mohon lampirkan surat tugas pembimbing atau berita acara lomba.',
 ];
 
-export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoading }) => {
+export const DecisionPanel: React.FC<DecisionPanelProps> = ({
+  pointRecommendation,
+  isCompetition = true,
+  isGroup = false,
+  participantsCount = 1,
+  onDecision,
+  isLoading,
+}) => {
   const [catatan, setCatatan] = useState('');
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState<'disetujui' | 'perlu_perbaikan' | 'ditolak' | null>(null);
+
+  const [enableOverride, setEnableOverride] = useState(false);
+  const [overridePoints, setOverridePoints] = useState<string>(
+    pointRecommendation ? String(pointRecommendation.calculatedPoints) : '0'
+  );
+  const [overrideReason, setOverrideReason] = useState('');
+
   const textareaId = 'catatan-verifikator';
   const errorId = 'catatan-error';
 
@@ -36,6 +59,19 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
       document.getElementById(textareaId)?.focus();
       return;
     }
+
+    if (status === 'disetujui' && isCompetition && enableOverride) {
+      const parsed = Number(overridePoints);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        setError('Nilai override poin harus berupa bilangan bulat minimal 0.');
+        return;
+      }
+      if (overrideReason.trim().length < 3) {
+        setError('Alasan perubahan poin (override) wajib diisi minimal 3 karakter.');
+        return;
+      }
+    }
+
     if (status === 'ditolak') {
       setConfirming(status);
       return;
@@ -45,18 +81,95 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
 
   const handleAction = async (status: 'disetujui' | 'perlu_perbaikan' | 'ditolak') => {
     setConfirming(null);
-    await onDecision(status, catatan);
+    const override =
+      status === 'disetujui' && isCompetition && enableOverride
+        ? { overridePoints: Number(overridePoints), overrideReason: overrideReason.trim() }
+        : undefined;
+    await onDecision(status, catatan, override);
   };
 
   return (
-    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs space-y-5">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-blue-700" />
+          <MessageSquare className="w-4 h-4 text-blue-700" aria-hidden="true" />
           <h2 className="text-sm font-bold text-slate-900">Keputusan & Telaah Verifikasi Berkas</h2>
         </div>
-        <span className="text-[11px] text-slate-400">Verifikator demo</span>
+        <span className="text-[11px] font-semibold text-slate-500">Verifikasi Validator</span>
       </div>
+
+      {/* Ringkasan Poin Otomatis & Override Validator */}
+      {pointRecommendation && (
+        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="text-xs font-extrabold text-blue-950 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-blue-700" aria-hidden="true" />
+                Kalkulasi Poin Otomatis: {pointRecommendation.calculatedPoints} Poin
+              </div>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                {pointRecommendation.explanation}
+              </p>
+              {isGroup && (
+                <p className="text-[11px] font-bold text-blue-800">
+                  Prestasi kelompok: poin penuh akan diberikan kepada seluruh {participantsCount} anggota terdaftar saat disetujui.
+                </p>
+              )}
+            </div>
+
+            {isCompetition && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !enableOverride;
+                  setEnableOverride(next);
+                  if (next) setOverridePoints(String(pointRecommendation.calculatedPoints));
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                  enableOverride
+                    ? 'bg-amber-100 border-amber-300 text-amber-900'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300'
+                }`}
+              >
+                <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
+                {enableOverride ? 'Batalkan Ubah Poin' : 'Ubah Poin (Override)'}
+              </button>
+            )}
+          </div>
+
+          {isCompetition && enableOverride && (
+            <div className="pt-3 border-t border-blue-200/70 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label htmlFor="override-points" className="block font-bold text-slate-800 mb-1">
+                  Poin Baru (Bulat &ge; 0)
+                </label>
+                <input
+                  id="override-points"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={overridePoints}
+                  onChange={(e) => setOverridePoints(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white font-bold text-slate-900"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="override-reason" className="block font-bold text-slate-800 mb-1">
+                  Alasan Perubahan Poin (Wajib)
+                </label>
+                <input
+                  id="override-reason"
+                  type="text"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Contoh: Penyesuaian bobot sub-lomba / penghargaan khusus panitia"
+                  className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white text-slate-900"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <label htmlFor={textareaId} className="block text-xs font-semibold text-slate-700">
@@ -99,7 +212,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
       {confirming === 'ditolak' ? (
         <div role="alert" className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-950 space-y-3">
           <p className="font-semibold">
-            Konfirmasi Penolakan: Pengajuan yang ditolak tidak akan dihitung sebagai prestasi sah di institusi. Lanjutkan?
+            Konfirmasi Penolakan: Pengajuan yang ditolak tidak akan dihitung sebagai prestasi terverifikasi. Lanjutkan?
           </p>
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setConfirming(null)}>
@@ -110,7 +223,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
               size="sm"
               onClick={() => handleAction('ditolak')}
               isLoading={isLoading}
-              leftIcon={<XCircle className="w-3.5 h-3.5" />}
+              leftIcon={<XCircle className="w-3.5 h-3.5" aria-hidden="true" />}
             >
               Ya, Tetap Tolak Pengajuan
             </Button>
@@ -123,7 +236,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
             size="sm"
             disabled={isLoading}
             onClick={() => requestAction('perlu_perbaikan')}
-            leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+            leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />}
           >
             Minta Revisi Dokumen
           </Button>
@@ -133,7 +246,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
             disabled={isLoading}
             onClick={() => requestAction('ditolak')}
             className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-            leftIcon={<XCircle className="w-3.5 h-3.5" />}
+            leftIcon={<XCircle className="w-3.5 h-3.5" aria-hidden="true" />}
           >
             Tolak
           </Button>
@@ -142,9 +255,9 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ onDecision, isLoad
             variant="success"
             disabled={isLoading}
             onClick={() => requestAction('disetujui')}
-            leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            leftIcon={<CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />}
           >
-            Setujui prestasi
+            Setujui Prestasi
           </Button>
         </div>
       )}

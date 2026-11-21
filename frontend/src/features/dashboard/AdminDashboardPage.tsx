@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Trophy, Download } from 'lucide-react';
 import { AdminStats } from '../../services/types';
-import { statsService, competitionService } from '@talenta/services';
+import { statsService, competitionService, dashboardService } from '@talenta/services';
 import { Competition } from '../../types';
 import { ScopeBanner } from './components/ScopeBanner';
 import { StatCards } from './components/StatCards';
@@ -16,6 +16,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export const AdminDashboardPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) return;
+        if (cancelled) return;
         setError('Gagal memuat statistik admin.');
         setLoading(false);
       });
@@ -37,8 +38,16 @@ export const AdminDashboardPage: React.FC = () => {
     };
   }, []);
 
-  const handleExportData = () => {
-    notify('Laporan rekapitulasi pembinaan 2026 berhasil disiapkan (unduhan simulasi).');
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      await dashboardService.downloadAchievementsCsv();
+      notify('Laporan rekapitulasi prestasi berhasil diunduh.', 'success');
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengunduh rekapitulasi prestasi.', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) return <PageLoading message="Memuat analitik dashboard admin..." />;
@@ -58,7 +67,7 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   // Find max count to scale visual progress bars
-  const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi));
+  const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi || {}));
 
   return (
     <div className="space-y-6">
@@ -70,7 +79,7 @@ export const AdminDashboardPage: React.FC = () => {
               Pusat Kendali Pengelola
             </span>
             <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
-              Tahun Akademik 2026
+              Operasional
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
@@ -86,9 +95,10 @@ export const AdminDashboardPage: React.FC = () => {
             size="md"
             variant="outline"
             onClick={handleExportData}
+            disabled={exporting}
             leftIcon={<Download className="w-4 h-4" />}
           >
-            Ekspor Data
+            {exporting ? 'Mengunduh...' : 'Ekspor Data'}
           </Button>
           <Link to="/validator/prestasi">
             <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
@@ -155,7 +165,7 @@ export const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="p-4 space-y-2.5 text-xs">
             <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-50/90 text-emerald-950 border border-emerald-200/80">
-              <span className="font-bold">Prestasi disetujui (demo)</span>
+              <span className="font-bold">Prestasi Disetujui</span>
               <strong className="text-emerald-700 text-sm font-black">{stats.pengajuanPrestasi.disetujui}</strong>
             </div>
 
@@ -175,7 +185,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2 leading-relaxed">
-              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> yang sah dihitung dalam pelaporan PDDIKTI dan akreditasi pemeringkatan kemahasiswaan institusi.
+              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> oleh validator yang dihitung dalam rekapitulasi resmi dan papan ranking kemahasiswaan internal kampus.
             </div>
           </CardContent>
         </Card>

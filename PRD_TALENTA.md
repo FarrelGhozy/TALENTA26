@@ -1,6 +1,6 @@
 # PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.0, 20 November 2026. Status: rancangan target produksi, belum diimplementasikan. Keputusan yang disepakati dan yang masih terbuka tercatat di docs/14-keputusan-terbuka.md.
+Versi rancangan: 2.1, 21 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-22`); implementasi kode masih memerlukan perbaikan keamanan, kelengkapan alur, dan verifikasi menurut TODO.md dan docs/24. Keputusan yang disepakati dan yang masih terbuka tercatat di docs/14-keputusan-terbuka.md.
 
 ## 1. Masalah dan tujuan
 
@@ -41,45 +41,45 @@ Akun super admin dibuat lewat seed/bootstrap awal yang aman; validator ditunjuk 
 - Ranking publik hanya dari pengajuan kategori lomba yang disetujui validator. Tab riwayat keseluruhan boleh menampilkan akumulasi lintas periode dengan label jelas.
 
 ### Mahasiswa
-- Daftar/login email dan password; nama dan NIM unik; pemulihan akun; profil minat, keahlian, pengalaman, waktu tersedia; pilih target aktif.
-- Rekomendasi calon partner yang dapat dijelaskan, undangan dan tim. Lomba individu tidak memaksa alur tim.
+- Daftar/login email dan password (langsung aktif pada rilis pertama; verifikasi email ditunda ke pasca-rilis awal); nama dan NIM unik; pemulihan akun via SMTP; profil minat, keahlian, pengalaman, waktu tersedia, serta foto profil (avatar) privat yang disimpan di RustFS; pilih target aktif.
+- Rekomendasi calon partner yang dapat dijelaskan, undangan (termasuk pembatalan undangan keluar), dan tim. Lomba individu tidak memaksa alur tim dan langsung mengarah ke ruang persiapan.
 - Persiapan: roadmap berisi fase, materi, tugas, tenggat, progres, dan kontak WA konsultan yang telah diterbitkan validator.
-- Pengajuan prestasi lomba dan prestasi mandiri lain dengan bukti; lihat antrean/status, catatan, revisi, dan riwayat.
-- Tampilan kontribusi poin pribadi berdasarkan keputusan sah dan aturan poin yang berlaku.
+- Pengajuan prestasi lomba (individu maupun kelompok) dan prestasi mandiri lain lengkap dengan jenis lomba, sub-lomba/cabang, peserta tim (jika kelompok), keterangan aturan poin, dan bukti privat; lihat detail/antrean/status, catatan, revisi penuh (termasuk mengganti berkas bukti), pembatalan saat menunggu, dan riwayat.
+- Tampilan kontribusi poin pribadi berdasarkan keputusan sah dan aturan/override poin yang berlaku.
 
 ### Validator
-- CRUD dan publikasi kompetisi, periode, syarat, kuota/aturan tim, jadwal, roadmap, sumber, kontak konsultan, dan seleksi internal.
-- Antrean pengajuan dengan filter, bukti privat, keputusan setuju/minta perbaikan/tolak, alasan, audit, serta mekanisme koreksi yang tercatat.
+- CRUD dan publikasi kompetisi, periode, syarat, kuota/aturan tim, jadwal, roadmap (non-destruktif terhadap progres mahasiswa), sumber, kontak konsultan, seleksi internal (mendukung lomba beregu maupun individu), serta pengaturan poin per perlombaan/sub-lomba (memakai template poin atau custom dengan keterangan).
+- Antrean pengajuan dengan filter, detail lengkap (lomba, jenis/sub-lomba, anggota kelompok, bukti privat, duplikat, riwayat revisi/keputusan, kalkulasi poin otomatis + keterangannya), keputusan setuju (dengan opsi mengubah/override poin jika dibutuhkan beserta alasan wajib), minta perbaikan, tolak, audit, serta mekanisme koreksi yang tercatat.
 - Ringkasan operasional dan kualitas data.
 
 ### Super admin
-- Hak validator, pengelolaan staf/peran, akun, konfigurasi institusi, periode aktif, bobot poin berversi, audit log, dan status sistem.
+- Hak validator, pengelolaan staf/peran (menyimpan nama asli staf, bukan label generik peran), akun, konfigurasi institusi, manajemen pergantian periode akademik (pratinjau dampak, konfirmasi, dan pengarsipan atomik target & tim periode lama tanpa menghapus riwayat), template bobot poin berversi, master jenis & sub-lomba, audit log, dan status sistem.
 - Konfigurasi yang memengaruhi data historis harus punya jejak versi dan tanggal berlaku.
 
 ## 5. Alur inti dan kriteria penerimaan
 ### J1 Mahasiswa menuju persiapan
-Daftar → login → lengkapi profil → pilih lomba → jika beregu, lihat rekomendasi dan bentuk tim → baca roadmap → tandai progres. Berhasil jika data tetap ada setelah refresh dan login di perangkat lain, aturan komposisi dipenuhi, dan transisi target/periode tidak menghapus riwayat.
+Daftar → login → lengkapi profil (termasuk avatar privat opsional) → pilih lomba → jika individu langsung menuju persiapan; jika beregu lihat rekomendasi, kelola undangan, dan bentuk tim → baca roadmap → tandai progres. Berhasil jika data tetap ada setelah refresh dan login di perangkat lain, batas jumlah anggota dipenuhi, pembatalan undangan bekerja, dan transisi target/periode tidak menghapus riwayat.
 
 ### J2 Prestasi
-Mahasiswa mengajukan prestasi dengan bukti → validator melihat data/bukti → setuju, meminta revisi, atau menolak → mahasiswa melihat alasan dan dapat revisi jika diminta → hanya yang disetujui masuk statistik. Berhasil jika keputusan dan perubahan bukti memiliki riwayat, file privat, dan tidak ada penghitungan ganda.
+Mahasiswa mengajukan prestasi (individu atau kelompok, lengkap dengan jenis & sub-lomba serta 1–3 bukti privat) → status menunggu (dapat dibatalkan pemilik sebelum diputuskan) → validator melihat detail lomba, anggota, bukti, poin rekomendasi + keterangan → setuju (memakai poin rekomendasi atau override poin dengan alasan wajib), meminta perbaikan dengan alasan, atau menolak dengan alasan → mahasiswa melihat alasan dan dapat revisi penuh (termasuk mengganti berkas bukti) jika diminta → hanya yang disetujui masuk statistik; pada prestasi kelompok seluruh anggota terdaftar menerima poin penuh. Berhasil jika keputusan, override poin, dan perubahan bukti memiliki riwayat, file privat, dan tidak ada penghitungan ganda.
 
 ### J3 Konten validator
-Validator membuat draft lomba, jadwal, roadmap, aturan tim, dan kontak konsultasi → meninjau → menerbitkan → publik melihat versi yang diterbitkan. Berhasil jika draft tidak bocor ke publik, tanggal dan sumber terlihat, serta konten dapat diperbarui untuk tahun berikutnya.
+Validator membuat/mengedit draft lomba, jenis/sub-lomba, aturan poin perlombaan (template/custom + keterangan), jadwal, aturan tim, roadmap multi-fase (tanpa menghapus progres mahasiswa), kontak konsultasi, dan hasil seleksi internal (beregu/individu) → meninjau → menerbitkan → publik melihat versi yang diterbitkan. Berhasil jika draft tidak bocor ke publik, tanggal dan sumber terlihat, serta konten dapat diperbarui untuk tahun berikutnya.
 
 ### J4 Ranking
-Prestasi lomba disetujui → sistem memberi poin berdasarkan tingkat dan hasil serta versi aturan → ranking tahun akademik diperbarui → pembatalan/koreksi keputusan memperbarui ranking melalui peristiwa yang diaudit. Berhasil jika hasil dapat dihitung ulang dan tie break deterministik.
+Prestasi lomba disetujui → sistem memberi poin ke mahasiswa (atau seluruh anggota tim jika kelompok) berdasarkan aturan poin perlombaan/sub-lomba/template berversi atau override poin validator yang beralasan → ranking tahun akademik diperbarui → pembatalan/koreksi keputusan membalik poin seluruh anggota terkait melalui peristiwa ledger yang diaudit. Berhasil jika hasil dapat dihitung ulang dan tie break deterministik.
 
 ### J5 Operasi
-Super admin mengundang/menonaktifkan validator, mengubah konfigurasi dan periode, meninjau audit. Operator melakukan deploy/rollback dan restore teruji tanpa kehilangan data yang tidak tercakup rencana pemulihan.
+Super admin menambah/mengelola staf dengan nama asli, mengatur template poin, jenis/sub-lomba, konfigurasi, serta menjalankan manajemen pergantian periode akademik (dengan pratinjau dampak & pengarsipan atomik target/tim lama), dan meninjau audit. Operator melakukan deploy/rollback dan restore teruji tanpa kehilangan data yang tidak tercakup rencana pemulihan.
 
 ## 6. Aturan domain utama
-- Satu target lomba aktif per mahasiswa per periode; target lama dan timnya diarsipkan secara logis, bukan dihapus.
-- Peraturan tim berasal dari versi lomba yang berlaku. Undangan tidak boleh melewati kapasitas dan kedaluwarsa sesuai kebijakan yang terdokumentasi.
-- Mahasiswa bebas mengajukan prestasi di luar target lombanya. Hanya prestasi berjenis lomba yang masuk ranking; kategori lain tetap tercatat dan dapat masuk statistik sesuai definisi.
-- Status pengajuan: draft, menunggu, perlu_perbaikan, disetujui, ditolak, dibatalkan. Transisi, alasan, aktor, dan waktu dicatat. Pengajuan yang disetujui tidak diedit langsung; koreksi memakai tindakan khusus.
-- Bukti adalah objek privat RustFS; database menyimpan metadata dan kunci objek, bukan URL publik permanen.
-- Poin dihitung dari tingkat dan hasil, dengan tabel bobot berversi yang ditetapkan super admin. Nilai awal adalah usulan produk di docs/09 dan harus diuji terhadap contoh capaian kampus sebelum go-live.
-- Tahun akademik mempunyai tanggal mulai/akhir dan status aktif/arsip; satu periode aktif pada satu waktu.
+- Satu target lomba aktif per mahasiswa per periode akademik; pergantian target maupun aktivasi periode baru mengarsipkan target dan tim lama secara logis/atomik, bukan menghapus riwayat.
+- Peraturan tim berasal dari kompetisi yang berlaku; default global rilis pertama adalah maksimum 5 undangan aktif dan masa berlaku 14 hari. Status `terbentuk` di backend ditentukan oleh pemenuhan rentang jumlah anggota (`min`–`max`); peran wajib dan lintas prodi ditampilkan sebagai indikator/saran di UI.
+- Mahasiswa bebas mengajukan prestasi di luar target lombanya, baik individu maupun kelompok (memilih tim pembinaan atau rekan mahasiswa satu institusi). Hanya prestasi berjenis lomba yang masuk ranking; kategori lain tetap tercatat dan dapat masuk statistik sesuai definisi.
+- Status pengajuan aktif rilis pertama: `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`, `dibatalkan` (status `draft` ditunda ke pasca-rilis awal). Transisi, alasan, override poin, aktor, dan waktu dicatat. Pengajuan yang disetujui tidak diedit langsung; koreksi memakai tindakan khusus yang membalik poin seluruh anggota terkait.
+- Bukti prestasi dan avatar mahasiswa adalah objek privat RustFS; database menyimpan metadata dan kunci objek, bukan Base64 atau URL publik permanen. Avatar tidak ditampilkan pada halaman ranking publik.
+- Poin dihitung melalui 3 lapis: (1) Template Poin berversi yang dikelola super admin, (2) Pengaturan poin khusus per perlombaan atau jenis/sub-lomba beserta keterangannya, dan (3) Override poin opsional oleh validator saat approve dengan alasan wajib. Nilai awal template ada di docs/09 dan harus diuji terhadap contoh capaian kampus sebelum go-live.
+- Tahun akademik mempunyai tanggal mulai/akhir dan status aktif/arsip; satu periode aktif pada satu waktu dan pergantiannya dikelola eksplisit di panel super admin.
 
 ## 7. Nonfungsional dan kesiapan produksi
 - API memakai Elysia di Bun, Prisma/MySQL, serta storage S3 compatible RustFS. Frontend React/Vite terpisah.
@@ -91,10 +91,10 @@ Super admin mengundang/menonaktifkan validator, mengubah konfigurasi dan periode
 - Uji performa dan kapasitas memakai target terukur pada staging; angka SLA dan retensi final masih perlu disahkan operasional kampus.
 
 ## 8. Batas rilis dan tahap lanjut
-AI, login Google, SSO, multi-kampus, beasiswa, SKPI, klaim BAAK, pertemuan dosen terjadwal, dan statistik nasional berada di luar rilis pertama. SSO dipertimbangkan saat integrasi kampus; identitas yang semula diisi sendiri perlu dipadankan melalui proses migrasi yang diaudit. Fitur-fitur ini tidak boleh muncul sebagai aktif sebelum benar-benar ada dan disahkan.
+AI, login Google, SSO, verifikasi email saat registrasi, simpan draft pengajuan prestasi, multi-kampus, beasiswa, SKPI, klaim BAAK, pertemuan dosen terjadwal, dan statistik nasional berada di luar rilis pertama. SSO dipertimbangkan saat integrasi kampus; identitas yang semula diisi sendiri perlu dipadankan melalui proses migrasi yang diaudit. Fitur-fitur ini tidak boleh muncul sebagai aktif sebelum benar-benar ada dan disahkan.
 
 ## 9. Ukuran keberhasilan dan keputusan tertunda
-Keberhasilan pilot dinilai lewat penyelesaian J1–J5 dengan pengguna nyata, akurasi data, dan kemampuan operasi lintas periode. Target numerik adopsi/performa tidak dikarang. Keputusan yang masih membutuhkan pemilik produk atau kampus: dasar publikasi nama di ranking, kebijakan retensi, domain resmi, RTO/RPO, sumber data SSO, dan bobot poin final. Lihat docs/14.
+Keberhasilan pilot dinilai lewat penyelesaian J1–J5 dengan pengguna nyata, akurasi data, dan kemampuan operasi lintas periode. Target numerik adopsi/performa tidak dikarang. Keputusan yang masih membutuhkan pemilik produk atau kampus: dasar publikasi nama di ranking, kebijakan retensi, domain resmi, RTO/RPO, sumber data SSO, dan pengesahan bobot poin final kampus. Lihat docs/14.
 
 ## 10. Dokumen turunan
-Sitemap, akses, model data, API, desain UI, keamanan, roadmap, deployment, pengujian, dan bukti stage ada di docs/00–19. README root menyatakan status implementasi saat ini; TODO.md menyatakan urutan kerja.
+Sitemap, akses, model data, API, desain UI, keamanan, roadmap, deployment, pengujian, bukti stage, dan hasil audit ada di docs/00–24. README root menyatakan status implementasi saat ini; TODO.md menyatakan urutan kerja.

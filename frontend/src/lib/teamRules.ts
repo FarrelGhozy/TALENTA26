@@ -29,17 +29,19 @@ export function validateTeamFormation(
 
   const missingRoles = peranWajib.filter((r) => !filledRoles.has(r));
   const isCountValid = acceptedCount >= min && acceptedCount <= max;
-  const isRolesValid = missingRoles.length === 0;
-
-  const isFormed = isCountValid && isRolesValid;
+  const isFormed =
+    team.isFormed ||
+    team.status === 'terbentuk' ||
+    team.status === 'terkunci_seleksi' ||
+    isCountValid;
 
   let statusText = 'Mencari rekan tim';
-  if (isFormed) {
-    statusText = 'Tim Terbentuk (Lengkap)';
+  if (team.status === 'terkunci_seleksi') {
+    statusText = 'Terkunci Seleksi Internal';
+  } else if (isFormed) {
+    statusText = missingRoles.length > 0 ? 'Tim Terbentuk (Saran peran belum lengkap)' : 'Tim Terbentuk (Lengkap)';
   } else if (acceptedCount < min) {
     statusText = `Kurang ${min - acceptedCount} anggota lagi`;
-  } else if (!isRolesValid) {
-    statusText = `Peran wajib belum terisi: ${missingRoles.join(', ')}`;
   }
 
   return {
