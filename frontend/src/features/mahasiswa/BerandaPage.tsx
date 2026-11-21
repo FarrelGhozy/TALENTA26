@@ -86,6 +86,15 @@ export const BerandaPage: React.FC = () => {
     return 'Selamat Malam';
   };
 
+  const getInitials = (name?: string) => {
+    if (!name) return 'M';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   const steps = [
     { label: 'Identitas & Skill', done: true, to: '/app/profil' },
     { label: 'Target Belmawa', done: !!targetComp, to: '/app/profil?need=target' },
@@ -146,11 +155,20 @@ export const BerandaPage: React.FC = () => {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
-            <img
-              src={assetUrl(currentUser?.avatar) || assetUrl('images/avatar-andi.jpg')}
-              alt={currentUser?.nama || 'Foto Profil'}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-600/30 shadow-md shrink-0"
-            />
+            {currentUser?.avatar ? (
+              <img
+                src={assetUrl(currentUser.avatar)}
+                alt={currentUser?.nama || 'Foto Profil'}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-600/30 shadow-md shrink-0"
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-black text-xl sm:text-2xl flex items-center justify-center border-2 border-blue-500/30 shadow-md shrink-0"
+              >
+                {getInitials(currentUser?.nama)}
+              </div>
+            )}
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-black text-blue-700 uppercase tracking-wider">

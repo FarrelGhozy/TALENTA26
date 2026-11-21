@@ -14,7 +14,7 @@ function getUsers(): User[] {
     const raw = (usersData as User[]).find((r) => r.id === u.id);
     return {
       ...u,
-      avatar: u.avatar || raw?.avatar || '/images/avatar-andi.jpg',
+      avatar: u.avatar || raw?.avatar || undefined,
     };
   });
 }

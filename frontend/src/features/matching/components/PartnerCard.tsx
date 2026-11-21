@@ -14,6 +14,15 @@ interface PartnerCardProps {
   onCancel?: (userId: string) => Promise<void>;
 }
 
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return 'M';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
 export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatus, onInvite, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const { user, matchScore, reasons, isOverlapTime } = candidate;
@@ -51,7 +60,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
                 aria-hidden="true"
                 className="w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-blue-900 text-white font-black text-sm flex items-center justify-center shadow-xs"
               >
-                {user.nama.substring(0, 2).toUpperCase()}
+                {getInitials(user.nama)}
               </div>
             )}
             <div className="min-w-0">

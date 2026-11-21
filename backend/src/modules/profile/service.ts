@@ -8,6 +8,7 @@ export interface UpdateStudentProfileDto {
   studyProgram?: string;
   faculty?: string;
   enrollmentYear?: number;
+  avatarUrl?: string;
   phone?: string;
   bio?: string;
   skills?: any;
@@ -58,6 +59,7 @@ export async function updateStudentProfile(
     studyProgram?: string;
     faculty?: string;
     enrollmentYear?: number | null;
+    avatarUrl?: string | null;
     phone?: string | null;
     bio?: string | null;
   } = {};
@@ -99,6 +101,10 @@ export async function updateStudentProfile(
 
   if (dto.bio !== undefined) {
     updateData.bio = dto.bio ? dto.bio.trim() : null;
+  }
+
+  if (dto.avatarUrl !== undefined) {
+    updateData.avatarUrl = dto.avatarUrl ? dto.avatarUrl.trim() : null;
   }
 
   const jsonUpdateData: any = { ...updateData };

@@ -167,6 +167,7 @@ model StudentProfile {
   studyProgram String
   faculty      String
   enrollmentYear Int?     @map("enrollment_year")
+  avatarUrl    String?  @map("avatar_url") @db.Text
   phone        String?
   bio          String?  @db.Text
   skills       Json?

@@ -109,13 +109,13 @@ export const Navbar: React.FC = () => {
     return role || 'Pengguna';
   };
 
-  const getAvatarSrc = (user?: { nama?: string; avatar?: string } | null) => {
-    if (user?.avatar) return assetUrl(user.avatar);
-    const name = (user?.nama || '').toLowerCase();
-    if (name.includes('rina') || name.includes('sari') || name.includes('maya')) {
-      return assetUrl('images/avatar-rina.jpg');
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
     }
-    return assetUrl('images/avatar-andi.jpg');
+    return name.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -201,11 +201,20 @@ export const Navbar: React.FC = () => {
                   isLanding ? 'border-white/20' : 'border-slate-200/80'
                 }`}
               >
-                <img
-                  src={getAvatarSrc(currentUser)}
-                  alt={currentUser.nama}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-                />
+                {currentUser.avatar ? (
+                  <img
+                    src={assetUrl(currentUser.avatar)}
+                    alt={currentUser.nama}
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
+                  >
+                    {getInitials(currentUser.nama)}
+                  </div>
+                )}
                 <div className="text-right hidden md:block">
                   <span
                     className={`text-xs font-bold block leading-tight truncate max-w-[140px] ${
@@ -299,11 +308,20 @@ export const Navbar: React.FC = () => {
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <img
-                src={getAvatarSrc(currentUser)}
-                alt={currentUser.nama}
-                className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-              />
+              {currentUser.avatar ? (
+                <img
+                  src={assetUrl(currentUser.avatar)}
+                  alt={currentUser.nama}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
+                />
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
+                >
+                  {getInitials(currentUser.nama)}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <span
                   className={`text-xs font-bold block truncate ${
