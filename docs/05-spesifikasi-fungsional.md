@@ -4,36 +4,36 @@ Semua item di bawah adalah target, bukan status implementasi. ID kebutuhan stabi
 
 | ID | Kebutuhan | Aturan penerimaan |
 |---|---|---|
-| AUTH-01 | Registrasi mahasiswa manual | nama, NIM, email, password; NIM dan email unik; akun publik hanya mahasiswa; pesan duplikat aman |
-| AUTH-02 | Login, logout, pemulihan | sesi aman, logout memutus sesi, reset satu kali dan kedaluwarsa; rate limit; tidak ada Google login |
-| AUTH-03 | Bootstrap staf | seed awal super admin lewat secret dan prosedur satu kali; validator dibuat/dinonaktifkan super admin; seed tidak berisi password tetap |
-| PROF-01 | Profil mahasiswa | prodi, angkatan, minat, skill, pengalaman, waktu tersedia; simpan draft; perubahan terlihat lintas perangkat |
-| PROF-02 | Identitas | NIM tidak tampil publik; status identitas belum diverifikasi kampus; NIM tidak otomatis dipercaya untuk fasilitas resmi |
-| COMP-01 | Katalog | pengunjung hanya melihat konten terbit; cari/filter tahun, bidang, tingkat, format tim, status |
-| COMP-02 | Konten validator | draft, pratinjau, terbit, arsip; syarat, sumber, jadwal, aturan tim, pembaruan tanggal |
-| COMP-03 | Periode | kompetisi dapat diadakan ulang; edisi berbeda punya ID sendiri dan relasi ke tahun akademik |
-| TARG-01 | Target | satu aktif per mahasiswa/periode; ganti target dengan konfirmasi dan arsip tim lama |
-| MATCH-01 | Rekomendasi | hanya kandidat yang memilih kompetisi/edisi sama dan memenuhi syarat; alasan dan batas data jelas |
-| TEAM-01 | Undangan | pengirim dan penerima terotorisasi; kapasitas, duplikat, kedaluwarsa dan transaksi serentak aman |
-| TEAM-02 | Tim | status dibentuk dari anggota diterima dan komposisi; lomba individu tidak memerlukan tim |
-| ROAD-01 | Roadmap | validator membuat fase, tugas, sumber, tenggat; mahasiswa melihat versi terbit dan menandai progres sendiri |
-| ROAD-02 | Konsultasi | validator mengisi kontak WA, status persetujuan dan konteks kapasitas; tombol hanya untuk kontak yang diterbitkan |
-| SEL-01 | Seleksi internal | jadwal, peserta/tim, hasil dan status konfirmasi; hasil tidak otomatis menjadi prestasi sah |
-| ACH-01 | Pengajuan | individu/tim, kategori, tingkat, hasil, tanggal, penyelenggara, bukti 1–3 file; dapat dibuat tanpa target |
-| ACH-02 | Revisi | mahasiswa hanya memperbaiki saat perlu_perbaikan; versi sebelumnya tetap tersedia untuk audit |
-| VER-01 | Keputusan | validator/super admin setuju, minta perbaikan, tolak; alasan wajib untuk dua tindakan terakhir; jejak aktor/waktu |
-| VER-02 | Koreksi | keputusan sah yang salah dibatalkan/dikoreksi melalui aksi khusus beralasan dan audit; poin serta statistik dihitung ulang |
-| RANK-01 | Poin | hanya prestasi lomba disetujui; aturan tingkat×hasil berversi; satu pengajuan satu pemberian poin aktif |
-| RANK-02 | Ranking | tahun akademik default; total sepanjang waktu terpisah; tie break stabil; hanya identitas publik minimum |
-| DASH-01 | Dashboard | mahasiswa/validator/super admin sesuai scope, setiap angka punya definisi, periode dan sumber |
-| ADMIN-01 | Pengelolaan | super admin mengatur periode, poin, staf, role, audit dan status sistem; semua perubahan sensitif diaudit |
-| OPS-01 | Deploy | dua image GHCR, Compose server, root .env, migrasi terkontrol, health, backup dan rollback |
+| AUTH-01 | Registrasi mahasiswa manual | nama, NIM, email, password, prodi, fakultas, angkatan opsional; NIM dan email unik; akun publik hanya mahasiswa dan langsung aktif (verifikasi email ditunda per K-21); pemberitahuan publikasi ranking jelas; pesan duplikat aman |
+| AUTH-02 | Login, logout, pemulihan | sesi HttpOnly dengan hash token di DB, logout memutus sesi secara await, reset via SMTP satu kali dan kedaluwarsa (production gagal tertutup tanpa SMTP); rate limit per IP nyata; tidak ada Google login |
+| AUTH-03 | Bootstrap & akun staf | seed produksi hanya institusi + bootstrap super admin dari env tanpa password fallback dan tanpa konten demo; staf (validator/super admin) dibuat/dikelola super admin dengan nama asli (`fullName`) |
+| PROF-01 | Profil mahasiswa & avatar | prodi, fakultas, angkatan, minat, skill, pengalaman, waktu tersedia, serta avatar privat yang diunggah via multipart ke RustFS (bukan Base64 di MySQL); perubahan langsung tersinkron lintas perangkat dan AuthContext |
+| PROF-02 | Identitas | NIM tidak tampil publik; status identitas belum diverifikasi kampus ditampilkan jelas; NIM tidak otomatis dipercaya untuk fasilitas resmi; avatar tidak tampil di ranking publik |
+| COMP-01 | Katalog | pengunjung hanya melihat konten `published`; cari/filter periode, jenis/kategori, tingkat, format tim (individu/beregu), serta menampilkan sub-lomba dan keterangan aturan poin |
+| COMP-02 | Konten validator | buat, edit penuh, pratinjau, terbit, arsip; jenis/sub-lomba, aturan poin per perlombaan (template/custom + keterangan), syarat, sumber, jadwal, aturan tim, pembaruan tanggal |
+| COMP-03 | Periode & edisi | kompetisi terikat ke periode akademik dan dapat diadakan ulang lintas tahun akademik tanpa merusak referensi pengajuan lama |
+| TARG-01 | Target | satu target aktif per mahasiswa per periode (`StudentTarget.academicPeriodId`); ganti target menampilkan konfirmasi dampak dan mengarsipkan tim lama secara atomik |
+| MATCH-01 | Rekomendasi | hanya untuk lomba beregu; kandidat aktif pada institusi & kompetisi sama; tampilkan label kesesuaian (bukan persentase mentah) + alasan konkret; tanpa PII |
+| TEAM-01 | Undangan | pengirim & penerima terotorisasi; batas default global 5 undangan aktif dan 14 hari (K-19); kapasitas, duplikat, transaksi serentak aman; pengirim dapat membatalkan (`dibatalkan`); anggota yang keluar dapat bergabung ulang |
+| TEAM-02 | Tim | status `terbentuk` berdasarkan rentang `minTeamMembers`–`maxTeamMembers`; `requiredRoles` dan lintas prodi adalah indikator/saran di UI; status `terkunci_seleksi` tampil jelas dan memblokir keluar mandiri; lomba individu tidak memaksa alur tim |
+| ROAD-01 | Roadmap | validator membuat/mengedit multi-fase, multi-tugas, sumber, tenggat secara non-destruktif (tidak menghapus progres mahasiswa); mahasiswa melihat versi terbit dan menandai progres per ID tugas unik |
+| ROAD-02 | Konsultasi | validator mengelola daftar, tambah, edit, arsip kontak WA lengkap dengan status persetujuan publikasi dan keterangan kapasitas (`capacityNote`); tombol WA hanya tampil untuk kontak terbit & disetujui |
+| SEL-01 | Seleksi internal | jadwal/tahap, dropdown peserta (tim beregu atau mahasiswa individu per K-18), hasil, catatan, waktu konfirmasi, dan validator pengonfirmasi; lolos terkonfirmasi mengunci tim beregu dan tidak otomatis menjadi prestasi sah |
+| ACH-01 | Pengajuan | individu atau kelompok (pilih tim pembinaan atau rekan mahasiswa satu institusi), jenis lomba, sub-lomba/cabang, tingkat, hasil, tanggal (zona Asia/Jakarta), penyelenggara, deskripsi, 1–3 bukti privat; dapat dibuat tanpa target; tampilkan keterangan poin otomatis |
+| ACH-02 | Revisi & pembatalan | mahasiswa dapat melihat detail pengajuan (`/app/prestasi/:id`), membatalkan saat `menunggu` (`→ dibatalkan`), dan merevisi seluruh field serta mengganti berkas bukti saat `perlu_perbaikan` tanpa menghapus riwayat audit; simpan draft ditunda ke pasca-rilis awal |
+| VER-01 | Keputusan & override poin | validator/super admin hanya dapat memutus status `menunggu` (setuju, minta perbaikan, tolak); alasan wajib untuk perbaikan/tolak; saat setuju validator melihat detail lomba, anggota, poin rekomendasi + keterangan, dan dapat mengubah (override) poin final dengan alasan wajib; semua tercatat di audit dan `PointLedger` dengan `version` & `idempotencyKey` |
+| VER-02 | Koreksi | keputusan `disetujui` yang salah dikoreksi melalui aksi khusus beralasan dan diaudit; seluruh award poin milik pengaju/semua anggota kelompok dibalik secara atomik tanpa double-reversal |
+| RANK-01 | Poin 3 lapis | hanya prestasi lomba disetujui; sumber poin berjenjang dari aturan perlombaan/sub-lomba atau template poin berversi (bukan hardcoded v1), atau override poin validator; pada prestasi kelompok semua anggota terdaftar mendapat poin penuh; satu siklus persetujuan satu entri ledger per anggota |
+| RANK-02 | Ranking | tahun akademik aktif default (kosong bila tidak ada periode aktif); lifetime terpisah; tie break stabil (poin → Juara 1 → prestasi sah unik → nama → ID stabil); identitas publik minimum tanpa avatar/NIM/email/WA |
+| DASH-01 | Dashboard | mahasiswa (`/me/dashboard`), validator, super admin sesuai scope; angka akurat tanpa pemotongan dan tanpa salah pemetaan kategori/kompetisi; ekspor CSV aman dari formula injection dan terfilter |
+| ADMIN-01 | Pengelolaan & pergantian periode | super admin mengatur staf bernamakan asli, peran, manajemen pergantian periode akademik (pratinjau dampak + konfirmasi + arsip atomik target/tim lama), template poin berversi, master jenis/sub-lomba, audit, dan kesehatan sistem |
+| OPS-01 | Deploy | dua image GHCR public, Compose server (`web`, `api`, `migrate`), root `.env`, build produksi fail-safe tanpa mock/demo, health, backup/restore MySQL & RustFS, dan rollback teruji |
 
 ## Validasi umum
-Semua input divalidasi di backend. Tanggal tidak boleh keliru karena zona waktu; lampiran diperiksa tipe MIME nyata, ekstensi, ukuran, dan jumlah. Teks bebas dibatasi panjang, di-escape saat tampil, dan tidak menerima HTML aktif. Pagination, sort, dan filter memiliki batas agar query tidak menghabiskan server. Operasi mutasi yang rentan klik ganda memakai idempotensi/constraint database.
+Semua input divalidasi di backend (termasuk validasi enum ketat agar tidak crash Prisma). Tanggal dievaluasi dengan zona waktu `Asia/Jakarta`; lampiran diperiksa tipe MIME nyata, magic byte, ekstensi, ukuran nyata buffer, dan jumlah. Teks bebas dibatasi panjang, di-escape saat tampil, dan tidak menerima HTML aktif. Pagination, sort, dan filter memiliki batas agar query tidak menghabiskan server. Operasi mutasi yang rentan klik ganda memakai `idempotencyKey` dan/atau optimistic locking `version`.
 
 ## Keadaan antarmuka
-Setiap daftar punya empty state yang menjelaskan langkah lanjut. Form mempertahankan data saat gagal, menunjukkan error di field, mencegah submit ganda, dan memberi konfirmasi sebelum tindakan yang mengubah riwayat. Layar tidak menampilkan keberhasilan palsu saat API gagal.
+Setiap daftar punya empty state yang menjelaskan langkah lanjut. Form mempertahankan data saat gagal, menunjukkan error di field, mencegah submit ganda, dan memberi konfirmasi sebelum tindakan yang mengubah riwayat (ganti target, keluar tim, suspend staf, ubah peran, aktifkan periode baru, koreksi keputusan). Layar tidak menampilkan keberhasilan palsu atau infinite loading saat API gagal.
 
-## Perubahan dari demo
-Rute /daftar, admin konten, revisi pengajuan, bukti nyata, ranking, dan banyak alur di atas belum ada di repo. Adapter API saat ini adalah kerangka, bukan kontrak akhir. Migrasi implementasi mengikuti docs/13.
+## Status penyelarasan
+Kebutuhan di atas menjadi acuan resmi penutupan audit dan implementasi Fase 1–4 pada `TODO.md` serta `docs/13-peta-jalan.md`. Fitur di luar rilis awal (verifikasi email, simpan draft prestasi, SSO, AI, multi-kampus, beasiswa) dicatat di bagian *Setelah rilis awal* pada `TODO.md`.

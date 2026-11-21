@@ -4,9 +4,9 @@ TALENTA ditujukan untuk membantu mahasiswa menemukan lomba, membentuk tim, mengi
 
 ## Status repo saat ini
 
-Repo memuat frontend React/Vite serta backend Bun/Elysia dengan Prisma/MySQL, autentikasi, domain pembinaan dan prestasi, integrasi storage S3 compatible, serta uji integrasi. Ini merupakan implementasi yang masih perlu perbaikan dan verifikasi, bukan rilis siap produksi. Audit dan tindak lanjutnya tercatat di `docs/24-audit-stage-d0-5.md` dan `TODO.md`; khususnya pemulihan password belum mengirim email dan sejumlah alur validator belum tersedia di UI. Gate yang terdampak sedang ditinjau ulang.
+Repo memuat frontend React/Vite serta backend Bun/Elysia dengan Prisma/MySQL, autentikasi, domain pembinaan dan prestasi, integrasi storage S3 compatible, serta uji integrasi dan Playwright E2E. Ini merupakan implementasi yang masih perlu perbaikan kritis, kelengkapan fitur sesuai keputusan produk `K-15`–`K-22`, dan verifikasi penuh — **bukan rilis siap produksi**. Audit, keputusan produk terbaru, dan rencana bertahap (Fase 0 dokumentasi → Fase 1 patch kritis → Fase 2 fitur baru → Fase 3 Gate Stage 5 → Fase 4 / Stage 6 container & GHCR) tercatat di `docs/14-keputusan-terbuka.md`, `docs/24-audit-stage-d0-5.md`, dan `TODO.md`.
 
-Mode demo memakai JSON/localStorage; build production memakai adapter API. Workflow yang ada menerbitkan build demo ke GitHub Pages, bukan deployment produksi. Image GHCR, Compose produksi dan deployment staging masih direncanakan.
+Mode demo memakai JSON/localStorage; build production memakai adapter API (ditargetkan fail-safe tanpa mock/kartu demo pada Fase 1). Workflow yang ada menerbitkan build demo ke GitHub Pages, bukan deployment produksi. Image GHCR, Compose produksi dan deployment staging masuk jadwal Stage 6 (Fase 4).
 
 Stack demo: React 19, TypeScript, Vite 8, React Router 7, Tailwind CSS 4, Lucide React, Bun. Gunakan Bun dan bun.lock; jangan mengganti package manager tanpa keputusan proyek.
 
@@ -43,6 +43,6 @@ Target saat stage implementasi: frontend/ aplikasi React; backend/ Bun/Elysia/Pr
 
 ## Arah rilis
 
-Mahasiswa mendaftar/login manual. Validator mengelola lomba, roadmap, kontak konsultasi, seleksi dan pengajuan prestasi. Super admin mengelola sistem/peran serta semua fungsi validator. Dosen bukan role login. Landing dan `/ranking` sudah memiliki prototipe ranking berbasis prestasi lomba berstatus disetujui; bobot saat ini hanya fixture UI dan belum boleh dipakai sebagai kebijakan kampus. Google login, AI, SSO, beasiswa, dan multi-kampus tidak masuk rilis pertama. SSO dipertimbangkan setelah integrasi kampus tersedia.
+Mahasiswa mendaftar/login manual (langsung aktif di rilis pertama; verifikasi email ditunda ke pasca-rilis awal) dan dapat mengunggah avatar privat di RustFS. Validator mengelola lomba, jenis & sub-lomba, aturan poin per perlombaan (template/custom + keterangan), roadmap, kontak konsultasi, seleksi internal (beregu maupun individu), serta memvalidasi pengajuan prestasi individu/kelompok (dengan hak override poin beralasan & teraudit; prestasi kelompok memberi poin penuh ke seluruh anggota). Super admin mengelola sistem, staf bernamakan asli (`fullName`), peran, manajemen pergantian periode akademik, template poin berversi, serta seluruh fungsi validator. Dosen bukan role login. Landing dan `/ranking` menampilkan ranking berbasis prestasi lomba berstatus disetujui tanpa avatar/PII; bobot awal belum boleh dipakai sebagai kebijakan resmi kampus sebelum disahkan (`O-01`/`O-02`). Google login, AI, SSO, verifikasi email, simpan draft prestasi, beasiswa, dan multi-kampus tidak masuk rilis pertama.
 
 Home server memakai MySQL, RustFS, Cloudflare Tunnel dan domain pribadi yang sudah ada. GitHub Actions kelak membangun image dan push ke GHCR public; operator server menyiapkan root .env lalu menjalankan docker compose pull dan docker compose up -d. Rancangan ini belum bisa dijalankan dari repo sekarang.

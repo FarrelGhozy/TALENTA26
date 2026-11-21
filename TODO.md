@@ -1,84 +1,121 @@
 # TODO — Rencana bertahap TALENTA menuju produksi
 
-Status diperbarui 21 November 2026. Tanda [x] hanya untuk bukti yang sudah ada; rencana berikutnya belum diimplementasikan. Lihat docs/13-peta-jalan.md untuk urutan, dependensi, dan gate yang rinci.
+Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di `docs/14-keputusan-terbuka.md`). Tanda `[x]` hanya untuk bukti yang sudah ada dan terverifikasi; pekerjaan kode sistem pada Fase 1–4 dijalankan berurutan setelah Fase 0 (dokumentasi) selesai. Lihat `docs/13-peta-jalan.md` untuk dependensi dan gate yang rinci.
 
 ## Kondisi awal yang terverifikasi
-- [x] Frontend React/Vite dengan rute mahasiswa, kompetisi publik, verifikasi, dashboard admin, adapter mock/API.
-- [x] Data demo di JSON dan perubahan di localStorage; typecheck dan lint lulus pada audit dokumentasi.
-- [x] Backend Elysia, Prisma/MySQL, integrasi S3 compatible, autentikasi, dan tes integrasi ada di repo; kesiapan produksi belum terbukti.
-- [ ] CI image GHCR, Compose produksi dan pengujian staging belum tersedia.
-- [ ] UI pengelolaan konten validator belum lengkap; alur revisi prestasi tersedia dalam kode dan masih perlu diuji ulang.
+- [x] Frontend React/Vite dengan rute publik, mahasiswa, validator, super admin, serta adapter mock/API.
+- [x] Backend Elysia, Prisma 7/MySQL, integrasi storage S3 compatible (RustFS), autentikasi Argon2id + cookie HttpOnly, SMTP reset password, serta tes unit/integrasi/Playwright E2E ada di repo.
+- [ ] Penutupan temuan audit keamanan, korupsi poin/ledger, crash alur nyata, dan fitur keputusan `K-15`–`K-22` (Fase 1–3) belum dijalankan.
+- [ ] CI image GHCR public, `Dockerfile`, `compose.yaml` produksi, reverse proxy `infra/`, dan pengujian staging (Fase 4 / Stage 6) belum tersedia.
 
-## Stage D0 — Rekonsiliasi dokumentasi
-- [x] Audit repo dan identifikasi konflik dokumen/kode.
-- [x] Putuskan peran rilis awal, login manual, satu kampus, RustFS/MySQL existing, GHCR public, ranking lomba.
-- [x] Selaraskan PRD, spesifikasi, keputusan, AGENTS, README, dan TODO; hapus klaim mock yang diperlakukan sebagai kebijakan final.
-- [x] Tinjau dokumen dengan pemilik produk; arahan lanjutan mengesahkan scope Stage 1. Keputusan yang belum dapat disahkan kampus tetap tercatat dengan pemilik dan gate di docs/14, bukan dianggap final.
-Gate D0: tidak ada kontradiksi lintas dokumen, setiap fitur punya status nyata/rencana, dan semua keputusan terbuka punya pemilik.
+---
 
-## Stage 1 — Fondasi repo dan desain UI
-- [x] Pindahkan frontend ke frontend/; sediakan backend/ dan infra/ sesuai docs/04. Bukti: build dan lint lulus; base root untuk lokal, GitHub Pages tetap memakai subpath.
-- [x] Hapus klaim beasiswa, SKPI, dan BAAK dari UI demo dan data kompetisi; pencarian teks pada frontend/src dan mocks tidak menemukan klaim tersebut.
-- [x] Pertahankan demo mock sebagai jalur pengembangan, bukan paket produksi. `build:demo` memakai adapter mock; `build` mode production memakai adapter API dan hasil bundle telah dipindai agar fixture mock tidak ikut.
-- [x] Buat fondasi design system, sitemap final, dan prototipe responsif untuk publik, mahasiswa, validator, super admin. Ikon produk distandardkan ke Lucide; ranking publik serta workspace validator/super admin tersedia sebagai prototipe Stage 1.
-- [x] Uji navigasi keyboard, fokus terlihat, mobile 390×844, tablet 768×1024, desktop, login manual gagal/berhasil, redirect lintas role, loading, kosong, error, dan alur mahasiswa/validator/super admin di browser lokal.
-Gate 1: frontend build/lint/typecheck bersih setelah pemindahan; rancangan UI disetujui dan dapat diuji.
-Status gate: **selesai 20 November 2026**. Route lazy-loading menurunkan bundle entry produksi menjadi sekitar 340 kB tanpa peringatan chunk 500 kB. Bukti lengkap: docs/19-validasi-stage-1.md.
+## Ringkasan historis Stage D0–5 (sebelum rekonsiliasi lanjutan 21 November 2026)
+- [x] **Stage D0 awal**: Rekonsiliasi awal PRD, spesifikasi, keputusan `K-01`–`K-14`, `AGENTS.md`, `README.md`, dan `TODO.md`.
+- [x] **Stage 1**: Pemindahan frontend ke `frontend/`, pemisahan adapter `@talenta/services`, ikon Lucide, fondasi UI responsif & keyboard. Bukti historis: `docs/19-validasi-stage-1.md`.
+- [x] **Stage 2**: Fondasi backend Elysia + Prisma 7/MySQL, registrasi/login manual, Argon2id, RBAC, SMTP reset password (`K-13`), proteksi CSRF/Origin. Bukti historis: `docs/20-validasi-stage-2.md`.
+- [x] **Stage 3**: Domain kompetisi, target, matching, tim concurrency-safe, roadmap, konsultan, dan seleksi internal dasar. Bukti historis: `docs/21-validasi-stage-3.md`.
+- [x] **Stage 4**: Pengajuan prestasi, RustFS privat dengan validasi magic-byte & cleanup orphan, verifikasi berversi, koreksi, PointLedger, dan ranking tanpa periode aktif. Bukti historis: `docs/22-validasi-stage-4.md`.
+- [x] **Tindak lanjut audit awal (`docs/24`, A-01 s.d. A-10)**: Rekonsiliasi dokumen awal, SMTP reset password, validasi signature berkas & cleanup orphan, isolasi ranking tanpa periode aktif, mitigasi formula injection CSV, serta skrip `infra/scripts/backup-storage.ts`.
+- [ ] **Gate Stage 5 (`docs/18` & `docs/23`)**: **Masih terbuka** — hasil audit mendalam lanjutan (21 November 2026) menemukan celah keamanan, bug poin/ledger, crash enum/avatar, alur belum lengkap, dan sisa teks/klaim terlarang yang wajib ditutup pada Fase 1–3 di bawah sebelum Stage 6.
 
-## Stage 2 — Fondasi backend, data, dan autentikasi
-- [x] Siapkan Elysia, Prisma versi stabil untuk MySQL, skema awal, migrations, seed super admin yang aman, dan health endpoints. Bukti: Prisma 7 + adapter MariaDB terhubung ke MySQL; migrasi awal diterapkan pada talenta_dev dan talenta_test; health live & ready merespons 200.
-- [x] Implementasi daftar/login manual, hash password, sesi aman, reset password, NIM/email unik, rate limiting, RBAC backend, audit. Bukti: Argon2id hash password; 21 uji integrasi & RBAC di Bun lulus; pencegahan 409 pada email/nim duplikat; anti-IDOR profil; halaman frontend /daftar, /lupa-password, /reset-password terhubung.
-- [x] Hubungkan ke MySQL existing melalui variabel root .env; tidak ada data nyata dalam seed. Bukti: seed hanya memuat institusi dan bootstrap super admin dari environment, bebas dari data mahasiswa nyata.
-Gate 2: uji migrasi ulang, akun duplikat, sesi, otorisasi lintas pengguna/peran, dan pemulihan akun lulus.
-Status gate: **selesai 20 November 2026**. Bukti lengkap: docs/20-validasi-stage-2.md.
+---
 
-## Stage 3 — Domain mahasiswa dan kompetisi
-- [x] Profil, periode akademik, katalog kompetisi, aturan tim per kompetisi, target, matching transparan, undangan, tim, dan roadmap dengan data persisten. Bukti: Skema Prisma & migrasi MySQL 20261120181913_add_competitions_teams_roadmaps aktif; matching transparan tanpa PII; pembentukan tim dengan penguncian pesimistik (concurrency-safe race condition check); checklist progres roadmap persisten di database.
-- [x] Validator mengelola kompetisi, jadwal, roadmap, sumber, seleksi, dan kontak konsultasi WhatsApp yang disetujui. Bukti: Rute admin /api/v1/admin/competitions, /api/v1/admin/roadmaps/:slug, /api/v1/admin/consultants dilindungi RBAC validator/super_admin; kontak konsultasi WhatsApp resmi terintegrasi.
-- [x] Pastikan alur berulang lintas periode: arsip target/tim lama, kompetisi baru, perubahan aturan berversi. Bukti: Pergantian target kompetisi secara atomik mengarsipkan target dan keanggotaan tim lama; versioning pada entitas Team dan Roadmap; seluruh 22 uji integrasi Stage 3 lulus (total 43 uji lulus).
-Gate 3: perjalanan profil → target → tim → persiapan berjalan tanpa mock dan tahan refresh/pergantian perangkat.
-Status gate: **selesai 21 November 2026**. Seluruh 43 uji integrasi lintas auth, rbac, dan domain lulus; typecheck, lint (0 error/warning), build produksi, dan build demo lulus. Bukti lengkap: docs/21-validasi-stage-3.md.
+## Fase 0 — Penyelarasan Dokumentasi & Keputusan Produk (`K-15`–`K-22`) *(Tanpa Ubah Kode Sistem)*
+- [x] Tambahkan keputusan produk `K-15` s.d. `K-22` pada `docs/14-keputusan-terbuka.md` (sistem poin 3 lapis + jenis/sub-lomba + override validator, prestasi kelompok multi-anggota, revisi penuh + batal tanpa draft, seleksi individu & beregu, aturan tim/undangan 5 aktif / 14 hari + peran/prodi sebagai indikator UI, avatar privat RustFS + nama asli staf `fullName`, manajemen pergantian periode di admin + tunda verifikasi email, struktur tab ringkas `?tab=...` + penghapusan rute legacy IDOR).
+- [x] Selaraskan `PRD_TALENTA.md`, `README.md`, `docs/00`, `docs/01`, `docs/02`, `docs/03`, `docs/04`, `docs/05`, `docs/06`, `docs/08`, `docs/09`, `docs/10`, `docs/12`, `docs/13`, `docs/15`, dan `docs/16` agar bebas kontradiksi lintas dokumen.
+- [x] Susun ulang `TODO.md` menjadi rencana operasional bertahap Fase 0 → Fase 1 → Fase 2 → Fase 3 → Fase 4 (Stage 6) → Stage 7, dengan verifikasi email dan simpan draft prestasi di bagian paling bawah (*Setelah rilis awal*).
+- **Gate Fase 0**: nol perubahan di `frontend/`, `backend/`, `infra/`; tidak ada kontradiksi antar-dokumen; commit Git lokal dokumentasi selesai dan disetujui pemilik produk sebelum masuk Fase 1.
 
-## Stage 4 — Prestasi, bukti, verifikasi, ranking
-- [x] Pengajuan prestasi, revisi, jejak keputusan, deteksi duplikat, file bukti privat di RustFS, validasi tipe/ukuran dan hak akses. Bukti: Migrasi 20261120221116_add_achievements_evidence_point_ledger aktif; integrasi RustFS S3 privat terverifikasi; batas 8 MB max (PDF/JPG/PNG); anti-IDOR teruji (403 Forbidden); deteksi duplikat aktif.
-- [x] Validator memutuskan status; tindakan tercatat dan tidak boleh mengubah riwayat diam-diam. Bukti: Rute /api/v1/admin/achievements/:id/decisions dan /corrections dilindungi RBAC validator/super admin; catatan wajib pada revisi/penolakan/koreksi; optimistic locking (versioning) mencegah *race condition* verifikasi serentak (409 Conflict); audit event lengkap.
-- [x] Poin lomba disetujui dihitung menurut aturan berversi; ranking tahunan dan riwayat keseluruhan; data publik minimum. Bukti: PointRule versi 1 terpasang; buku besar PointLedger mengelola award dan reversal atomik; kategori non-lomba 0 poin lomba; /api/v1/ranking dan /ranking/lifetime bebas PII (tanpa NIM, email, no HP, atau berkas).
-Gate 4: unggah/unduh terotorisasi, revisi, dua pengajuan serentak, perhitungan poin, dan koreksi keputusan lulus.
-Status gate: **selesai 21 November 2026**. Seluruh 25 uji integrasi Stage 4 (total 68 uji otomatis sistem) lulus; typecheck, lint (0 error/warning), build produksi, dan build demo lulus. Bukti lengkap: docs/22-validasi-stage-4.md.
+---
 
-## Stage 5 — Operasi admin, kualitas, dan keamanan
-- [x] Super admin mengelola peran staf, konfigurasi, bobot poin, audit, dashboard kesehatan dan operasi; validator mengelola data domain. Bukti: Rute /api/v1/system/* terpasang dengan proteksi RBAC super_admin; penangguhan (suspend) akun mencabut seluruh sesi aktif secara instan (revokeAllUserSessions); periode akademik teraktivasi secara atomik; matriks bobot poin terversi; jejak audit otomatis meredaksi data sensitif; telemetri kesehatan memantau MySQL & RustFS tanpa kebocoran kredensial; SuperAdminDashboardPage menyediakan 5 tab operasional lengkap dengan modal dialog.
-- [x] Dashboard mahasiswa/validator/super admin dengan definisi metrik, filter periode, empty state, dan ekspor yang terotorisasi bila disepakati. Bukti: Rute /api/v1/me/dashboard menyajikan kelengkapan profil, target aktif, tim, progres roadmap, rincian pengajuan, poin periode berjalan, dan rekomendasi aksi nyata (actionable steps); BerandaPage menampilkan banner peringatan oranye saat ada revisi berkas; ValidatorDashboardPage & AdminDashboardPage terhubung statistik antrean riil; ekspor CSV resmi (/api/v1/admin/export) terproteksi RBAC dan berformat UTF-8 BOM kompatibel Microsoft Excel.
-- [ ] Uji aksesibilitas, performa, keamanan, backup/restore, retensi data, dan kebijakan publikasi ranking. Bukti historis mencatat tes RBAC dan backup/restore database; audit menemukan kekurangan dan bukti tersebut belum mencakup seluruh kriteria, termasuk restore RustFS dan aksesibilitas menyeluruh. Lihat docs/24.
-Gate 5: semua kriteria docs/18 lulus; tidak ada temuan kritis terbuka.
-Status gate: **ditinjau ulang; belum terbukti terpenuhi** setelah audit docs/24. Hasil historis tes dan restore database tercatat di docs/23, tetapi tidak membuktikan seluruh kriteria docs/18.
+## Fase 1 — Patch Kritis Keamanan, Bug Poin/Ledger, & Crash Alur Nyata
+### 1.1 Keamanan Backend, Privasi, & Konfigurasi
+- [ ] Hapus kebocoran `passwordHash` dan PII (`email`, `nim`, `phone`) pada `GET /api/v1/users/:userId`, `getMyTeam`, dan `getMyInvites` dengan Prisma explicit `select` serta enforce filter `institutionId`.
+- [ ] Hapus rute legacy rawan IDOR (`/api/v1/users/:userId/target`, query `?userId=` pada checklist roadmap, alias `/api/v1/matching/invites`, dan duplikat `POST /api/v1/competitions`).
+- [ ] Enforce filter `status: 'published'` pada endpoint publik `GET /competitions/:slug`, `GET /roadmaps/:slug`, dan `GET /consultants`.
+- [ ] Simpan `sessionToken` dalam bentuk hash SHA-256 di `auth_sessions`, aktifkan validasi fail-fast `SESSION_SECRET`/`COOKIE_SECRET` di produksi, hapus pengembalian token sesi di JSON body jika cookie HttpOnly aktif penuh, dan kunci `login()`/`validateSession()` konsisten pada status `active`.
+- [ ] Perbaiki `resolveClientIp` agar memakai IP soket nyata saat `TRUST_PROXY=false` (mencegah seluruh pengguna berbagi 1 bucket `'unknown'`), batasi CORS `localhost` hanya untuk non-production, dan matikan fallback `.storage/` lokal pada `NODE_ENV=production`.
+- [ ] Bersihkan `.env.example` (hapus hostname privat `sr-farrel-myserver...` dan password konkret; tambahkan `IMAGE_TAG`, `LOG_LEVEL`, `UPLOAD_MAX_BYTES`, `TIMEZONE_DISPLAY`, `PORT`) dan kunci `backend/prisma/seed.ts` agar pada `NODE_ENV=production` tidak memakai password fallback hardcoded serta tidak meng-upsert 4 lomba 2026 / nomor WA dummy.
 
-## Tindak lanjut audit Stage D0–5 — 21 November 2026
+### 1.2 Bug Kritis Poin, Ledger, & Verifikasi
+- [ ] Perbaiki query `PointRule` di `decideAchievement` agar mengambil versi aktif terbaru (hapus hardcode `version: 1`).
+- [ ] Perbaiki bug double-negation reversal poin pada `getStudentDashboard` dan `generateAchievementsCsv` (`sum += entry.points`).
+- [ ] Cegah double-reversal & double-count pada re-approval pasca koreksi (tandai award yang sudah dibalik, hitung `approvedCount`/`juara1Count` per `achievementId` unik, dan tambahkan tie-break ke-5 `userId.localeCompare`).
+- [ ] Enforce transisi status ketat (`ach.status === 'menunggu'`) pada `decideAchievement`, kunci baris atomik (`FOR UPDATE` / conditional update `version` wajib), dukungan `idempotencyKey`, dan panggil `recordAuditEvent` pada `decideAchievement` serta `correctAchievement`.
+- [ ] Perbaiki validasi tanggal capaian prestasi agar memakai zona waktu `Asia/Jakarta`, validasi enum ketat (`category`, `level`, `result`), dan validasi ukuran buffer nyata (bukan `item.size` klien).
 
-Audit berbasis kode dan dokumen menemukan celah terhadap sebagian klaim gate terdahulu. Prioritas, bukti, dampak, dan batas pemeriksaan ada di [docs/24-audit-stage-d0-5.md](docs/24-audit-stage-d0-5.md). Status historis di atas belum merupakan persetujuan go-live; triase gate bersama pemilik sebelum melanjutkan rilis. Semua butir berikut masih terbuka dan harus dikerjakan sesuai stage serta keputusan produk.
+### 1.3 Patch Crash & Build Frontend
+- [ ] Jadikan build produksi fail-safe: `frontend/vite.config.ts` mengunci `factory.api.ts` pada `--mode production` (abaikan `VITE_USE_MOCK=true`), default `APP_ENV` ke `'PRODUCTION'`, lazy/conditional load `RoleCardLogin` hanya di mode dev/demo agar kredensial demo tidak masuk bundle produksi, dan sembunyikan preset berkas PDF palsu (`AchievementForm.tsx`) pada produksi.
+- [ ] Selaraskan enum `AchievementType` frontend ↔ `AchievementResult` Prisma (`finalis`, `penghargaan_khusus`, dll.) di `AchievementForm`, `StatusBadge`, dan `format.ts`.
+- [ ] Perbaiki bug infinite loading (`if (!cancelled) return;`) di `ProfilePage.tsx` dan `AdminDashboardPage.tsx`, perbaiki perhitungan progres roadmap di `PreparationPage.tsx` (hapus efek dual-key >100%), perbaiki cancel invite & re-join tim di `teams/service.ts` + `PartnerPage.tsx`, pertahankan status `terkunci_seleksi` di mapper tim, hapus fallback user palsu di `userApiService.getById`, dan perbaiki `statsApiService` agar chart analitik peserta per kompetisi & delegasi terkonfirmasi akurat.
+- **Gate Fase 1**: `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo` lulus; uji integrasi keamanan (IDOR, no `passwordHash`, PointRule v2, reversal dashboard/CSV, build scan bebas kredensial/mock) lulus; commit Git lokal.
 
-- [x] D0: Rekonsiliasi README, indeks dan status implementasi; koreksi klaim gate Stage 5 agar mencerminkan bukti yang tersedia (A-01, bagian dokumentasi A-11). Bukti: pencarian klaim usang dan pemeriksaan diff; penyelesaian uji gate tetap terbuka pada butir Stage 5.
-- [x] Stage 1: Tinjau klaim resmi/kebijakan dan perbaiki aksesibilitas dialog/tab serta target sentuh; verifikasi visual dan keyboard di mobile, tablet, desktop (A-02, A-03). Bukti: klaim resmi, afiliasi, popularitas dan skor matching tanpa dasar dikoreksi; dialog mengurung/mengembalikan fokus, tab mendukung panah/Home/End dan semua kontrol mempunyai panel terkait, target aksi utama minimal 44 px. Landing, ranking, dashboard validator, dan pengelolaan konten diperiksa pada 390×844, 768×1024, dan 1440×900 tanpa overflow horizontal/alert; visual penuh halaman validator diperiksa pada mobile/desktop. Uji pembaca layar menyeluruh tetap menjadi bagian gate Stage 5, bukan klaim butir ini.
-- [x] Stage 1/3/5: Hapus asumsi tahun, angkatan dan zona waktu yang tidak bersumber dari data; uji lintas periode dan zona waktu (A-04). Bukti: label tahun statis dan angkatan palsu dihapus; `StudentProfile.enrollmentYear` opsional disimpan melalui migrasi `20261121120000_add_student_enrollment_year`; tahun formulir dan format tanggal memakai Asia/Jakarta. Uji ranking tanpa periode aktif, histori eksplisit, dan lifetime lulus; format lintas TZ diperiksa dari `America/Los_Angeles`.
-- [x] Stage 2: Selesaikan pengiriman reset password, amankan log/token, dan putuskan O-04; tinjau sesi, proxy tepercaya, CSRF dan rate limit (A-05, A-06). Bukti: K-13 menetapkan SMTP production; pengiriman transport diuji, kegagalan membatalkan token, dan production tanpa SMTP gagal tertutup tanpa log token. Frontend memakai cookie HttpOnly tanpa localStorage/query token; origin silang dan cookie tanpa Origin ditolak; proxy header diabaikan kecuali `TRUST_PROXY=true`. K-14 membatasi rilis awal satu instance karena rate limit masih in-memory. 20 uji auth, 4 RBAC, dan unit keamanan lulus.
-- [x] Stage 3: Lengkapi alur UI pengelolaan validator dan selaraskan kontrak API; uji J3 dan cakupan seleksi (A-07). Bukti: `/validator/konten` mencakup kompetisi, roadmap, kontak konsultasi dan seleksi; kontrak memakai endpoint admin. Migrasi `20261121123000_add_internal_selections` menyimpan hasil per tim/kompetisi dan mengunci tim hanya setelah lolos dikonfirmasi. 24 uji Stage 3 dan smoke UI lintas viewport/keyboard lulus.
-- [x] Stage 4: Perkuat validasi isi bukti dan pembersihan objek yatim; uji kegagalan storage/DB serta kebijakan file (A-08). Bukti: signature PDF/JPEG/PNG diverifikasi; file palsu ditolak; upload/revisi membersihkan seluruh object key yang telah dibuat bila storage/DB gagal. Unit signature/kompensasi dan 26 uji integrasi Stage 4 lulus. Malware scanning/sanitasi metadata tetap gate kebijakan O-06 sebelum file nyata.
-- [x] Stage 4: Tangani ketiadaan periode aktif tanpa mencampur ranking seluruh periode; uji pergantian periode dan histori (A-09). Bukti: pengajuan tanpa periode aktif ditolak; ranking current mengembalikan periode null dan daftar kosong, sedangkan histori eksplisit/lifetime tetap tersedia. Skenario deaktivasi dan pemulihan periode lulus.
-- [x] Stage 5: Cegah formula injection pada ekspor CSV dan uji pada aplikasi spreadsheet (A-10). Bukti: prefix berbahaya `=`, `+`, `-`, `@` termasuk setelah whitespace dinetralisasi. Unit test lulus; LibreOffice Calc mengonversi CSV sintetis ke XLSX sebagai shared strings tanpa elemen formula.
-- [ ] Stage 5: Lengkapi bukti aksesibilitas, keamanan, E2E, performa dan backup/restore RustFS; triase ulang gate sesuai docs/18 (A-11). Progres: 13 unit + 92 integrasi, typecheck, lint, build production/demo, UI responsif/keyboard, smoke performa loopback, serta backup/restore object storage terisolasi lulus; rangkaian pengujian Playwright E2E otomatis terpasang di `tests/e2e/` (`run-e2e.sh` / `bun run test:e2e`) memvalidasi alur nyata publik, registrasi mahasiswa, unggah berkas bukti prestasi asli, persetujuan validator, update ranking publik, konsol super admin, analitik, dan ekspor CSV; pemindaian UI memastikan bebas dari icon/klaim AI; gate telah ditriase ulang di docs/23. Masih terbuka: sesi pembaca layar manusia, ambang kapasitas O-06, retensi/RTO/RPO O-03, restore pada bucket RustFS uji nyata, dan pengesahan publikasi ranking O-01/O-02. Operasi terhadap home server tidak dijalankan tanpa tugas terpisah.
+---
 
-## Stage 6 — CI, staging, dan deployment produksi
-- [ ] GitHub Actions menguji dan membangun dua image lalu push GHCR public dengan SHA dan tag rilis.
-- [ ] Compose hanya menarik image aplikasi; root .env mengatur koneksi MySQL/RustFS, domain, rahasia dan tag image.
-- [ ] Reverse proxy melalui Cloudflare Tunnel yang ada; health check, migration job satu kali, backup, rollback, serta observabilitas diuji di staging.
-Gate 6: dari checkout server + .env, docker compose pull dan docker compose up -d membawa rilis sehat; rollback diuji.
+## Fase 2 — Implementasi Fitur & Alur Baru (`K-15` s.d. `K-22`)
+### 2.1 Skema & Migrasi Prisma MySQL
+- [ ] Buat migrasi Prisma untuk:
+  - `User.fullName` (nama asli staf/pengguna, `K-20`).
+  - `StudentProfile.avatarObjectKey` (objek privat RustFS, `K-20`).
+  - `AcademicPeriod.startDate`, `endDate`, `archivedAt` + `StudentTarget.academicPeriodId` (`K-21`).
+  - `CompetitionCategory` (jenis lomba), `CompetitionSubCategory` (sub-lomba/cabang), `PointTemplate`, `CompetitionPointRule` (+ `description`/keterangan poin) (`K-15`).
+  - `Achievement`: `participationType` (`individu | kelompok`), `teamId?`, `competitionCategoryId?`, `subCategoryId?`, `subCompetitionName?`, `potentialDuplicateOfId?`, tabel `AchievementParticipant` (`K-16`), `AchievementEvidence.isActive/supersededByRevisionId` (`K-17`).
+  - Provenance poin & anti-double-reversal: `AchievementDecision` (`calculatedPoints`, `awardedPoints`, `pointSource`, `overrideReason`) dan `PointLedger` (`idempotencyKey @unique`, `pointSource`, `calculatedPoints`, `overrideReason`, `reversedByLedgerId?`).
+  - `InternalSelection`: `teamId?` opsional, `userId?` opsional, `notes?`, `confirmedAt?`, `validatorId?` (`K-18`).
+
+### 2.2 Sistem Poin 3 Lapis, Jenis/Sub-Lomba, Override Validator, & Prestasi Kelompok (`K-15`, `K-16`, `K-17`)
+- [ ] **Admin/Super Admin**: Endpoint & UI `/super-admin?tab=poin` untuk kelola **Template Poin berversi**, **Master Jenis & Sub-Lomba**, dan bobot default + keterangannya.
+- [ ] **Admin/Validator**: Pengaturan poin per perlombaan/sub-lomba (pakai template atau custom bobot + keterangan poin) pada `/validator/konten?tab=kompetisi`.
+- [ ] **Mahasiswa**: Perbarui `/app/prestasi/baru` untuk pilih **jenis & sub-lomba**, lihat keterangan poin, pilih kepesertaan `individu` atau `kelompok` (tarik dari tim aktif atau cari rekan satu institusi); buat halaman detail `/app/prestasi/:id`; lengkapi **revisi penuh** (semua field + ganti berkas bukti lama) dan aksi **batalkan pengajuan** (`menunggu → dibatalkan`).
+- [ ] **Validator**: Perbarui `/validator/prestasi/:id` untuk menampilkan detail lengkap (jenis/sub-lomba, anggota kelompok, deskripsi, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + sumber aturan & keterangannya), tampilkan panel keputusan hanya pada status `menunggu`, sediakan input **override poin + alasan wajib** saat *approve*, beri poin penuh ke seluruh anggota kelompok secara atomik, dan balikkan seluruh anggota saat koreksi.
+
+### 2.3 Avatar Privat RustFS & Nama Asli Staf (`K-20`)
+- [ ] Implementasikan `POST /api/v1/me/profile/avatar` (validasi magic-byte JPEG/PNG/WebP maks 2 MB → unggah ke RustFS privat) dan `GET /api/v1/users/:id/avatar` (stream terotorisasi; pastikan tidak muncul di ranking publik).
+- [ ] Perbarui `StepIdentitas.tsx` & `ProfilePage.tsx` (pakai endpoint upload avatar + `AuthContext.refreshUser()`, hapus `window.alert()`, tampilkan NIM dengan status belum terverifikasi kampus, field pengalaman/bio, kunci input email agar tidak hilang diam-diam).
+- [ ] Perbarui form pembuatan/edit staf di `/super-admin?tab=staf` (wajib `fullName`), simpan & tampilkan nama asli staf di `Navbar`, `AchievementDecision`, dan `AuditEvent` (bukan "Tim Validator" / "Super Administrator").
+
+### 2.4 Lomba Individu, Seleksi Internal, Konten Validator, & Manajemen Pergantian Periode (`K-18`, `K-19`, `K-21`, `K-22`)
+- [ ] Pisahkan alur lomba **individu** vs **beregu** secara konsisten di `ProfilePage` (redirect ke `/app/kompetisi/:slug/persiapan` untuk individu), `BerandaPage`, `PartnerPage`, `CompetitionDetailPage`, dan tambahkan dialog konfirmasi arsip tim saat ganti target.
+- [ ] Tambahkan form buat tim kustom di `TeamPage`, tampilkan banner status `terkunci_seleksi` (disable keluar mandiri), tampilkan label kesesuaian (bukan `%` mentah) di `PartnerCard`, dan jadikan `requiredRoles`/lintas prodi sebagai indikator saran UI.
+- [ ] Lengkapi `/validator/konten` (dengan sinkronisasi `?tab=...`): edit penuh kompetisi + pratinjau + jadwal/syarat/sumber, editor roadmap multi-fase/multi-tugas non-destruktif (tanpa `deleteMany` yang menghapus progres mahasiswa), daftar/edit/arsip konsultan + `capacityNote` + persetujuan publikasi, serta tab seleksi internal dengan **dropdown peserta tim/individu** + catatan & konfirmasi.
+- [ ] Bangun bagian **Manajemen Pergantian Periode** di `/super-admin?tab=periode`: buat periode dengan `startDate`/`endDate`, endpoint `activation-preview` (jumlah target & tim aktif terdampak), modal konfirmasi eksplisit, dan aktivasi atomik yang mengarsipkan target & tim periode lama tanpa menghapus riwayat.
+- **Gate Fase 2**: migrasi teruji pada DB uji + data eksisting; uji unit & integrasi mencakup poin 3 lapis, override validator, prestasi kelompok + koreksi, revisi/ganti bukti, batal pengajuan, avatar RustFS, nama staf, seleksi individu/beregu, dan pergantian periode; commit Git lokal.
+
+---
+
+## Fase 3 — Pembersihan UI/UX, Kepatuhan Kebijakan, & Penutupan Gate Stage 5
+- [ ] Bersihkan seluruh sisa klaim terlarang (`BAAK`, `SK dan transkrip`, `PDDIKTI`), copy `"demo"`/`"simulasi"` hardcoded, emoji (`🎉`, `🤝`), dan nomor WA palsu (`628120000001`).
+- [ ] Hubungkan `BerandaPage` ke `GET /api/v1/me/dashboard` (dengan `actionUrl` rute `/app/*` valid dan metrik akurat tanpa pemotongan 4 item), perbaiki `RequireRole` agar user yang sudah login tanpa izin diarahkan ke `/403`, perbaiki double-active `Navbar`, perbaiki error login ganda, `await logout()`, stale closure filter peran & mutasi state aturan poin di `SuperAdminDashboardPage`, dan ganti seluruh modal mentah ke `<Modal>` aksesibel.
+- [ ] Lengkapi filter katalog (`/kompetisi`), filter/cari nama & NIM di antrean validator (`/validator/prestasi`), filter periode di dashboard validator & ekspor CSV terfilter, serta konfirmasi untuk aksi sensitif super admin (suspend, ubah peran, aktifkan periode) + larangan suspend/downgrade diri sendiri.
+- [ ] Jalankan verifikasi penuh Gate Stage 5 sesuai `docs/18`:
+  - `bun run typecheck`, `bun run lint`, `bun run build`, `bun run build:demo` (cek bundle bebas mock/kredensial).
+  - Seluruh unit test, integration test, dan Playwright E2E J1–J5 (termasuk alur poin override, kelompok, avatar, pergantian periode) pada mobile 390×844, tablet 768×1024, desktop 1440×900.
+  - Optimasi `infra/scripts/backup-storage.ts` (hindari unduh objek 2×), validasi nama DB pada `infra/scripts/backup-db.sh`, serta catat hasil uji backup/restore MySQL & RustFS terisolasi di `docs/23-validasi-stage-5.md`.
+- [ ] Catatan gate operasional/kebijakan yang masih menunggu pengesahan eksternal sebelum go-live data nyata: sesi pembaca layar manusia, ambang kapasitas `O-06`, retensi/RTO/RPO `O-03`, uji restore bucket RustFS uji nyata di server, dan pengesahan publikasi ranking `O-01`/`O-02`.
+- **Gate Fase 3 (Stage 5)**: seluruh kriteria teknis `docs/18` lulus tanpa temuan kritis terbuka; commit Git lokal.
+
+---
+
+## Fase 4 (Stage 6) — CI/CD GHCR Public, Container, Compose Produksi, & Staging
+- [ ] Rapikan struktur monorepo & lockfile (`workspaces` atau sinkronisasi penuh dependensi root/backend termasuk `@aws-sdk/client-s3` dengan versi terkunci; perbaiki `run-e2e.sh` agar tidak menjalankan `bun add`).
+- [ ] Sediakan `frontend/Dockerfile` (multi-stage build produksi + static web server), `backend/Dockerfile` (Bun + Prisma client), konfigurasi reverse proxy `infra/` (same-origin `/` dan `/api`, header keamanan), dan root `compose.yaml` (`web`, `api`, serta `migrate` job satu kali; terhubung ke MySQL & RustFS existing via root `.env`).
+- [ ] Ganti/tambahkan workflow GitHub Actions CI + build & push dua image (`frontend` & `backend`) ke GHCR public dengan tag commit SHA dan tag rilis (pin versi/digest action, jalankan typecheck/lint/unit/integration/build/scan rahasia, tanpa secret server di build).
+- [ ] Perbarui `docs/17-runbook-operasi.md` dan uji di staging: `docker compose pull`, migration job satu kali, `docker compose up -d`, `GET /health/live` & `GET /health/ready` (cek DB + storage), Cloudflare Tunnel HTTPS, serta uji rollback.
+- **Gate Stage 6**: dari checkout server + root `.env`, `docker compose pull && docker compose up -d` membawa rilis sehat; rollback teruji; commit Git lokal.
+
+---
 
 ## Stage 7 — Pilot kampus dan alih operasi
 - [ ] Uji bersama mahasiswa, validator, dan super admin pada data yang disetujui; perbaiki temuan usability.
-- [ ] Dapatkan persetujuan kampus untuk klaim institusi, publikasi nama di ranking, retensi dan pengelolaan data.
-- [ ] Serahkan runbook, akun operasional, prosedur insiden, backup/restore, dan jadwal pembaruan konten.
-Gate 7: pemilik produk menerima pilot; sistem dapat dipakai lintas tahun akademik tanpa reset data.
+- [ ] Dapatkan persetujuan kampus untuk klaim institusi (`O-05`), publikasi nama di ranking (`O-01`/`O-02`), retensi dan pengelolaan data (`O-03`), serta ambang kapasitas/keamanan file (`O-06`).
+- [ ] Serahkan runbook, akun operasional (staf bernamakan asli), prosedur insiden, backup/restore, dan jadwal pembaruan konten.
+- **Gate Stage 7**: pemilik produk menerima pilot; sistem dapat dipakai lintas tahun akademik tanpa reset data.
+
+---
 
 ## Setelah rilis awal
-- [ ] Integrasi SSO kampus ketika sumber identitas dan kontrak integrasi tersedia.
-- [ ] AI, notifikasi/pengingat otomatis, multi-kampus, beasiswa dan integrasi lain hanya melalui keputusan produk baru.
+- [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
+- [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).
+- [ ] Integrasi SSO kampus ketika sumber identitas dan kontrak integrasi tersedia (dengan prosedur pemadanan identitas NIM yang diaudit).
+- [ ] AI, notifikasi/pengingat otomatis, multi-kampus, beasiswa, dan integrasi resmi lain hanya melalui keputusan produk baru.

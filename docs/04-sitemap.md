@@ -1,50 +1,70 @@
 # 04 — Sitemap dan struktur repo tujuan
 
-Status: fondasi struktur dan rute prototipe selesai pada Stage 1. Rute bertanda **target** baru diimplementasikan setelah backend tersedia.
+Status: diselaraskan dengan Keputusan K-22 (21 November 2026). Rute operasional memakai struktur tab ringkas dengan sinkronisasi query parameter `?tab=...` agar navigasi antar-area tetap jelas, dapat di-bookmark, dan konsisten antara desktop serta mobile.
 
 ## Rute publik
-Sudah ada: `/` landing; `/kompetisi` katalog; `/kompetisi/:slug` detail; `/ranking` leaderboard; `/masuk` login demo/manual prototype; `/403` dan `/404`.
+- `/` landing; `/kompetisi` katalog (pencarian, kategori/jenis, tingkat, format, periode); `/kompetisi/:slug` detail (termasuk sub-lomba & keterangan aturan poin); `/ranking` leaderboard (periode aktif & lifetime); `/masuk` login manual (kartu peran instan hanya ada di mode dev/demo, tidak masuk bundle produksi); `/daftar` registrasi manual mahasiswa; `/lupa-password` & `/reset-password` pemulihan sandi SMTP; `/403` dan `/404`.
 
-Target Stage 2+: `/daftar`, `/lupa-password`, dan `/reset-password`.
+## Rute mahasiswa (`/app/*`, role `mahasiswa`)
+- `/app/beranda`: ringkasan progres, target aktif, tim, roadmap, pengajuan, poin periode berjalan, dan rekomendasi aksi nyata (`GET /me/dashboard`).
+- `/app/profil`: identitas (termasuk upload avatar privat RustFS, NIM status belum terverifikasi kampus), minat/keahlian/pengalaman, dan pengaturan target kompetisi (dengan konfirmasi arsip tim lama bila mengganti target).
+- `/app/partner`: tab `?tab=rekomendasi` (rekomendasi calon partner untuk lomba beregu, bukan lomba individu) dan `?tab=undangan` (undangan masuk/keluar termasuk pembatalan undangan keluar).
+- `/app/tim`: buat tim, daftar anggota, status tim (`mencari`, `terbentuk`, `terkunci_seleksi`), indikator saran peran/lintas prodi, dan keluar tim (terblokir bila terkunci seleksi).
+- `/app/kompetisi/:slug/persiapan`: ruang persiapan mandiri (roadmap terbit, progres checklist, jadwal, dan kontak konsultasi WA terverifikasi).
+- `/app/prestasi`: daftar pengajuan prestasi mahasiswa, filter status, dan akses cepat ajukan/revisi/batalkan.
+- `/app/prestasi/baru`: form pengajuan prestasi individu/kelompok dengan pilihan jenis & sub-lomba, peserta tim, keterangan poin, dan unggah 1–3 bukti privat.
+- `/app/prestasi/:id`: detail pengajuan prestasi milik mahasiswa (bukti privat, keterangan poin/override, riwayat revisi & keputusan, tombol revisi penuh saat `perlu_perbaikan`, dan tombol batalkan saat `menunggu`).
 
-## Rute mahasiswa
-Sudah ada: `/app/beranda`, `/app/profil`, `/app/partner`, `/app/tim`, `/app/kompetisi/:slug/persiapan`, `/app/prestasi`, dan `/app/prestasi/baru`.
+## Rute validator (`/validator/*`, role `validator` dan `super_admin`)
+- `/validator`: ringkasan operasional, antrean verifikasi, filter periode, dan kartu pintasan yang terhubung langsung ke tab konten terkait (`?tab=...`).
+- `/validator/konten`: ruang pengelolaan konten terpadu berbasis tab tersinkronisasi URL:
+  - `?tab=kompetisi`: daftar, buat, edit penuh (termasuk jenis/sub-lomba, aturan tim, syarat, jadwal, sumber, aturan poin template/custom + keterangan), pratinjau, terbitkan, dan arsipkan.
+  - `?tab=roadmap`: editor multi-fase & multi-tugas non-destruktif (mempertahankan progres mahasiswa).
+  - `?tab=konsultan`: daftar, tambah, edit, persetujuan publikasi, dan arsip kontak konsultasi WA.
+  - `?tab=seleksi`: catat & perbarui hasil seleksi internal untuk tim beregu maupun peserta individu (dropdown peserta, bukan input ID mentah).
+- `/validator/prestasi`: antrean pengajuan dengan filter status, periode, kategori/jenis, tingkat, pencarian nama/NIM/kegiatan, serta ekspor CSV terfilter.
+- `/validator/prestasi/:id`: detail pemeriksaan bukti privat, jenis/sub-lomba, anggota kelompok, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + keterangan, panel keputusan (dengan input override poin + alasan wajib saat approve), dan modal koreksi keputusan pasca-persetujuan.
 
-Target Stage 3–4: `/app/target`, `/app/undangan`, `/app/prestasi/:id`, `/app/prestasi/:id/perbaiki`, dan `/app/pengaturan`.
+## Rute super admin (`/super-admin/*`, role `super_admin`, plus akses penuh `/validator/*`)
+- `/super-admin`: pusat kendali berbasis tab tersinkronisasi URL:
+  - `?tab=staf`: manajemen pengguna & staf (tambah staf wajib nama asli `fullName`, ubah peran, suspend/aktifkan dengan konfirmasi dan pencabutan sesi instan).
+  - `?tab=periode`: manajemen pergantian periode akademik (buat periode dengan tanggal mulai/akhir, pratinjau dampak aktivasi, konfirmasi, dan aktivasi atomik dengan pengarsipan target & tim lama).
+  - `?tab=poin`: manajemen template poin berversi, master jenis & sub-lomba, serta pengaturan bobot poin default/keterangan.
+  - `?tab=audit`: penelusuran jejak audit berpaginasi & terfilter (aksi, aktor bernamakan asli, tipe target).
+  - `?tab=sistem`: telemetri kesehatan API, MySQL, RustFS, dan status antrean tanpa kebocoran kredensial.
+- `/super-admin/analitik`: ringkasan analitik peserta per kompetisi, delegasi terkonfirmasi, sebaran prestasi, dan ekspor CSV terfilter.
+- `/super-admin/design-system`: rujukan komponen antarmuka (hanya jalur internal/pengembangan).
 
-## Rute validator
-Sudah ada sebagai prototipe: `/validator`, `/validator/prestasi`, dan `/validator/prestasi/:id`.
+## Perilaku guard & build
+- Pengunjung belum login yang mengakses rute terproteksi diarahkan ke `/masuk?redirect=...`.
+- Pengguna yang **sudah login** tetapi tidak memiliki role yang diizinkan diarahkan ke `/403` (bukan `/masuk`).
+- `RequireTarget` memeriksa kecocokan `:slug` terhadap target aktif mahasiswa.
+- Build production memakai root `/` dan selalu mengunci adapter API tanpa mock/kartu demo; `build:demo` hanya untuk pratinjau demo (GitHub Pages menerima subpath dari `VITE_BASE_PATH`).
 
-Target Stage 3–5: `/validator/kompetisi` beserta buat/edit, `/validator/roadmap`, `/validator/konsultan`, `/validator/seleksi`, dan `/validator/laporan`.
-
-## Rute super admin
-Sudah ada sebagai prototipe: `/super-admin`, `/super-admin/analitik`, `/super-admin/design-system`, serta akses ke rute validator.
-
-Target Stage 5: `/super-admin/pengguna`, `/super-admin/staf`, `/super-admin/role`, `/super-admin/periode`, `/super-admin/poin`, `/super-admin/audit`, dan `/super-admin/sistem`.
-
-Route guard role dan fallback loading/error sudah ada untuk prototipe. Penanganan sesi kedaluwarsa dan batas API nyata menunggu Stage 2. Build production memakai root `/`; build demo Pages menerima subpath dari `VITE_BASE_PATH`.
-
-## Struktur setelah Stage 1 dan target Stage 2
+## Struktur repo aktual dan target Stage 6
 ~~~
 frontend/
   src/app/                 router, provider, layouts, guards
   src/features/            modul domain per halaman
   src/components/          design system bersama
-  src/services/            client API dan mock khusus pengembangan
+  src/services/            adapter API produksi dan adapter mock khusus dev/demo
   public/
+  Dockerfile               (target Stage 6)
 backend/
   src/app/                 bootstrap Elysia, middleware, route registration
-  src/modules/             auth, users, competitions, teams, roadmaps,
-                           achievements, verification, ranking, admin
-  src/lib/                 db, storage, audit, errors, config
-  prisma/                  schema dan migrations sesuai versi terkunci
-  tests/
-infra/                     proxy, contoh Compose dan operasi
-docs/
-compose.yaml
+  src/modules/             auth, profile, competitions, targets, matching, teams,
+                           roadmaps, selections, achievements, dashboard, system, health
+  src/lib/                 prisma, storage, storage-archive, audit, session, password, mailer, config
+  prisma/                  schema dan migrations Prisma 7 + MariaDB adapter
+  tests/                   unit & integration tests
+  Dockerfile               (target Stage 6)
+infra/                     skrip backup/restore, konfigurasi reverse proxy (Stage 6)
+docs/                      spesifikasi, keputusan, bukti validasi, audit
+tests/e2e/                 pengujian Playwright lintas peran
+compose.yaml               (target Stage 6)
 .env.example
 AGENTS.md
 TODO.md
 ~~~
 
-Bagian frontend dan placeholder direktori sudah diterapkan pada Stage 1. Isi backend, Prisma, Compose, proxy, dan pengujian backend masih target Stage 2+. Backend kelak memakai modul domain dengan service dan repository; handler HTTP tidak menaruh aturan bisnis. Kontrak HTTP terdokumentasi di docs/16.
+Backend memisahkan handler HTTP (`index.ts`) dan aturan bisnis (`service.ts`). Kontrak HTTP terbaru terdokumentasi di `docs/16-kontrak-api.md`.
