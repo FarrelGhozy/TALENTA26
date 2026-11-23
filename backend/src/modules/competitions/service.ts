@@ -399,6 +399,16 @@ export async function getCompetitionParticipantsAdmin(competitionId: string, ins
     }),
   ]);
 
+  const mappedStudents = targets
+    .filter((t) => t.user.studentProfile)
+    .map((t) => ({
+      id: t.user.id,
+      userId: t.user.id,
+      fullName: t.user.studentProfile!.fullName,
+      nim: t.user.studentProfile!.nim,
+      studyProgram: t.user.studentProfile!.studyProgram,
+    }));
+
   return {
     competitionId: comp.id,
     format: comp.format,
@@ -407,14 +417,11 @@ export async function getCompetitionParticipantsAdmin(competitionId: string, ins
       name: t.name,
       status: t.status,
       memberCount: t.members.length,
+      memberNames: t.members
+        .map((m) => m.user.studentProfile?.fullName)
+        .filter((n): n is string => Boolean(n)),
     })),
-    students: targets
-      .filter((t) => t.user.studentProfile)
-      .map((t) => ({
-        id: t.user.id,
-        fullName: t.user.studentProfile!.fullName,
-        nim: t.user.studentProfile!.nim,
-        studyProgram: t.user.studentProfile!.studyProgram,
-      })),
+    individuals: mappedStudents,
+    students: mappedStudents,
   };
 }

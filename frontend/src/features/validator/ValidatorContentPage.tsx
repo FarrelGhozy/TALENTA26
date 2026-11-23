@@ -80,6 +80,9 @@ export const ValidatorContentPage: React.FC = () => {
   const [selections, setSelections] = useState<
     Array<{
       id: string;
+      competitionId?: string;
+      teamId?: string | null;
+      userId?: string | null;
       stage: string;
       result: string;
       organizerVerified: boolean;
@@ -87,6 +90,7 @@ export const ValidatorContentPage: React.FC = () => {
       competition?: { id: string; name: string };
       team?: { id: string; name: string } | null;
       user?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string } | null } | null;
+      participant?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string } | null } | null;
     }>
   >([]);
 
@@ -210,7 +214,21 @@ export const ValidatorContentPage: React.FC = () => {
     }
     validatorContentService
       .getCompetitionParticipants(selectionForm.competitionId)
-      .then((res) => setCompParticipants(res))
+      .then((res: any) =>
+        setCompParticipants({
+          teams: Array.isArray(res?.teams)
+            ? res.teams.map((t: any) => ({
+                ...t,
+                memberNames: Array.isArray(t.memberNames) ? t.memberNames : [],
+              }))
+            : [],
+          individuals: Array.isArray(res?.individuals)
+            ? res.individuals
+            : Array.isArray(res?.students)
+            ? res.students.map((s: any) => ({ ...s, userId: s.userId || s.id }))
+            : [],
+        })
+      )
       .catch(() => setCompParticipants({ teams: [], individuals: [] }));
   }, [selectionForm.competitionId]);
 
@@ -1187,19 +1205,65 @@ export const ValidatorContentPage: React.FC = () => {
             </form>
 
             {selections.length > 0 && (
-              <ul className="space-y-2">
-                {selections.map((item) => (
-                  <li key={item.id} className="rounded-xl border bg-white p-4 text-sm">
-                    <strong>
-                      {item.competition?.name || 'Kompetisi'} —{' '}
-                      {item.team?.name || item.user?.studentProfile?.fullName || item.user?.fullName || 'Peserta'}
-                    </strong>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {item.stage} • Hasil: <strong>{item.result}</strong> • {item.organizerVerified ? 'Terkonfirmasi panitia' : 'Belum dikonfirmasi'}
-                      {item.notes ? ` • Catatan: ${item.notes}` : ''}
-                    </p>
-                  </li>
-                ))}
+              <ul className="space-y-2.5">
+                {selections.map((item) => {
+                  const participantName =
+                    item.team?.name ||
+                    item.participant?.studentProfile?.fullName ||
+                    item.user?.studentProfile?.fullName ||
+                    item.user?.fullName ||
+                    'Peserta';
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-xl border bg-white p-4 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong>
+                            {item.competition?.name || 'Kompetisi'} — {participantName}
+                          </strong>
+                          <Badge
+                            color={
+                              item.result === 'lolos'
+                                ? 'emerald'
+                                : item.result === 'tidak'
+                                ? 'rose'
+                                : 'amber'
+                            }
+                            size="sm"
+                          >
+                            {item.result}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {item.stage} • {item.organizerVerified ? 'Terkonfirmasi panitia' : 'Belum dikonfirmasi'}
+                          {item.notes ? ` • Catatan: ${item.notes}` : ''}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectionForm({
+                            competitionId: item.competitionId || item.competition?.id || '',
+                            teamId: item.teamId || item.team?.id || '',
+                            userId: item.userId || item.participant?.id || item.user?.id || '',
+                            stage: item.stage,
+                            result: (['menunggu', 'lolos', 'tidak'].includes(item.result)
+                              ? item.result
+                              : 'menunggu') as 'menunggu' | 'lolos' | 'tidak',
+                            organizerVerified: Boolean(item.organizerVerified),
+                            notes: item.notes || '',
+                          });
+                        }}
+                      >
+                        Tinjau / Nilai
+                      </Button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

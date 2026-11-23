@@ -2,14 +2,27 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Competition } from '../../../types';
-import { formatDate } from '../../../lib/format';
+import { formatDate, parseFlexibleDate } from '../../../lib/format';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 
 export const CompetitionCard: React.FC<{ competition: Competition }> = ({ competition }) => {
-  const nextSchedule = [...competition.jadwal].sort(
-    (a, b) => +new Date(a.tanggal) - +new Date(b.tanggal)
-  ).find((j) => new Date(j.tanggal).getTime() >= Date.now()) || competition.jadwal[0];
+  const nextSchedule =
+    [...competition.jadwal]
+      .sort((a, b) => {
+        const da = parseFlexibleDate(a.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const db = parseFlexibleDate(b.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return da - db;
+      })
+      .find((j) => {
+        const d = parseFlexibleDate(j.tanggal);
+        return d ? d.getTime() >= Date.now() - 86400000 : true;
+      }) || competition.jadwal[0];
+
+  const isIndividual =
+    competition.format === 'individu' ||
+    (competition.komposisi.min === 1 && competition.komposisi.max === 1);
+  const isClosed = competition.registrationStatus === 'tutup';
 
   const getCategoryTheme = (cat: string) => {
     switch (cat.toUpperCase()) {
@@ -50,10 +63,17 @@ export const CompetitionCard: React.FC<{ competition: Competition }> = ({ compet
 
       <CardContent className="space-y-4 p-5 sm:p-6 flex-1 flex flex-col justify-between">
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <Badge color={theme.badgeColor} dot>
-              {competition.kategori}
-            </Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge color={theme.badgeColor} dot>
+                {competition.kategori}
+              </Badge>
+              {isClosed && (
+                <Badge color="rose" size="sm">
+                  Rekrutmen Tutup
+                </Badge>
+              )}
+            </div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Tingkat {competition.tingkat}
             </span>
@@ -79,9 +99,9 @@ export const CompetitionCard: React.FC<{ competition: Competition }> = ({ compet
               Komposisi Tim:
             </span>
             <span className="font-extrabold text-slate-800 text-right">
-              {competition.komposisi.min === 1 && competition.komposisi.max === 1
-                ? 'Individu (1 Orang)'
-                : `${competition.komposisi.min}–${competition.komposisi.max} Anggota`}
+              {isIndividual
+                ? 'Individu (1 Peserta)'
+                : `Beregu · ${competition.komposisi.min}–${competition.komposisi.max} Anggota`}
             </span>
           </div>
 

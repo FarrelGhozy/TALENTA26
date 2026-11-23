@@ -26,7 +26,7 @@ import {
   userService,
 } from '@talenta/services';
 import { validateTeamFormation } from '../../lib/teamRules';
-import { formatDate } from '../../lib/format';
+import { formatDate, parseFlexibleDate } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -40,6 +40,7 @@ export const BerandaPage: React.FC = () => {
   const [targetComp, setTargetComp] = useState<Competition | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [isTeamFormed, setIsTeamFormed] = useState(false);
+  const [isSelectionReady, setIsSelectionReady] = useState(false);
   const [missingRoles, setMissingRoles] = useState<string[]>([]);
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -68,9 +69,11 @@ export const BerandaPage: React.FC = () => {
           if (t && comp && t.competitionSlug === comp.slug) {
             const validation = validateTeamFormation(t, [], comp);
             setIsTeamFormed(validation.isFormed);
+            setIsSelectionReady(validation.isSelectionReady);
             setMissingRoles(validation.missingRoles);
           } else {
             setIsTeamFormed(false);
+            setIsSelectionReady(false);
           }
         }
         setLoading(false);
@@ -142,13 +145,46 @@ export const BerandaPage: React.FC = () => {
   const nextStepIndex = steps.findIndex((s) => !s.done);
   const nextStep = nextStepIndex !== -1 ? steps[nextStepIndex] : null;
 
-  // Next agenda item
-  const nextAgenda = targetComp?.jadwal
-    .filter((j) => new Date(j.tanggal).getTime() >= Date.now() - 86400000)
-    .sort((a, b) => +new Date(a.tanggal) - +new Date(b.tanggal))[0] || targetComp?.jadwal[0];
+  // Next agenda item (mendukung format tanggal Indonesia maupun ISO)
+  const nextAgenda =
+    targetComp?.jadwal
+      .filter((j) => {
+        const d = parseFlexibleDate(j.tanggal);
+        return d ? d.getTime() >= Date.now() - 86400000 : true;
+      })
+      .sort((a, b) => {
+        const da = parseFlexibleDate(a.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const db = parseFlexibleDate(b.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return da - db;
+      })[0] || targetComp?.jadwal[0];
+
+  const pendingJoinRequests =
+    team?.isLeader ? (team.pendingJoinRequestsCount ?? team.joinRequests?.length ?? 0) : 0;
 
   return (
     <div className="space-y-6">
+      {/* Banner Perhatian Jika Ada Permintaan Bergabung Tim (Khusus Ketua) */}
+      {pendingJoinRequests > 0 && team && (
+        <div className="p-4 rounded-2xl bg-blue-50/90 border border-blue-200 text-blue-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <Users className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <div className="text-xs font-bold text-blue-900">
+                {pendingJoinRequests} Permintaan Bergabung ke {team.nama} Menunggu Persetujuan
+              </div>
+              <div className="text-xs text-blue-700 mt-0.5">
+                Tinjau profil ringkas pelamar di Ruang Tim Saya untuk menerima atau menolak pengajuan anggota baru.
+              </div>
+            </div>
+          </div>
+          <Link to="/app/tim" className="shrink-0">
+            <Button size="sm" variant="primary">
+              Tinjau Pengajuan
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Banner Perhatian Jika Ada Revisi Prestasi */}
       {revisionCount > 0 && (
         <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
@@ -354,8 +390,10 @@ export const BerandaPage: React.FC = () => {
                         </span>
                         <span
                           className={`font-black px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1 ${
-                            isIndividualTarget || isTeamFormed
+                            isIndividualTarget || isSelectionReady
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : team?.status === 'terkunci_seleksi'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
                               : team
                               ? 'bg-amber-100 text-amber-800 border border-amber-200'
                               : 'bg-slate-200 text-slate-700'
@@ -366,15 +404,25 @@ export const BerandaPage: React.FC = () => {
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" />
                               Kompetisi Individu (Perseorangan)
                             </>
-                          ) : isTeamFormed ? (
+                          ) : team?.status === 'terkunci_seleksi' ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 text-blue-700" aria-hidden="true" />
+                              Terkunci Seleksi Internal
+                            </>
+                          ) : isSelectionReady ? (
                             <>
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" />
-                              Tim Terbentuk & Memenuhi Syarat
+                              Siap Seleksi Internal
+                            </>
+                          ) : isTeamFormed ? (
+                            <>
+                              <Clock className="w-3 h-3 text-amber-600" aria-hidden="true" />
+                              Anggota Cukup &middot; Cek Syarat
                             </>
                           ) : team ? (
                             <>
                               <Clock className="w-3 h-3 text-amber-600" aria-hidden="true" />
-                              Masih Mencari Rekan
+                              Masih Mencari Anggota
                             </>
                           ) : (
                             'Belum Memiliki Tim'

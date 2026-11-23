@@ -324,7 +324,7 @@ export const ProfilePage: React.FC = () => {
                 {(() => {
                   const chosen = competitions.find((c) => c.slug === targetSlug);
                   const isInd = chosen?.format === 'individu' || (chosen && chosen.komposisi.min === 1 && chosen.komposisi.max === 1);
-                  return isInd ? 'Simpan & Mulai Persiapan' : 'Simpan & Cari Partner';
+                  return isInd ? 'Simpan & Mulai Persiapan' : 'Simpan & Pilih Cara Bergabung';
                 })()}
               </Button>
             )}
@@ -349,7 +349,7 @@ export const ProfilePage: React.FC = () => {
       >
         <p className="text-sm text-slate-600 leading-relaxed">
           Anda saat ini tergabung dalam tim aktif <strong className="text-slate-900">{activeTeam?.nama}</strong>.
-          Mengganti target kompetisi akan menyesuaikan rekomendasi tim dan persiapan roadmap Anda. Pastikan koordinasi dengan tim bila ingin berpindah lomba.
+          Mengganti target kompetisi akan mengeluarkan Anda dari tim lama secara otomatis (kepemimpinan dialihkan ke anggota terlama jika Anda ketua, atau tim diarsipkan bila Anda anggota terakhir) serta membatalkan pengajuan gabung yang masih menunggu pada kompetisi lama. Pergantian target ditolak bila tim sudah terkunci seleksi internal.
         </p>
       </Modal>
     </div>

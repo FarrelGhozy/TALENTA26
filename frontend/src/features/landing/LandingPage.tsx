@@ -26,7 +26,7 @@ const heroSlides = [
     title1: 'Menembus',
     title2: 'Batas Potensi,',
     titleHighlight: 'Menginspirasi Dunia',
-    desc: 'Platform pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, menemukan partner lintas prodi, dan mencatat capaian prestasi kompetisi.',
+    desc: 'Platform pembinaan mahasiswa Universitas Darussalam Gontor untuk merintis ide, membentuk tim secara terstruktur, dan mencatat capaian prestasi kompetisi.',
     tags: ['PKM BELMAWA', 'GEMASTIK & KRI', 'RISET & INOVASI', 'PRESTASI GLOBAL'],
   },
   {
@@ -34,8 +34,8 @@ const heroSlides = [
     title1: 'Satukan Visi,',
     title2: 'Bentuk Tim Tangguh,',
     titleHighlight: 'Raih Juara Bersama',
-    desc: 'Fitur pencocokan partner membantu menemukan mahasiswa dengan variasi keahlian: pemrograman, penulisan proposal, analisis data, hingga desain presentasi.',
-    tags: ['MATCHMAKING TIM', 'LINTAS FAKULTAS', 'MENTORING DOSEN', 'SELEKSI INTERNAL'],
+    desc: 'Buat ruang tim sendiri, ajukan bergabung ke tim terbuka lintas prodi, atau masuk lewat kode undangan ketua; lomba individu langsung menuju persiapan.',
+    tags: ['REKRUTMEN TIM', 'KODE UNDANGAN', 'MENTORING DOSEN', 'SELEKSI INTERNAL'],
   },
   {
     kicker: 'PENCATATAN PRESTASI',
@@ -247,8 +247,8 @@ export const LandingPage: React.FC = () => {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xl font-black text-slate-900 leading-tight">Partner</div>
-            <div className="text-[11px] font-bold text-slate-500">Rekomendasi tim</div>
+            <div className="text-xl font-black text-slate-900 leading-tight">Tim &amp; Individu</div>
+            <div className="text-[11px] font-bold text-slate-500">Rekrutmen &amp; Kode Tim</div>
           </div>
         </div>
 
@@ -296,8 +296,8 @@ export const LandingPage: React.FC = () => {
             },
             {
               step: '02',
-              title: 'Cari Partner Tim',
-              desc: 'Fitur pencocokan partner membantu mencari rekan dengan keahlian dan peran yang saling melengkapi.',
+              title: 'Bentuk / Gabung Tim',
+              desc: 'Untuk lomba beregu: buat tim baru, ajukan gabung di direktori terbuka, atau masuk lewat kode ketua. Lomba individu langsung ke persiapan.',
               icon: Users,
               color: 'text-blue-800 bg-blue-50 border-blue-200/80',
             },
@@ -347,77 +347,87 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Team Matching Spotlight Feature */}
+      {/* Team Recruitment Spotlight Feature */}
       <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl p-6 sm:p-10 overflow-hidden relative shadow-xl">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 font-bold text-xs border border-blue-400/30">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Fitur Unggulan Mahasiswa
+              Alur Kolaborasi Mahasiswa
             </span>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
-              Temukan Partner Sesuai Kebutuhan Tim Tanpa Canggung
+              Rekrutmen Tim Terbuka atau Gabung Langsung Pakai Kode Tim
             </h2>
             <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed">
-              Sering kesulitan mencari rekan yang bisa pemrograman, riset data, desain, atau menulis proposal? Sistem pencocokan membandingkan target lomba, minat, variasi keahlian, dan ketersediaan waktu mahasiswa.
+              Belum punya tim? Lihat lowongan tim terbuka pada kompetisi target yang sama lalu kirim pengajuan ke ketua tim. Sudah punya kelompok? Cukup buat tim privat dan bagikan kode undangan ke rekanmu.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
-                Transparansi Nilai Kecocokan
+                Persetujuan Ketua Tim
               </span>
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
-                Lintas Prodi & Fakultas
+                Kode Undangan Tim Privat
               </span>
               <span className="px-3 py-1 rounded-lg bg-blue-800/80 border border-blue-700/60 text-xs font-bold text-blue-100">
-                Sistem Undangan Terstruktur
+                Roadmap Terbuka Lebih Awal
               </span>
             </div>
             <div className="pt-4">
-              <Link to="/app/partner">
+              <Link to="/app/tim/cari">
                 <Button size="md" variant="white" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
-                  Coba Pencocokan Partner
+                  Jelajahi Direktori Tim
                 </Button>
               </Link>
             </div>
           </div>
 
           <div className="lg:col-span-5">
-            {/* Visual Skill Match Puzzle Card */}
+            {/* Visual 3-Path Recruitment Summary Card */}
             <div className="rounded-2xl border border-blue-400/30 bg-blue-950/70 p-5 space-y-3 shadow-2xl backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-blue-800/60 pb-3">
                 <span className="text-xs font-bold text-blue-200 flex items-center gap-1.5">
                   <Users className="w-4 h-4 text-blue-300" />
-                  Kombinasi Tim Ideal
+                  3 Jalur Lomba Beregu
                 </span>
                 <span className="text-[11px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-full">
-                  Contoh rekomendasi
+                  Aturan per lomba
                 </span>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="p-3 rounded-xl bg-blue-900/60 border border-blue-700/50 flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-blue-900/60 border border-blue-700/50 flex items-center justify-between gap-2">
                   <div>
-                    <span className="font-bold text-white block">Riset & Teori</span>
-                    <span className="text-[10px] text-blue-200">Andi Pratama (Informatika)</span>
+                    <span className="font-bold text-white block">1. Buat Tim &amp; Buka Lowongan</span>
+                    <span className="text-[10px] text-blue-200">Tentukan peran dibutuhkan, terima/tolak pelamar</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-blue-800 text-blue-200 px-2 py-0.5 rounded">
-                    Data & Persiapan
+                  <span className="text-[10px] font-bold bg-blue-800 text-blue-200 px-2 py-0.5 rounded shrink-0">
+                    Ketua Tim
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-blue-900/60 border border-blue-700/50 flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-blue-900/60 border border-blue-700/50 flex items-center justify-between gap-2">
                   <div>
-                    <span className="font-bold text-white block">Desain UI/UX & Presentasi</span>
-                    <span className="text-[10px] text-blue-200">Rina Kartika (DKV)</span>
+                    <span className="font-bold text-white block">2. Cari Tim Terbuka</span>
+                    <span className="text-[10px] text-blue-200">Filter kompetisi &amp; peran lalu ajukan bergabung</span>
                   </div>
-                  <span className="text-[10px] font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded">
-                    Figma & Pitch
+                  <span className="text-[10px] font-bold bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded shrink-0">
+                    Ajukan Gabung
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-900/60 border border-blue-700/50 flex items-center justify-between gap-2">
+                  <div>
+                    <span className="font-bold text-white block">3. Sudah Punya Tim</span>
+                    <span className="text-[10px] text-blue-200">Masuk langsung memakai kode undangan rahasia</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-amber-800/80 text-amber-200 px-2 py-0.5 rounded shrink-0">
+                    Kode Tim
                   </span>
                 </div>
               </div>
 
-              <div className="text-[10px] text-blue-300/80 text-center pt-1 italic">
-                *Ilustrasi kombinasi peran tim. Ketersediaan dan kesesuaian mengikuti profil masing-masing mahasiswa.
+              <div className="text-[10px] text-blue-300/80 text-center pt-1">
+                Lomba individu seperti ONMIPA otomatis melewati tahap tim dan langsung ke ruang persiapan.
               </div>
             </div>
           </div>

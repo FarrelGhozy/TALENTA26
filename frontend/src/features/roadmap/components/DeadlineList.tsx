@@ -1,11 +1,12 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { formatDate } from '../../../lib/format';
+import { formatDate, parseFlexibleDate } from '../../../lib/format';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../components/ui/Card';
 
 const getUrgency = (tanggal: string): { label: string; classes: string } => {
-  const target = new Date(tanggal).getTime();
-  if (Number.isNaN(target)) return { label: 'Jadwal', classes: 'bg-slate-100 text-slate-600' };
+  const parsed = parseFlexibleDate(tanggal);
+  if (!parsed) return { label: 'Jadwal', classes: 'bg-slate-100 text-slate-600' };
+  const target = parsed.getTime();
   const diffDays = Math.ceil((target - Date.now()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return { label: 'Terlewat', classes: 'bg-slate-100 text-slate-500 font-medium' };
   if (diffDays <= 14) return { label: `H-${diffDays}`, classes: 'bg-rose-100 text-rose-800 font-bold border border-rose-200' };
@@ -16,7 +17,11 @@ const getUrgency = (tanggal: string): { label: string; classes: string } => {
 export const DeadlineList: React.FC<{ deadlines: { label: string; tanggal: string }[] }> = ({
   deadlines,
 }) => {
-  const sorted = [...deadlines].sort((a, b) => +new Date(a.tanggal) - +new Date(b.tanggal));
+  const sorted = [...deadlines].sort((a, b) => {
+    const da = parseFlexibleDate(a.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const db = parseFlexibleDate(b.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    return da - db;
+  });
   return (
     <Card className="bg-white shadow-2xs">
       <CardHeader className="py-3.5">

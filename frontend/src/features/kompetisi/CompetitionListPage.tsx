@@ -114,6 +114,8 @@ export const CompetitionListPage: React.FC = () => {
               onClick={() => {
                 setSearch('');
                 setCategory('semua');
+                setLevel('semua');
+                setFormat('semua');
               }}
             >
               Reset Filter Pencarian

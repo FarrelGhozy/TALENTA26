@@ -509,6 +509,21 @@ describe('Fase 3B — Rekrutmen Tim Berbasis Pengajuan, Kode Undangan & Aturan D
     const selData = ((await okSel.json()) as any).data;
     expect(selData.teamId).toBe(openTeamId);
     expect(selData.result).toBe('menunggu');
+
+    // Verifikasi endpoint admin participants mengembalikan memberNames & individuals sesuai kontrak UI ValidatorContentPage
+    const partRes = await app.handle(
+      new Request(`http://localhost/api/v1/admin/competitions/${compId}/participants`, {
+        headers: { Authorization: `Bearer ${validatorToken}` },
+      })
+    );
+    expect(partRes.status).toBe(200);
+    const partData = ((await partRes.json()) as any).data;
+    expect(Array.isArray(partData.teams)).toBe(true);
+    expect(Array.isArray(partData.individuals)).toBe(true);
+    const openTeamRow = partData.teams.find((t: any) => t.id === openTeamId);
+    expect(Array.isArray(openTeamRow?.memberNames)).toBe(true);
+    expect(openTeamRow.memberNames.length).toBe(3);
+    expect(partData.individuals.some((s: any) => s.userId === leaderId)).toBe(true);
   });
 
   it('8. Cegah anggota aktif ganda & transfer ketua otomatis saat ketua keluar tim', async () => {

@@ -20,7 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { Competition, Team } from '../../types';
-import { CreateTeamOptions } from '../../services/types';
+import { CreateTeamOptions, UpdateTeamOptions } from '../../services/types';
 import { competitionService, teamService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
@@ -30,6 +30,7 @@ import { LeaveTeamModal } from './components/LeaveTeamModal';
 import { TeamOnboardingHub } from './components/TeamOnboardingHub';
 import { TeamCreateForm } from './components/TeamCreateForm';
 import { JoinByCodeModal } from './components/JoinByCodeModal';
+import { EditTeamModal } from './components/EditTeamModal';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -59,7 +60,7 @@ export const TeamPage: React.FC = () => {
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState<{ userId: string; name: string } | null>(null);
   const [registeringSelection, setRegisteringSelection] = useState(false);
-  const [togglingRecruitment, setTogglingRecruitment] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (modeParam === 'kode') setCodeModalOpen(true);
@@ -184,26 +185,11 @@ export const TeamPage: React.FC = () => {
     }
   };
 
-  const handleToggleRecruitment = async () => {
+  const handleUpdateTeam = async (options: UpdateTeamOptions) => {
     if (!team || !teamService.updateTeam) return;
-    setTogglingRecruitment(true);
-    try {
-      const nextType = team.recruitmentType === 'terbuka' ? 'privat' : 'terbuka';
-      await teamService.updateTeam(team.id, {
-        recruitmentType: nextType,
-        isRecruiting: nextType === 'terbuka',
-      });
-      notify(
-        nextType === 'terbuka'
-          ? 'Rekrutmen tim diubah menjadi Terbuka dan tampil di direktori.'
-          : 'Rekrutmen tim diubah menjadi Privat (khusus kode undangan).'
-      );
-      await loadData();
-    } catch (err: any) {
-      notify(err?.message || 'Gagal mengubah pengaturan rekrutmen.', 'error');
-    } finally {
-      setTogglingRecruitment(false);
-    }
+    await teamService.updateTeam(team.id, options);
+    notify('Pengaturan dan informasi tim berhasil diperbarui.');
+    await loadData();
   };
 
   const handleConfirmRemoveMember = async () => {
@@ -480,11 +466,10 @@ export const TeamPage: React.FC = () => {
               type="button"
               variant="outline"
               size="sm"
-              isLoading={togglingRecruitment}
-              onClick={handleToggleRecruitment}
+              onClick={() => setEditModalOpen(true)}
               leftIcon={<Settings2 className="w-3.5 h-3.5" aria-hidden="true" />}
             >
-              Ubah ke {team.recruitmentType === 'terbuka' ? 'Privat' : 'Terbuka'}
+              Edit Info Tim
             </Button>
           )}
           <Button
@@ -818,6 +803,14 @@ export const TeamPage: React.FC = () => {
           <strong className="text-slate-900">Pemisahan tugas:</strong> ketua menyetujui anggota tim, pengelola konten mengatur aturan dan jadwal lomba, sedangkan verifikator prestasi memeriksa bukti capaian setelah pengajuan prestasi.
         </p>
       </div>
+
+      <EditTeamModal
+        isOpen={editModalOpen}
+        team={team}
+        competition={competition}
+        onClose={() => setEditModalOpen(false)}
+        onSave={handleUpdateTeam}
+      />
 
       <LeaveTeamModal
         isOpen={isLeaveModalOpen}
