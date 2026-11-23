@@ -60,7 +60,7 @@ export const VerificationListPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-              Portal Verifikator
+              Portal Admin
             </span>
             <span className="text-[11px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
               {counts.menunggu} Menunggu Tindakan
@@ -102,7 +102,7 @@ export const VerificationListPage: React.FC = () => {
       <div id={`panel-${filterTab}`} role="tabpanel" aria-labelledby={`tab-${filterTab}`}>
         <AchievementTable
           achievements={filtered}
-          onSelect={(item) => navigate(`/validator/prestasi/${item.id}`)}
+          onSelect={(item) => navigate(`/admin/prestasi/${item.id}`)}
         />
       </div>
     </div>

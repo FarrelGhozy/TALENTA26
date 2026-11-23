@@ -452,8 +452,8 @@ export const ValidatorContentPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Ruang Validator"
-        title="Kelola Konten & Aturan Pembinaan"
+        eyebrow="Manajemen Lomba & Pembinaan"
+        title="Kelola Lomba & Konten Pembinaan"
         description="Kelola katalog perlombaan, bobot poin per lomba/sub-lomba, roadmap non-destruktif, kontak konsultan, dan seleksi internal."
       />
       <Tabs

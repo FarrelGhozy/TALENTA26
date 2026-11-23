@@ -75,7 +75,7 @@ export const VerificationDetailPage: React.FC = () => {
           : 'Pengajuan prestasi ditolak.',
         status === 'ditolak' ? 'error' : 'success'
       );
-      navigate('/validator/prestasi');
+      navigate('/admin/prestasi');
     } catch (err: any) {
       if (err.status === 409 || err.code === 'CONFLICT') {
         notify('Status pengajuan telah diubah oleh validator lain. Memuat ulang data...', 'error');
@@ -100,7 +100,7 @@ export const VerificationDetailPage: React.FC = () => {
         await achievementService.correct(id, correctionReason.trim(), achievement.version, correctionTarget);
         notify('Koreksi keputusan berhasil disimpan. Poin lomba telah dibalikkan secara otomatis.');
         setShowCorrectionModal(false);
-        navigate('/validator/prestasi');
+        navigate('/admin/prestasi');
       }
     } catch (err: any) {
       notify(err.message || 'Gagal mengoreksi keputusan.', 'error');
@@ -114,7 +114,7 @@ export const VerificationDetailPage: React.FC = () => {
     return (
       <div className="p-12 text-center space-y-4">
         <p role="alert" className="text-rose-500 text-xs font-semibold">Data pengajuan tidak ditemukan.</p>
-        <Link to="/validator/prestasi" className="text-sm font-bold text-blue-700 underline">
+        <Link to="/admin/prestasi" className="text-sm font-bold text-blue-700 underline">
           Kembali ke antrean verifikasi
         </Link>
       </div>
@@ -158,7 +158,7 @@ export const VerificationDetailPage: React.FC = () => {
             </Button>
           )}
           <Link
-            to="/validator/prestasi"
+            to="/admin/prestasi"
             className="text-xs font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />

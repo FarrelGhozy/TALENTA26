@@ -26,11 +26,8 @@ export const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string>('');
 
   const getSafeRedirect = (role: Role) => {
-    const roleHome = role === 'super_admin'
-      ? '/super-admin'
-      : role === 'validator'
-        ? '/validator'
-        : '/app/beranda';
+    const isAdminRole = role === 'super_admin' || role === 'validator';
+    const roleHome = isAdminRole ? '/admin' : '/app/beranda';
 
     if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
       const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -38,12 +35,16 @@ export const LoginPage: React.FC = () => {
         ? redirect.slice(basePath.length) || '/'
         : redirect;
       const isStudentRoute = normalizedRedirect === '/app' || normalizedRedirect.startsWith('/app/');
-      const isValidatorRoute = normalizedRedirect === '/validator' || normalizedRedirect.startsWith('/validator/');
-      const isSuperAdminRoute = normalizedRedirect === '/super-admin' || normalizedRedirect.startsWith('/super-admin/');
+      const isAdminRoute =
+        normalizedRedirect === '/admin' ||
+        normalizedRedirect.startsWith('/admin/') ||
+        normalizedRedirect === '/validator' ||
+        normalizedRedirect.startsWith('/validator/') ||
+        normalizedRedirect === '/super-admin' ||
+        normalizedRedirect.startsWith('/super-admin/');
 
       if (isStudentRoute && role !== 'mahasiswa') return roleHome;
-      if (isValidatorRoute && role !== 'validator' && role !== 'super_admin') return roleHome;
-      if (isSuperAdminRoute && role !== 'super_admin') return roleHome;
+      if (isAdminRoute && !isAdminRole) return roleHome;
       if (normalizedRedirect === '/masuk' || normalizedRedirect.startsWith('/masuk?')) {
         return roleHome;
       }

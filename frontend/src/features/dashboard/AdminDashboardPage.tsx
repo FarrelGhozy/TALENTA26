@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Trophy, Download } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpenCheck,
+  CalendarDays,
+  ClipboardCheck,
+  Contact,
+  Download,
+  ShieldCheck,
+  Trophy,
+  UsersRound,
+} from 'lucide-react';
 import { AdminStats } from '../../services/types';
 import { statsService, competitionService, dashboardService } from '@talenta/services';
 import { Competition } from '../../types';
@@ -8,24 +18,33 @@ import { ScopeBanner } from './components/ScopeBanner';
 import { StatCards } from './components/StatCards';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { WorkspaceCard } from '../../components/ui/WorkspaceCard';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
 
 export const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [rawDashboard, setRawDashboard] = useState<any>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exportStatus, setExportStatus] = useState('');
+  const [exportCategory, setExportCategory] = useState('');
   const [exporting, setExporting] = useState(false);
   const { notify } = useToast();
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([statsService.getAdminStats(), competitionService.getAll()])
-      .then(([s, comps]) => {
+    Promise.all([
+      statsService.getAdminStats(),
+      competitionService.getAll(),
+      dashboardService.getAdminDashboard().catch(() => null),
+    ])
+      .then(([s, comps, rawDash]) => {
         if (cancelled) return;
         setStats(s);
         setCompetitions(comps);
+        setRawDashboard(rawDash);
         setLoading(false);
       })
       .catch(() => {
@@ -41,7 +60,10 @@ export const AdminDashboardPage: React.FC = () => {
   const handleExportData = async () => {
     setExporting(true);
     try {
-      await dashboardService.downloadAchievementsCsv();
+      await dashboardService.downloadAchievementsCsv({
+        status: exportStatus || undefined,
+        category: exportCategory || undefined,
+      });
       notify('Laporan rekapitulasi prestasi berhasil diunduh.', 'success');
     } catch (err: any) {
       notify(err.message || 'Gagal mengunduh rekapitulasi prestasi.', 'error');
@@ -50,33 +72,83 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  if (loading) return <PageLoading message="Memuat analitik dashboard admin..." />;
+  if (loading) return <PageLoading message="Memuat dashboard & analitik admin..." />;
   if (error || !stats) {
     return (
       <div className="p-12 text-center space-y-4">
-        <p role="alert" className="text-rose-500 text-xs font-semibold">{error || 'Gagal memuat statistik.'}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.location.reload()}
-        >
+        <p role="alert" className="text-rose-500 text-xs font-semibold">
+          {error || 'Gagal memuat statistik.'}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
           Muat Ulang
         </Button>
       </div>
     );
   }
 
-  // Find max count to scale visual progress bars
   const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi || {}));
+  const pendingCount =
+    rawDashboard?.queue?.pendingVerifications ?? stats.pengajuanPrestasi.menunggu;
+  const approvedConsultants = rawDashboard?.users?.approvedConsultants;
+  const publishedCompetitions = rawDashboard?.competitions?.published ?? competitions.length;
+  const formedTeamsCount = rawDashboard?.teams?.terbentuk ?? stats.totalTimTerbentuk;
+
+  const modules = [
+    {
+      title: 'Kompetisi & Aturan Tim',
+      description:
+        'Susun informasi lomba, syarat, batas anggota tim, bobot poin sub-lomba, dan status publikasi.',
+      icon: Trophy,
+      status: `${publishedCompetitions} aktif`,
+      to: '/admin/konten?tab=kompetisi',
+    },
+    {
+      title: 'Roadmap Persiapan',
+      description:
+        'Kelola fase persiapan, tugas, tenggat, dan sumber belajar mahasiswa secara non-destruktif.',
+      icon: BookOpenCheck,
+      status: 'Terstruktur',
+      to: '/admin/konten?tab=roadmap',
+    },
+    {
+      title: 'Kontak Konsultasi',
+      description: 'Atur kontak WhatsApp dosen/konsultan yang telah disetujui untuk ditampilkan.',
+      icon: Contact,
+      status: approvedConsultants !== undefined ? `${approvedConsultants} kontak` : 'Disetujui',
+      to: '/admin/konten?tab=konsultan',
+    },
+    {
+      title: 'Seleksi Internal',
+      description: 'Catat jadwal, peserta tim maupun individu, hasil, dan status konfirmasi seleksi.',
+      icon: UsersRound,
+      status: `${formedTeamsCount} tim`,
+      to: '/admin/konten?tab=seleksi',
+    },
+    {
+      title: 'Aturan Poin & Sub-Lomba',
+      description: 'Atur master jenis/sub-lomba dan bobot poin pengecualian perlombaan.',
+      icon: CalendarDays,
+      status: '3 Lapis',
+      to: '/admin/konten?tab=poin',
+    },
+    {
+      title: 'Validasi Prestasi',
+      description:
+        'Periksa data, bukti sertifikat, revisi, dan keputusan pengajuan prestasi mahasiswa.',
+      icon: ClipboardCheck,
+      to: '/admin/prestasi',
+      status: `${pendingCount} menunggu`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-              Pusat Kendali Pengelola
+              Portal Admin Terpadu
             </span>
             <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
               Operasional
@@ -86,22 +158,46 @@ export const AdminDashboardPage: React.FC = () => {
             Dashboard Pengelola Program
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Pemantauan operasional pembinaan, progres tim Belmawa, dan pendataan prestasi institusi.
+            Satu pusat kendali untuk analitik pembinaan, pengelolaan kompetisi, validasi prestasi, dan ekspor data institusi.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <select
+            aria-label="Filter status ekspor CSV"
+            value={exportStatus}
+            onChange={(e) => setExportStatus(e.target.value)}
+            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 min-h-[38px]"
+          >
+            <option value="">Semua Status CSV</option>
+            <option value="disetujui">Disetujui</option>
+            <option value="menunggu">Menunggu</option>
+            <option value="perlu_perbaikan">Perlu Perbaikan</option>
+            <option value="ditolak">Ditolak</option>
+          </select>
+          <select
+            aria-label="Filter kategori ekspor CSV"
+            value={exportCategory}
+            onChange={(e) => setExportCategory(e.target.value)}
+            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 min-h-[38px]"
+          >
+            <option value="">Semua Kategori CSV</option>
+            <option value="kompetisi">Kompetisi</option>
+            <option value="konferensi">Konferensi</option>
+            <option value="olahraga">Olahraga</option>
+            <option value="seni">Seni</option>
+          </select>
           <Button
-            size="md"
+            size="sm"
             variant="outline"
             onClick={handleExportData}
             disabled={exporting}
-            leftIcon={<Download className="w-4 h-4" />}
+            leftIcon={<Download className="w-4 h-4" aria-hidden="true" />}
           >
             {exporting ? 'Mengunduh...' : 'Ekspor Data'}
           </Button>
-          <Link to="/validator/prestasi">
-            <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+          <Link to="/admin/prestasi">
+            <Button size="sm" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
               Antrean Verifikasi
             </Button>
           </Link>
@@ -112,14 +208,34 @@ export const AdminDashboardPage: React.FC = () => {
 
       <StatCards stats={stats} />
 
+      {/* Pintasan Modul Pengelolaan */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+            Pintasan Modul Pengelolaan
+          </h2>
+          <Link
+            to="/admin/sistem"
+            className="text-xs font-bold text-blue-700 hover:underline inline-flex items-center gap-1"
+          >
+            Pengaturan Sistem &amp; Akun <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {modules.map((module) => (
+            <WorkspaceCard key={module.title} {...module} />
+          ))}
+        </div>
+      </section>
+
       {/* Analytics Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Distribusi Peserta per Kompetisi */}
         <Card className="bg-white border-slate-200/90 shadow-2xs">
           <CardHeader className="py-3.5">
             <CardTitle level={2} className="text-sm font-bold flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-blue-700" />
-              <span>Distribusi Peserta per Kompetisi Belmawa</span>
+              <Trophy className="w-4 h-4 text-blue-700" aria-hidden="true" />
+              <span>Distribusi Peserta per Kompetisi</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-3 text-xs">
@@ -159,8 +275,8 @@ export const AdminDashboardPage: React.FC = () => {
         <Card className="bg-white border-slate-200/90 shadow-2xs">
           <CardHeader className="py-3.5">
             <CardTitle level={2} className="text-sm font-bold flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Ringkasan Verifikasi Prestasi Mandiri</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+              <span>Ringkasan Verifikasi Prestasi</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-2.5 text-xs">
@@ -185,7 +301,7 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2 leading-relaxed">
-              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> oleh validator yang dihitung dalam rekapitulasi resmi dan papan ranking kemahasiswaan internal kampus.
+              <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> oleh admin yang dihitung dalam rekapitulasi resmi dan papan ranking kemahasiswaan internal kampus.
             </div>
           </CardContent>
         </Card>

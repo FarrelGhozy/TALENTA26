@@ -92,7 +92,9 @@ let mockAuditLogs: AuditLogItem[] = [
 export const systemMockService: ISystemService = {
   getUsers: async (params) => {
     let list = [...mockUsers];
-    if (params?.role && params.role !== 'semua') {
+    if (params?.role === 'admin') {
+      list = list.filter((u) => u.role === 'validator' || u.role === 'super_admin');
+    } else if (params?.role && params.role !== 'semua') {
       list = list.filter((u) => u.role === params.role);
     }
     if (params?.status && params.status !== 'semua') {
@@ -127,7 +129,7 @@ export const systemMockService: ISystemService = {
     const newUser = {
       id: `u-staff-${Date.now()}`,
       email: data.email,
-      role: data.role,
+      role: !data.role || data.role === 'admin' ? 'super_admin' : data.role,
       status: 'active',
       createdAt: new Date().toISOString(),
       studentProfile: null,

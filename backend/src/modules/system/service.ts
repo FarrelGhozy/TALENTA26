@@ -23,7 +23,9 @@ export async function getUsers(institutionId: string, params: UserFilterParams) 
     institutionId,
   };
 
-  if (params.role) {
+  if (params.role === 'admin') {
+    where.role = { in: ['validator', 'super_admin'] };
+  } else if (params.role && params.role !== 'semua') {
     where.role = params.role as Role;
   }
 
@@ -144,7 +146,7 @@ export async function createStaff(
     email: string;
     password: string;
     fullName?: string;
-    role: 'validator' | 'super_admin';
+    role?: 'admin' | 'validator' | 'super_admin';
   },
   actorId: string,
   institutionId: string
@@ -158,8 +160,11 @@ export async function createStaff(
     throw new ValidationError('Password minimal 8 karakter');
   }
 
-  if (!['validator', 'super_admin'].includes(data.role)) {
-    throw new ValidationError('Peran staf hanya boleh validator atau super_admin');
+  const normalizedRole: 'validator' | 'super_admin' =
+    !data.role || data.role === 'admin' ? 'super_admin' : data.role;
+
+  if (!['validator', 'super_admin'].includes(normalizedRole)) {
+    throw new ValidationError('Peran admin tidak valid');
   }
 
   const existing = await prisma.user.findUnique({
@@ -179,7 +184,7 @@ export async function createStaff(
       email,
       fullName: displayName,
       passwordHash,
-      role: data.role,
+      role: normalizedRole,
       status: 'active',
     },
     select: {

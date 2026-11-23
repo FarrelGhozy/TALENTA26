@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useSearchParams } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import type { ComponentType } from 'react';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
@@ -21,6 +21,13 @@ const LegacyTeamSearchRedirect = () => {
     next.set('tab', 'cari');
   }
   return <Navigate to={`/app/tim?${next.toString()}`} replace />;
+};
+
+const LegacyQueryRedirect = ({ to }: { to: string }) => {
+  const location = useLocation();
+  const { id } = useParams<{ id?: string }>();
+  const target = id ? `${to}/${id}` : to;
+  return <Navigate to={`${target}${location.search}`} replace />;
 };
 
 export const router = createBrowserRouter(
@@ -71,41 +78,31 @@ export const router = createBrowserRouter(
   },
 
   {
-    element: <RequireRole allowedRoles={['super_admin']} />,
-    errorElement: <RouteErrorPage />,
-    hydrateFallbackElement: <PageLoading message="Menyiapkan portal super admin..." />,
-    children: [
-      {
-        path: '/super-admin',
-        element: <AppLayout />,
-        children: [
-          { index: true, lazy: lazyRoute(() => import('../features/super-admin/SuperAdminDashboardPage'), 'SuperAdminDashboardPage') },
-          { path: 'analitik', lazy: lazyRoute(() => import('../features/dashboard/AdminDashboardPage'), 'AdminDashboardPage') },
-        ],
-      },
-    ],
-  },
-
-  {
     element: <RequireRole allowedRoles={['validator', 'super_admin']} />,
     errorElement: <RouteErrorPage />,
-    hydrateFallbackElement: <PageLoading message="Menyiapkan ruang validator..." />,
+    hydrateFallbackElement: <PageLoading message="Menyiapkan portal admin..." />,
     children: [
       {
-        path: '/validator',
+        path: '/admin',
         element: <AppLayout />,
         children: [
-          { index: true, lazy: lazyRoute(() => import('../features/validator/ValidatorDashboardPage'), 'ValidatorDashboardPage') },
+          { index: true, lazy: lazyRoute(() => import('../features/dashboard/AdminDashboardPage'), 'AdminDashboardPage') },
           { path: 'konten', lazy: lazyRoute(() => import('../features/validator/ValidatorContentPage'), 'ValidatorContentPage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/verifikasi/VerificationListPage'), 'VerificationListPage') },
           { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/verifikasi/VerificationDetailPage'), 'VerificationDetailPage') },
+          { path: 'sistem', lazy: lazyRoute(() => import('../features/super-admin/SuperAdminDashboardPage'), 'SuperAdminDashboardPage') },
         ],
       },
     ],
   },
 
-  { path: '/admin', element: <Navigate to="/super-admin" replace /> },
-  { path: '/verifikasi', element: <Navigate to="/validator/prestasi" replace /> },
+  { path: '/super-admin', element: <LegacyQueryRedirect to="/admin/sistem" /> },
+  { path: '/super-admin/analitik', element: <Navigate to="/admin" replace /> },
+  { path: '/validator', element: <Navigate to="/admin" replace /> },
+  { path: '/validator/konten', element: <LegacyQueryRedirect to="/admin/konten" /> },
+  { path: '/validator/prestasi', element: <Navigate to="/admin/prestasi" replace /> },
+  { path: '/validator/prestasi/:id', element: <LegacyQueryRedirect to="/admin/prestasi" /> },
+  { path: '/verifikasi', element: <Navigate to="/admin/prestasi" replace /> },
   { path: '/login', element: <Navigate to="/masuk" replace /> },
   { path: '/auth/login', element: <Navigate to="/masuk" replace /> },
   { path: '/register', element: <Navigate to="/daftar" replace /> },

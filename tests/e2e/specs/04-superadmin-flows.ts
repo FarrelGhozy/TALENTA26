@@ -2,10 +2,10 @@ import { type Page } from 'playwright';
 import { CONFIG, CREDENTIALS, log } from '../helpers';
 
 export async function runSuperAdminFlows(page: Page): Promise<void> {
-  log.suite('4. Super Admin Flows (Konsol Admin, Tab Tata Kelola, Analitik, Ekspor CSV)');
+  log.suite('4. Admin Portal Terpadu (Dashboard, Pengaturan Sistem, Kelola Lomba, Ekspor CSV, & Redirect)');
 
-  // 1. Login Super Admin (Mendukung klik kartu instan mode dev atau form manual)
-  log.step(`Login sebagai Super Admin: ${CREDENTIALS.superadmin.email}`);
+  // 1. Login Admin Kampus (kartu instan mode dev atau form manual)
+  log.step(`Login sebagai Admin: ${CREDENTIALS.superadmin.email}`);
   await page.context().clearCookies();
   await page.goto(`${CONFIG.baseUrl}/masuk`);
   await page.evaluate(() => {
@@ -14,8 +14,7 @@ export async function runSuperAdminFlows(page: Page): Promise<void> {
   });
   await page.reload();
 
-  // Tunggu elemen login siap
-  const adminCard = page.locator('button[role="listitem"]:has-text("Super Admin")').first();
+  const adminCard = page.locator('button[role="listitem"]:has-text("Admin Kampus")').first();
   const manualEmail = page.locator('input[type="text"], input[type="email"]').first();
   await Promise.race([
     adminCard.waitFor({ state: 'visible', timeout: 8000 }),
@@ -30,61 +29,76 @@ export async function runSuperAdminFlows(page: Page): Promise<void> {
     await page.locator('button[type="submit"]').click();
   }
 
-  // Tunggu redirect ke /super-admin
-  await page.waitForURL((url) => url.pathname.includes('/super-admin'), { timeout: 8000 });
-  log.pass('Login Super Admin berhasil');
+  // Tunggu redirect ke /admin
+  await page.waitForURL((url) => url.pathname.endsWith('/admin'), { timeout: 8000 });
+  log.pass('Login Admin berhasil dan masuk ke /admin');
 
-  // 2. Konsol Utama Super Admin (/super-admin)
-  log.step('Memeriksa konsol utama Super Admin (/super-admin)');
-  await page.goto(`${CONFIG.baseUrl}/super-admin`);
+  // 2. Dashboard Terpadu Admin (/admin): Analitik + Pintasan Modul + Ekspor CSV
+  log.step('Memeriksa Dashboard & Analitik Admin (/admin)');
+  await page.locator('text=Dashboard Pengelola Program').waitFor({ state: 'visible', timeout: 8000 });
+  await page.locator('text=Pintasan Modul Pengelolaan').waitFor({ state: 'visible', timeout: 5000 });
+  log.pass('Dashboard Admin terpadu berhasil memuat metrik analitik & pintasan modul');
+
+  // Pengujian Ekspor Data CSV
+  log.step('Menguji fungsionalitas unduh CSV rekapitulasi prestasi');
+  const exportBtn = page.locator('button:has-text("Ekspor Data")');
+  await exportBtn.waitFor({ state: 'visible', timeout: 5000 });
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 10000 }).catch(() => null),
+    exportBtn.click(),
+  ]);
+
+  if (download) {
+    log.pass(`Unduhan CSV berhasil dimulai: ${download.suggestedFilename()}`);
+  } else {
+    log.info('Ekspor data diproses melalui in-memory blob trigger');
+  }
+
+  // 3. Halaman Pengaturan Sistem & Operasional (/admin/sistem)
+  log.step('Memeriksa Pengaturan Sistem (/admin/sistem) & perpindahan seluruh tab');
+  await page.goto(`${CONFIG.baseUrl}/admin/sistem`);
   await page.waitForLoadState('domcontentloaded');
+  await page.locator('text=Pengaturan Sistem & Operasional').waitFor({ state: 'visible', timeout: 6000 });
 
-  const adminHeader = page.locator('text=Super Admin');
-  await adminHeader.first().waitFor({ state: 'visible', timeout: 5000 });
-
-  // Uji perpindahan tab (Pengguna, Aturan Poin, Jejak Audit, Kesehatan Sistem)
   const tabButtons = page.locator('[role="tab"]');
   const count = await tabButtons.count();
-  log.info(`Ditemukan ${count} tab tata kelola di konsol admin`);
+  log.info(`Ditemukan ${count} tab tata kelola di Pengaturan Sistem`);
 
   for (let i = 0; i < count; i++) {
     const tab = tabButtons.nth(i);
     const tabText = await tab.textContent();
     await tab.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(250);
     log.info(`Tab "${tabText?.trim()}" dapat diakses dengan baik`);
   }
-  log.pass('Seluruh tab tata kelola institusi responsif');
+  log.pass('Seluruh tab pengaturan sistem responsif');
 
-  // 3. Halaman Analitik Operasional (/super-admin/analitik)
-  log.step('Memeriksa dashboard analitik operasional (/super-admin/analitik)');
-  await page.goto(`${CONFIG.baseUrl}/super-admin/analitik`);
+  // 4. Halaman Kelola Lomba (/admin/konten)
+  log.step('Memeriksa halaman Kelola Lomba (/admin/konten)');
+  await page.goto(`${CONFIG.baseUrl}/admin/konten`);
   await page.waitForLoadState('domcontentloaded');
+  await page.locator('text=Kelola Lomba & Konten Pembinaan').waitFor({ state: 'visible', timeout: 6000 });
+  log.pass('Halaman Kelola Lomba terpadu berhasil dibuka');
 
-  const analitikHeader = page.locator('text=Dashboard Pengelola Program');
-  await analitikHeader.waitFor({ state: 'visible', timeout: 8000 });
+  // 5. Uji Kompatibilitas Redirect Rute Lama (/validator & /super-admin)
+  log.step('Memverifikasi redirect rute lama (/validator/* dan /super-admin/* -> /admin/*)');
+  await page.goto(`${CONFIG.baseUrl}/validator`);
+  await page.waitForURL((url) => url.pathname === '/admin', { timeout: 6000 });
 
-  // Verifikasi banner scope & statistik institusi
-  const statCards = page.locator('text=Total Prestasi Sah, text=Pendaftar Mahasiswa');
-  log.pass('Dashboard analitik operasional berhasil memuat metrik tanpa error');
+  await page.goto(`${CONFIG.baseUrl}/validator/konten?tab=seleksi`);
+  await page.waitForURL(
+    (url) => url.pathname === '/admin/konten' && url.searchParams.get('tab') === 'seleksi',
+    { timeout: 6000 }
+  );
 
-  // 4. Pengujian Ekspor Data CSV
-  log.step('Menguji fungsionalitas unduh CSV rekapitulasi prestasi');
-  const exportBtn = page.locator('button:has-text("Ekspor Data")');
-  await exportBtn.waitFor({ state: 'visible', timeout: 5000 });
+  await page.goto(`${CONFIG.baseUrl}/super-admin?tab=periods`);
+  await page.waitForURL(
+    (url) => url.pathname === '/admin/sistem' && url.searchParams.get('tab') === 'periods',
+    { timeout: 6000 }
+  );
 
-  // Tangkap event download Playwright
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 10000 }).catch(() => [null]),
-    exportBtn.click(),
-  ]);
-
-  if (download) {
-    const suggestedFilename = download.suggestedFilename();
-    log.pass(`Unduhan CSV berhasil dimulai: ${suggestedFilename}`);
-  } else {
-    log.info('Ekspor data diproses melalui in-memory blob trigger');
-  }
-
-  log.pass('Alur Super Admin selesai tanpa kendala');
+  await page.goto(`${CONFIG.baseUrl}/super-admin/analitik`);
+  await page.waitForURL((url) => url.pathname === '/admin', { timeout: 6000 });
+  log.pass('Seluruh rute lama /validator/* & /super-admin/* berhasil diarahkan ke /admin/*');
 }

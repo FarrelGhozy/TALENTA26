@@ -339,9 +339,9 @@ export interface ISystemService {
     totalPages: number;
   }>;
   updateUserStatus(userId: string, status: 'active' | 'suspended' | 'pending_verification'): Promise<any>;
-  createStaff(data: { email: string; fullName?: string; password: string; role: 'validator' | 'super_admin' }): Promise<any>;
+  createStaff(data: { email: string; fullName?: string; password: string; role?: 'admin' | 'validator' | 'super_admin' }): Promise<any>;
   updateUserName?(userId: string, fullName: string): Promise<any>;
-  updateStaffRole(userId: string, role: 'validator' | 'super_admin'): Promise<any>;
+  updateStaffRole(userId: string, role: 'admin' | 'validator' | 'super_admin'): Promise<any>;
   getAcademicPeriods(): Promise<AcademicPeriodItem[]>;
   createAcademicPeriod(data: { name: string; year: number; semester: 'ganjil' | 'genap'; startDate?: string; endDate?: string }): Promise<AcademicPeriodItem>;
   getAcademicPeriodPreview?(id: string): Promise<AcademicPeriodActivationPreview>;

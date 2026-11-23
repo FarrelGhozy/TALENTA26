@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap, Settings, ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { GraduationCap, Settings, ArrowRight, Loader2 } from 'lucide-react';
 import { Badge } from '../../../components/ui/Badge';
 import { Role } from '../../../types';
 
@@ -41,34 +41,19 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       highlights: ['Portofolio karya', 'Undangan tim masuk', 'Papan peringkat'],
     },
     {
-      role: 'validator' as Role,
-      userId: 'u-11',
-      email: 'validator@unida.gontor.ac.id',
-      pass: 'Validator2026!',
-      title: 'Validator Program',
-      name: 'Tim Validator',
-      subtitle: 'validator@unida.gontor.ac.id • Tim Verifikasi & Pembinaan Prestasi',
-      badge: 'Pengelola Prestasi',
-      color: 'from-emerald-500 to-teal-800',
-      bgColor: 'bg-emerald-50 border-emerald-200/80',
-      iconColor: 'text-emerald-700',
-      icon: ShieldCheck,
-      highlights: ['Kelola lomba dan roadmap', 'Verifikasi berkas', 'Pengesahan poin lomba'],
-    },
-    {
       role: 'super_admin' as Role,
       userId: 'u-10',
       email: 'admin@unida.gontor.ac.id',
       pass: 'AdminGontor2026!',
-      title: 'Super Admin',
-      name: 'Super Administrator',
-      subtitle: 'admin@unida.gontor.ac.id • Pengelola Sistem',
-      badge: 'Pengelola Sistem',
+      title: 'Admin Kampus',
+      name: 'Admin Pengelola TALENTA',
+      subtitle: 'admin@unida.gontor.ac.id • Pengelola Lomba, Verifikator & Sistem',
+      badge: 'Pengelola & Verifikator',
       color: 'from-amber-500 to-indigo-900',
       bgColor: 'bg-amber-50 border-amber-200/80',
       iconColor: 'text-amber-700',
       icon: Settings,
-      highlights: ['Kelola staf validator', 'Aturan poin & periode', 'Analitik & ekspor data'],
+      highlights: ['Dashboard & analitik', 'Kelola lomba & prestasi', 'Periode & sistem'],
     },
   ];
 
@@ -90,6 +75,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="list">
         {demoAccounts.map((acc) => {
           const Icon = acc.icon;
+          const isAdminCard = acc.role === 'super_admin' || acc.role === 'validator';
           return (
             <button
               key={acc.userId}
@@ -103,7 +89,9 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
                   onSelectRole(acc.role, acc.userId, { email: acc.email, pass: acc.pass });
                 }
               }}
-              className="text-left p-5 rounded-2xl border bg-white border-slate-200/90 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer disabled:opacity-60 min-h-[140px] focus-visible:ring-2 focus-visible:ring-blue-600 group relative overflow-hidden flex flex-col justify-between"
+              className={`text-left p-5 rounded-2xl border bg-white border-slate-200/90 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer disabled:opacity-60 min-h-[140px] focus-visible:ring-2 focus-visible:ring-blue-600 group relative overflow-hidden flex flex-col justify-between ${
+                isAdminCard ? 'md:col-span-2' : ''
+              }`}
             >
               <div className="flex items-start gap-4">
                 <div

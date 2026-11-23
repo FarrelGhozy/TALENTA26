@@ -95,20 +95,12 @@ export const Navbar: React.FC = () => {
         { to: '/app/prestasi', label: 'Prestasi', icon: Award },
       ];
     }
-    if (currentRole === 'super_admin') {
+    if (currentRole === 'super_admin' || currentRole === 'validator') {
       return [
-        { to: '/super-admin', label: 'Super Admin', icon: Settings2 },
-        { to: '/super-admin/analitik', label: 'Analitik', icon: LayoutDashboard },
-        { to: '/validator', label: 'Ruang Validator', icon: CheckCheck },
-        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
-      ];
-    }
-    if (currentRole === 'validator') {
-      return [
-        { to: '/validator', label: 'Ruang Validator', icon: LayoutDashboard },
-        { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
-        { to: '/validator/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
-        { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
+        { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/admin/konten', label: 'Kelola Lomba', icon: Trophy },
+        { to: '/admin/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
+        { to: '/admin/sistem', label: 'Pengaturan Sistem', icon: Settings2 },
       ];
     }
     return [{ to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy }];
@@ -126,8 +118,7 @@ export const Navbar: React.FC = () => {
     }
     if (
       cleanTarget === '/' ||
-      cleanTarget === '/validator' ||
-      cleanTarget === '/super-admin'
+      cleanTarget === '/admin'
     ) {
       return strippedPath === cleanTarget;
     }
@@ -143,8 +134,7 @@ export const Navbar: React.FC = () => {
 
   const formatRole = (role?: string) => {
     if (role === 'mahasiswa') return 'Mahasiswa';
-    if (role === 'super_admin') return 'Super Admin';
-    if (role === 'validator') return 'Validator';
+    if (role === 'super_admin' || role === 'validator') return 'Admin';
     return role || 'Pengguna';
   };
 

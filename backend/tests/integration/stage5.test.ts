@@ -186,13 +186,13 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
       expect(res.status).toBe(403);
     });
 
-    it('Validator dilarang mengakses API sistem super admin (/api/v1/system/*) -> 403', async () => {
+    it('Seluruh akun pengelola (validator & super_admin) tergabung sebagai Admin dan dapat mengakses API sistem (/api/v1/system/health) -> 200', async () => {
       const res = await app.handle(
         new Request('http://localhost/api/v1/system/health', {
           headers: { Authorization: `Bearer ${validatorToken}` },
         })
       );
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
     });
 
     it('Mahasiswa dilarang mengakses dashboard analitik admin (/api/v1/admin/dashboard) -> 403', async () => {
@@ -230,6 +230,19 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
   // Bagian 2: Pengelolaan Staf & Pengguna (Super Admin)
   // ============================================================================
   describe('2. Pengelolaan Staf & Status Pengguna', () => {
+    it('Filter ?role=admin mengembalikan seluruh pengelola (validator & super_admin) tanpa mahasiswa', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/api/v1/system/users?role=admin&limit=50', {
+          headers: { Authorization: `Bearer ${validatorToken}` },
+        })
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(Array.isArray(body.data.users)).toBe(true);
+      expect(body.data.users.length).toBeGreaterThan(0);
+      expect(body.data.users.every((u: any) => u.role === 'validator' || u.role === 'super_admin')).toBe(true);
+    });
+
     it('Super admin dapat membuat akun staf validator baru', async () => {
       const payload = {
         email: `staff.new.${timeId}@unida.gontor.ac.id`,

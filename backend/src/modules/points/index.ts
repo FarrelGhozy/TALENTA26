@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import * as pointsService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
-import { assertRole } from '../../app/middleware/rbac';
+import { ADMIN_ROLES, assertRole } from '../../app/middleware/rbac';
 import { getDefaultInstitutionId } from '../competitions/service';
 import type { AchievementLevel, AchievementResult } from '@prisma/client';
 
@@ -21,7 +21,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
   // Super Admin: Template Poin Berversi
   .get('/system/point-templates', async ({ auth }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ['super_admin']);
+    assertRole(auth, ADMIN_ROLES);
     const data = await pointsService.getPointTemplates(auth.user.institutionId);
     return { data };
   })
@@ -29,7 +29,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
     '/system/point-templates',
     async ({ auth, body, set }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ['super_admin']);
+      assertRole(auth, ADMIN_ROLES);
       const data = await pointsService.createPointTemplate(auth.user.institutionId, auth.user.id, {
         name: body.name,
         description: body.description,
@@ -60,7 +60,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
   )
   .post('/system/point-templates/:id/activate', async ({ auth, params }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ['super_admin']);
+    assertRole(auth, ADMIN_ROLES);
     const data = await pointsService.activatePointTemplate(
       auth.user.institutionId,
       params.id,

@@ -102,11 +102,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
     fullName: '',
     email: '',
     password: '',
-    role: 'validator' as 'validator' | 'super_admin',
   });
   const [editNameTarget, setEditNameTarget] = useState<{ id: string; fullName: string } | null>(null);
   const [confirmUserAction, setConfirmUserAction] = useState<{
-    type: 'status' | 'role';
     user: any;
   } | null>(null);
 
@@ -238,11 +236,11 @@ export const SuperAdminDashboardPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // Actions: Staf & Pengguna
+  // Actions: Akun Admin & Pengguna
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (staffForm.fullName.trim().length < 2) {
-      notify('Nama lengkap staf minimal 2 karakter wajib diisi', 'error');
+      notify('Nama lengkap admin minimal 2 karakter wajib diisi', 'error');
       return;
     }
     if (!staffForm.email || staffForm.password.length < 8) {
@@ -254,14 +252,14 @@ export const SuperAdminDashboardPage: React.FC = () => {
         email: staffForm.email.trim(),
         fullName: staffForm.fullName.trim(),
         password: staffForm.password,
-        role: staffForm.role,
+        role: 'super_admin',
       });
-      notify('Akun staf berhasil dibuat', 'success');
+      notify('Akun admin berhasil dibuat', 'success');
       setIsCreateStaffOpen(false);
-      setStaffForm({ fullName: '', email: '', password: '', role: 'validator' });
+      setStaffForm({ fullName: '', email: '', password: '' });
       await loadUsers(1);
     } catch (err: any) {
-      notify(err.message || 'Gagal membuat akun staf', 'error');
+      notify(err.message || 'Gagal membuat akun admin', 'error');
     }
   };
 
@@ -280,22 +278,16 @@ export const SuperAdminDashboardPage: React.FC = () => {
 
   const executeConfirmUserAction = async () => {
     if (!confirmUserAction) return;
-    const { type, user } = confirmUserAction;
+    const { user } = confirmUserAction;
     try {
-      if (type === 'status') {
-        const newStatus = user.status === 'active' ? 'suspended' : 'active';
-        await systemService.updateUserStatus(user.id, newStatus);
-        notify(
-          newStatus === 'suspended'
-            ? 'Akun ditangguhkan & seluruh sesi aktif dicabut'
-            : 'Akun berhasil diaktifkan kembali',
-          'success'
-        );
-      } else {
-        const nextRole = user.role === 'validator' ? 'super_admin' : 'validator';
-        await systemService.updateStaffRole(user.id, nextRole);
-        notify(`Peran berhasil diubah menjadi ${nextRole}`, 'success');
-      }
+      const newStatus = user.status === 'active' ? 'suspended' : 'active';
+      await systemService.updateUserStatus(user.id, newStatus);
+      notify(
+        newStatus === 'suspended'
+          ? 'Akun ditangguhkan & seluruh sesi aktif dicabut'
+          : 'Akun berhasil diaktifkan kembali',
+        'success'
+      );
       setConfirmUserAction(null);
       await loadUsers();
     } catch (err: any) {
@@ -393,7 +385,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   };
 
   const tabs = [
-    { id: 'users', label: 'Staf & Akun' },
+    { id: 'users', label: 'Akun & Admin' },
     { id: 'periods', label: 'Periode Akademik' },
     { id: 'points', label: 'Template & Aturan Poin' },
     { id: 'audit', label: 'Jejak Audit' },
@@ -405,14 +397,14 @@ export const SuperAdminDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Pusat Kendali Operasional"
-        title="Super Admin TALENTA"
-        description="Kelola akun staf, siklus pergantian periode akademik, template bobot poin kompetisi, jejak audit, dan kesehatan sistem."
+        eyebrow="Administrasi Sistem TALENTA"
+        title="Pengaturan Sistem & Operasional"
+        description="Kelola akun admin dan mahasiswa, siklus pergantian periode akademik, template bobot poin kompetisi, jejak audit, dan kesehatan sistem."
         actions={
           <div className="flex items-center gap-2">
             {activeTab === 'users' && (
               <Button size="sm" leftIcon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setIsCreateStaffOpen(true)}>
-                Tambah Staf
+                Tambah Admin
               </Button>
             )}
             {activeTab === 'periods' && (
@@ -446,7 +438,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
-        {loading && <PageLoading message="Memuat data operasional super admin..." />}
+        {loading && <PageLoading message="Memuat data pengaturan sistem..." />}
 
         {/* TAB 1: PENGGUNA & STAF */}
         {!loading && activeTab === 'users' && (
@@ -455,7 +447,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
               <CardContent className="p-4">
                 <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                   <div className="flex items-center gap-2 w-full lg:w-auto">
-                    <div className="relative w-full sm:w-64">
+                    <div className="relative w-full sm:w-72">
                       <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
                       <Input
                         placeholder="Cari email, nama, NIM..."
@@ -479,8 +471,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
                         }}
                         options={[
                           { value: 'semua', label: 'Semua Peran' },
-                          { value: 'super_admin', label: 'Super Admin' },
-                          { value: 'validator', label: 'Validator' },
+                          { value: 'admin', label: 'Admin' },
                           { value: 'mahasiswa', label: 'Mahasiswa' },
                         ]}
                         className="text-xs min-h-[38px] py-1.5"
@@ -527,7 +518,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
                       </tr>
                     ) : (
                       users.map((u) => {
-                        const isStudent = u.role === 'mahasiswa';
+                        const isAdminUser = u.role === 'super_admin' || u.role === 'validator';
                         const isSuspended = u.status === 'suspended';
                         const displayName = u.studentProfile?.fullName || u.fullName || u.email;
 
@@ -540,8 +531,8 @@ export const SuperAdminDashboardPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="p-3.5">
-                              <Badge color={u.role === 'super_admin' ? 'purple' : u.role === 'validator' ? 'blue' : 'slate'} size="sm">
-                                {u.role}
+                              <Badge color={isAdminUser ? 'blue' : 'slate'} size="sm">
+                                {isAdminUser ? 'Admin' : 'Mahasiswa'}
                               </Badge>
                             </td>
                             <td className="p-3.5">
@@ -568,20 +559,10 @@ export const SuperAdminDashboardPage: React.FC = () => {
                                   Nama
                                 </Button>
                               )}
-                              {!isStudent && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setConfirmUserAction({ type: 'role', user: u })}
-                                  className="text-[11px] h-8"
-                                >
-                                  {u.role === 'validator' ? 'Jadikan Super Admin' : 'Jadikan Validator'}
-                                </Button>
-                              )}
                               <Button
                                 size="sm"
                                 variant={isSuspended ? 'outline' : 'danger'}
-                                onClick={() => setConfirmUserAction({ type: 'status', user: u })}
+                                onClick={() => setConfirmUserAction({ user: u })}
                                 className="text-[11px] h-8"
                               >
                                 {isSuspended ? 'Aktifkan' : 'Suspend'}
@@ -825,7 +806,13 @@ export const SuperAdminDashboardPage: React.FC = () => {
                             {log.actor?.studentProfile?.fullName || (log.actor as any)?.fullName || log.actor?.email || 'Sistem'}
                           </div>
                           {log.actor?.role && (
-                            <span className="text-[10px] text-slate-400">{log.actor.role}</span>
+                            <span className="text-[10px] text-slate-400">
+                              {log.actor.role === 'super_admin' || log.actor.role === 'validator'
+                                ? 'Admin'
+                                : log.actor.role === 'mahasiswa'
+                                  ? 'Mahasiswa'
+                                  : log.actor.role}
+                            </span>
                           )}
                         </td>
                         <td className="p-3 font-mono font-bold text-blue-700 text-[11px]">{log.action}</td>
@@ -941,31 +928,31 @@ export const SuperAdminDashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* MODAL: TAMBAH STAF */}
+      {/* MODAL: TAMBAH ADMIN */}
       <Modal
         isOpen={isCreateStaffOpen}
         onClose={() => setIsCreateStaffOpen(false)}
-        title="Tambah Akun Staf Baru"
+        title="Tambah Akun Admin Baru"
         footer={
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateStaffOpen(false)}>Batal</Button>
-            <Button type="submit" form="create-staff-form" size="sm">Buat Akun Staf</Button>
+            <Button type="submit" form="create-staff-form" size="sm">Buat Akun Admin</Button>
           </div>
         }
       >
         <form id="create-staff-form" onSubmit={handleCreateStaff} className="space-y-4">
           <Input
-            label="Nama Lengkap Staf"
+            label="Nama Lengkap Admin"
             required
             placeholder="contoh: Ustadz Ahmad Pembina, M.Kom."
             value={staffForm.fullName}
             onChange={(e) => setStaffForm({ ...staffForm, fullName: e.target.value })}
           />
           <Input
-            label="Email Staf"
+            label="Email Admin"
             type="email"
             required
-            placeholder="staf@unida.gontor.ac.id"
+            placeholder="admin@unida.gontor.ac.id"
             value={staffForm.email}
             onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
           />
@@ -977,15 +964,6 @@ export const SuperAdminDashboardPage: React.FC = () => {
             placeholder="••••••••"
             value={staffForm.password}
             onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-          />
-          <Select
-            label="Peran Staf"
-            value={staffForm.role}
-            onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value as 'validator' | 'super_admin' })}
-            options={[
-              { value: 'validator', label: 'Validator (Verifikasi Prestasi & Lomba)' },
-              { value: 'super_admin', label: 'Super Admin (Kendali Penuh Sistem)' },
-            ]}
           />
         </form>
       </Modal>
@@ -1012,11 +990,11 @@ export const SuperAdminDashboardPage: React.FC = () => {
         </form>
       </Modal>
 
-      {/* MODAL: KONFIRMASI SUSPEND / UBAH PERAN */}
+      {/* MODAL: KONFIRMASI SUSPEND / AKTIFKAN */}
       <Modal
         isOpen={Boolean(confirmUserAction)}
         onClose={() => setConfirmUserAction(null)}
-        title={confirmUserAction?.type === 'status' ? 'Konfirmasi Status Akun' : 'Konfirmasi Perubahan Peran Staf'}
+        title="Konfirmasi Status Akun"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setConfirmUserAction(null)}>Batal</Button>
@@ -1025,13 +1003,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
         }
       >
         <p className="text-sm text-slate-600 leading-relaxed">
-          {confirmUserAction?.type === 'status'
-            ? confirmUserAction.user.status === 'active'
-              ? `Menangguhkan akun ${confirmUserAction.user.fullName || confirmUserAction.user.email} akan mencabut seluruh sesi login aktifnya. Lanjutkan?`
-              : `Aktifkan kembali akun ${confirmUserAction.user.fullName || confirmUserAction.user.email}?`
-            : `Ubah peran ${confirmUserAction?.user.fullName || confirmUserAction?.user.email} menjadi ${
-                confirmUserAction?.user.role === 'validator' ? 'Super Admin' : 'Validator'
-              }?`}
+          {confirmUserAction?.user.status === 'active'
+            ? `Menangguhkan akun ${confirmUserAction.user.fullName || confirmUserAction.user.email} akan mencabut seluruh sesi login aktifnya. Lanjutkan?`
+            : `Aktifkan kembali akun ${confirmUserAction?.user.fullName || confirmUserAction?.user.email}?`}
         </p>
       </Modal>
 

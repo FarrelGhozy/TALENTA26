@@ -18,24 +18,23 @@ Status: diselaraskan dengan Keputusan `K-19` (revisi), `K-22`, dan `K-23` (23 No
 - `/app/prestasi/baru`: form pengajuan prestasi individu/kelompok dengan pilihan jenis & sub-lomba, peserta tim, keterangan poin, dan unggah 1–3 bukti privat.
 - `/app/prestasi/:id`: detail pengajuan prestasi milik mahasiswa (bukti privat, keterangan poin/override, riwayat revisi & keputusan, tombol revisi penuh saat `perlu_perbaikan`, dan tombol batalkan saat `menunggu`).
 
-## Rute validator (`/validator/*`, role `validator` dan `super_admin`)
-- `/validator`: ringkasan operasional, antrean verifikasi, filter periode, dan kartu pintasan yang terhubung langsung ke tab konten terkait (`?tab=...`).
-- `/validator/konten`: ruang pengelolaan konten terpadu berbasis tab tersinkronisasi URL:
+## Rute admin terpadu (`/admin/*`, role `validator` dan `super_admin`)
+Validator dan Super Admin digabung menjadi satu peran dan portal **Admin** dengan 4 menu Navbar:
+- `/admin` (**Dashboard**): gabungan analitik peserta/prestasi institusi, filter & ekspor CSV terpadu, serta 6 kartu pintasan modul menuju tab pengelolaan lomba dan antrean validasi prestasi.
+- `/admin/konten` (**Kelola Lomba**): ruang pengelolaan konten terpadu berbasis tab tersinkronisasi URL (`?tab=...`):
   - `?tab=kompetisi`: daftar, buat, edit penuh (termasuk jenis/sub-lomba, format individu/beregu, min/max anggota, status pendaftaran buka/tutup, tenggat seleksi internal, syarat peran & lintas prodi wajib/opsional, batas satu tim per cabang, jadwal, sumber/pedoman, aturan poin template/custom + keterangan), pratinjau, terbitkan, dan arsipkan.
+  - `?tab=poin`: master jenis & sub-lomba serta pengaturan bobot poin khusus per perlombaan/sub-lomba.
   - `?tab=roadmap`: editor multi-fase & multi-tugas non-destruktif (mempertahankan progres mahasiswa).
   - `?tab=konsultan`: daftar, tambah, edit, persetujuan publikasi, dan arsip kontak konsultasi WA.
   - `?tab=seleksi`: catat & perbarui hasil seleksi internal untuk tim beregu maupun peserta individu (dropdown peserta, bukan input ID mentah).
-- `/validator/prestasi`: antrean pengajuan dengan filter status, periode, kategori/jenis, tingkat, pencarian nama/NIM/kegiatan, serta ekspor CSV terfilter.
-- `/validator/prestasi/:id`: detail pemeriksaan bukti privat, jenis/sub-lomba, anggota kelompok, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + keterangan, panel keputusan (dengan input override poin + alasan wajib saat approve), dan modal koreksi keputusan pasca-persetujuan.
-
-## Rute super admin (`/super-admin/*`, role `super_admin`, plus akses penuh `/validator/*`)
-- `/super-admin`: pusat kendali berbasis tab tersinkronisasi URL:
-  - `?tab=staf`: manajemen pengguna & staf (tambah staf wajib nama asli `fullName`, ubah peran, suspend/aktifkan dengan konfirmasi dan pencabutan sesi instan).
-  - `?tab=periode`: manajemen pergantian periode akademik (buat periode dengan tanggal mulai/akhir, pratinjau dampak aktivasi, konfirmasi, dan aktivasi atomik dengan pengarsipan target & tim lama).
-  - `?tab=poin`: manajemen template poin berversi, master jenis & sub-lomba, serta pengaturan bobot poin default/keterangan.
+- `/admin/prestasi` (**Validasi Prestasi**) & `/admin/prestasi/:id`: antrean pengajuan dengan filter status & pencarian nama/NIM/kegiatan, detail pemeriksaan bukti privat, jenis/sub-lomba, anggota kelompok, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + keterangan, panel keputusan (dengan input override poin + alasan wajib saat approve), dan modal koreksi keputusan pasca-persetujuan.
+- `/admin/sistem` (**Pengaturan Sistem**): pusat kendali sistem berbasis tab tersinkronisasi URL (`?tab=...`):
+  - `?tab=users`: manajemen akun Admin & mahasiswa (tambah admin wajib nama asli `fullName`, ubah nama, suspend/aktifkan dengan konfirmasi dan pencabutan sesi instan).
+  - `?tab=periods`: manajemen pergantian periode akademik (buat periode dengan tanggal mulai/akhir, pratinjau dampak aktivasi, konfirmasi, dan aktivasi atomik dengan pengarsipan target & tim lama).
+  - `?tab=points`: manajemen template poin berversi dan matriks bobot standar default kampus.
   - `?tab=audit`: penelusuran jejak audit berpaginasi & terfilter (aksi, aktor bernamakan asli, tipe target).
-  - `?tab=sistem`: telemetri kesehatan API, MySQL, RustFS, dan status antrean tanpa kebocoran kredensial.
-- `/super-admin/analitik`: ringkasan analitik peserta per kompetisi, delegasi terkonfirmasi, sebaran prestasi, dan ekspor CSV terfilter.
+  - `?tab=health`: telemetri kesehatan API, MySQL, RustFS, dan status antrean tanpa kebocoran kredensial.
+- **Redirect kompatibilitas rute lama**: `/validator` → `/admin`, `/validator/konten` → `/admin/konten`, `/validator/prestasi` & `/verifikasi` → `/admin/prestasi`, `/validator/prestasi/:id` → `/admin/prestasi/:id`, `/super-admin` → `/admin/sistem`, dan `/super-admin/analitik` → `/admin`.
 
 ## Perilaku guard & build
 - Pengunjung belum login yang mengakses rute terproteksi diarahkan ke `/masuk?redirect=...`.
