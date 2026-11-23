@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma';
+import { evaluateTeamReadiness } from '../teams/readiness';
 import type { AchievementStatus, AchievementCategory } from '@prisma/client';
 
 export async function getStudentDashboard(userId: string, institutionId: string) {
@@ -42,9 +43,15 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     orderBy: { createdAt: 'desc' },
   });
 
-  // 3. Tim aktif & status pembentukan
+  // 3. Tim aktif & status pembentukan (nol PII anggota lain)
   const teamMember = await prisma.teamMember.findFirst({
-    where: { userId, status: 'active' },
+    where: {
+      userId,
+      status: 'active',
+      team: {
+        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+      },
+    },
     include: {
       team: {
         include: {
@@ -56,6 +63,11 @@ export async function getStudentDashboard(userId: string, institutionId: string)
               format: true,
               minTeamMembers: true,
               maxTeamMembers: true,
+              requiredRoles: true,
+              registrationStatus: true,
+              internalSelectionDeadline: true,
+              requireRoles: true,
+              requireCrossStudyProgram: true,
             },
           },
           members: {
@@ -66,20 +78,38 @@ export async function getStudentDashboard(userId: string, institutionId: string)
                   id: true,
                   studentProfile: {
                     select: {
-                      nim: true,
                       fullName: true,
                       studyProgram: true,
+                      rolesCapable: true,
                     },
                   },
                 },
               },
             },
           },
+          joinRequests: {
+            where: { status: 'menunggu' },
+            select: { id: true },
+          },
         },
       },
     },
     orderBy: { joinedAt: 'desc' },
   });
+
+  const activeTeamReadiness = teamMember
+    ? evaluateTeamReadiness({
+        teamStatus: teamMember.team.status,
+        targetMaxMembers: teamMember.team.targetMaxMembers,
+        competition: teamMember.team.competition,
+        members: teamMember.team.members.map((m) => ({
+          userId: m.userId,
+          roleInTeam: m.roleInTeam,
+          studyProgram: m.user.studentProfile?.studyProgram ?? null,
+          rolesCapable: m.user.studentProfile?.rolesCapable ?? [],
+        })),
+      })
+    : null;
 
   // 4. Progres roadmap untuk target kompetisi (jika ada)
   let roadmapSummary = null;
@@ -227,20 +257,27 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     if (!teamMember) {
       actionableSteps.push({
         id: 'form-team',
-        title: 'Bentuk atau Gabung Tim Kompetisi',
-        description: 'Kompetisi target Anda berskala beregu. Cari rekan tim melalui fitur pencarian atau buat tim baru.',
-        actionUrl: '/app/partner',
+        title: 'Pilih Cara Bergabung atau Buat Tim',
+        description: 'Buat tim baru, cari tim yang membuka rekrutmen, atau gabung memakai kode undangan ketua.',
+        actionUrl: '/app/tim',
         isCompleted: false,
         priority: 'medium',
       });
     } else {
+      const pendingReqs =
+        teamMember.team.leaderId === userId ? teamMember.team.joinRequests.length : 0;
       actionableSteps.push({
         id: 'form-team',
-        title: 'Tim Kompetisi Terbentuk',
-        description: `Bergabung dalam ${teamMember.team.name} (${teamMember.team.status})`,
+        title:
+          pendingReqs > 0
+            ? `${pendingReqs} Permintaan Bergabung Menunggu Persetujuan`
+            : activeTeamReadiness?.isSelectionReady
+            ? 'Tim Siap Mengikuti Seleksi Internal'
+            : 'Kelola Ruang Tim & Anggota',
+        description: `${teamMember.team.name} (${activeTeamReadiness?.statusLabel || teamMember.team.status})`,
         actionUrl: '/app/tim',
-        isCompleted: true,
-        priority: 'low',
+        isCompleted: Boolean(activeTeamReadiness?.hasEnoughMembers),
+        priority: pendingReqs > 0 ? 'high' : 'low',
       });
     }
   }
@@ -289,7 +326,15 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       faculty: profile?.faculty || null,
     },
     targetCompetition: target ? target.competition : null,
-    activeTeam: teamMember ? teamMember.team : null,
+    activeTeam: teamMember
+      ? {
+          ...teamMember.team,
+          isLeader: teamMember.team.leaderId === userId,
+          pendingJoinRequestsCount:
+            teamMember.team.leaderId === userId ? teamMember.team.joinRequests.length : 0,
+          readiness: activeTeamReadiness,
+        }
+      : null,
     roadmapProgress: roadmapSummary,
     submissions: {
       total: totalAchievements,

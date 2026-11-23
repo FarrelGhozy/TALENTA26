@@ -106,9 +106,9 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 - [x] Perbarui `backend/prisma/seed.ts` (khusus non-production) dengan contoh lomba beregu/individu dengan aturan berbeda serta tim terbuka untuk verifikasi lokal.
 
 ### 3B.3 Backend Domain, Otorisasi Ketua Tim & Kontrak API
-- [ ] Implementasikan `evaluateTeamReadiness` (3 lapis: `dibuat`, `anggota_cukup`, `siap_seleksi`, serta `terkunci_seleksi`) beserta unit test aturan bisnisnya.
-- [ ] Implementasikan endpoint rekrutmen tim & otorisasi ketua (`GET /teams/directory`, `GET /me/join-requests`, `POST /teams`, `PATCH /teams/:id`, `POST /teams/:id/invite-code/rotate`, `POST /teams/:id/join-requests`, `POST /join-requests/:id/cancel`, `POST /join-requests/:id/decide`, `POST /teams/join-by-code`, `POST /teams/:id/members/:userId/remove`, `POST /teams/:id/register-selection`, serta transfer ketua otomatis pada `leaveTeam` & cleanup request pada ganti target/periode).
-- [ ] Perbarui endpoint kompetisi admin (`POST`/`PATCH /admin/competitions`) dan ringkasan dashboard mahasiswa (`GET /me/dashboard`).
+- [x] Implementasikan `evaluateTeamReadiness` (3 lapis: `dibuat`, `anggota_cukup`, `siap_seleksi`, serta `terkunci_seleksi`) beserta unit test aturan bisnisnya (`backend/tests/unit/team-readiness.test.ts` — 6/6 lulus).
+- [x] Implementasikan endpoint rekrutmen tim & otorisasi ketua (`GET /teams/directory`, `GET /me/join-requests`, `POST /teams`, `PATCH /teams/:id`, `POST /teams/:id/invite-code/rotate`, `POST /teams/:id/join-requests`, `POST /join-requests/:id/cancel`, `POST /join-requests/:id/decide`, `POST /teams/join-by-code`, `POST /teams/:id/members/:userId/remove`, `POST /teams/:id/register-selection`, serta transfer ketua otomatis pada `leaveTeam` & cleanup request pada ganti target/periode; terverifikasi via `backend/tests/integration/team-recruitment.test.ts` — 8/8 lulus, 62 assertions).
+- [x] Perbarui endpoint kompetisi admin (`POST`/`PATCH /admin/competitions`) dan ringkasan dashboard mahasiswa (`GET /me/dashboard`).
 
 ### 3B.4 Frontend UI/UX, Adapter Service & Rute Mahasiswa/Admin
 - [ ] Perbarui tipe & adapter `@talenta/services` (API & mock), rute `/app/tim`, `/app/tim/cari`, redirect `/app/partner`, Navbar (`Cari Tim`), `ProfilePage`, dan `BerandaPage` (bebas ketergantungan `userService.getAll()` pada halaman tim).

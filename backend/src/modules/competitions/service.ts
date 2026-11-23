@@ -1,7 +1,20 @@
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, ValidationError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
-import type { Competition, AcademicPeriod, CompetitionFormat, CompetitionStatus, Prisma } from '@prisma/client';
+import type { Competition, AcademicPeriod, CompetitionFormat, CompetitionStatus, RegistrationStatus, Prisma } from '@prisma/client';
+
+function parseDeadlineInput(val?: string | null): Date | null {
+  if (!val || !val.trim()) return null;
+  const trimmed = val.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T23:59:59+07:00`);
+  }
+  const d = new Date(trimmed);
+  if (Number.isNaN(d.getTime())) {
+    throw new ValidationError('Format tanggal tenggat tidak valid');
+  }
+  return d;
+}
 
 export interface CompetitionFilterParams {
   category?: string;
@@ -20,8 +33,13 @@ export interface CreateCompetitionDto {
   minTeamMembers?: number;
   maxTeamMembers?: number;
   requiredRoles?: string[];
-  registrationDeadline?: string;
-  competitionDate?: string;
+  registrationDeadline?: string | null;
+  competitionDate?: string | null;
+  registrationStatus?: RegistrationStatus;
+  internalSelectionDeadline?: string | null;
+  requireRoles?: boolean;
+  requireCrossStudyProgram?: boolean;
+  singleTeamPerCompetition?: boolean;
   description: string;
   requirements?: string[];
   scheduleTimeline?: Array<{ label: string; tanggal: string }>;
@@ -193,8 +211,13 @@ export async function createCompetition(
       minTeamMembers,
       maxTeamMembers,
       requiredRoles: dto.requiredRoles || [],
-      registrationDeadline: dto.registrationDeadline ? new Date(dto.registrationDeadline) : null,
-      competitionDate: dto.competitionDate ? new Date(dto.competitionDate) : null,
+      registrationDeadline: parseDeadlineInput(dto.registrationDeadline),
+      competitionDate: parseDeadlineInput(dto.competitionDate),
+      registrationStatus: dto.registrationStatus || 'buka',
+      internalSelectionDeadline: parseDeadlineInput(dto.internalSelectionDeadline),
+      requireRoles: dto.format === 'individu' ? false : Boolean(dto.requireRoles),
+      requireCrossStudyProgram: dto.format === 'individu' ? false : Boolean(dto.requireCrossStudyProgram),
+      singleTeamPerCompetition: dto.singleTeamPerCompetition ?? true,
       description: dto.description.trim(),
       requirements: dto.requirements || [],
       scheduleTimeline: dto.scheduleTimeline || [],
@@ -249,10 +272,28 @@ export async function updateCompetition(
   if (dto.requirements !== undefined) updateData.requirements = dto.requirements;
   if (dto.scheduleTimeline !== undefined) updateData.scheduleTimeline = dto.scheduleTimeline;
   if (dto.registrationDeadline !== undefined) {
-    updateData.registrationDeadline = dto.registrationDeadline ? new Date(dto.registrationDeadline) : null;
+    updateData.registrationDeadline = parseDeadlineInput(dto.registrationDeadline);
   }
   if (dto.competitionDate !== undefined) {
-    updateData.competitionDate = dto.competitionDate ? new Date(dto.competitionDate) : null;
+    updateData.competitionDate = parseDeadlineInput(dto.competitionDate);
+  }
+  if (dto.registrationStatus !== undefined) {
+    updateData.registrationStatus = dto.registrationStatus;
+  }
+  if (dto.internalSelectionDeadline !== undefined) {
+    updateData.internalSelectionDeadline = parseDeadlineInput(dto.internalSelectionDeadline);
+  }
+  if (nextFormat === 'individu') {
+    updateData.requireRoles = false;
+    updateData.requireCrossStudyProgram = false;
+  } else {
+    if (dto.requireRoles !== undefined) updateData.requireRoles = Boolean(dto.requireRoles);
+    if (dto.requireCrossStudyProgram !== undefined) {
+      updateData.requireCrossStudyProgram = Boolean(dto.requireCrossStudyProgram);
+    }
+  }
+  if (dto.singleTeamPerCompetition !== undefined) {
+    updateData.singleTeamPerCompetition = Boolean(dto.singleTeamPerCompetition);
   }
   if (dto.pointDescription !== undefined) {
     updateData.pointDescription = dto.pointDescription?.trim() || null;

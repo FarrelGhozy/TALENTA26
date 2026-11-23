@@ -474,9 +474,22 @@ export async function activateAcademicPeriod(
             academicPeriodId: { not: periodId },
           },
         },
-        data: { status: 'arsip', version: { increment: 1 } },
+        data: { status: 'arsip', isRecruiting: false, version: { increment: 1 } },
       });
       archivedTeamsCount = teamRes.count;
+
+      await tx.teamJoinRequest.updateMany({
+        where: {
+          status: 'menunggu',
+          team: {
+            competition: {
+              institutionId,
+              academicPeriodId: { not: periodId },
+            },
+          },
+        },
+        data: { status: 'kedaluwarsa' },
+      });
     }
 
     return { activated, archivedTargetsCount, archivedTeamsCount };

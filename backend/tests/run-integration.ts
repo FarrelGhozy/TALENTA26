@@ -6,6 +6,7 @@ const testFiles = [
   'backend/tests/integration/stage5.test.ts',
   'backend/tests/integration/fase1-security-points.test.ts',
   'backend/tests/integration/fase2-features.test.ts',
+  'backend/tests/integration/team-recruitment.test.ts',
 ];
 
 for (const testFile of testFiles) {

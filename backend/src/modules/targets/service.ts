@@ -66,7 +66,14 @@ export async function setTargetCompetition(
             status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
           },
         },
-        include: { team: { include: { members: true, competition: true } } },
+        include: {
+          team: {
+            include: {
+              members: { where: { status: 'active' }, orderBy: { joinedAt: 'asc' } },
+              competition: true,
+            },
+          },
+        },
       });
 
       if (currentMembership) {
@@ -82,25 +89,56 @@ export async function setTargetCompetition(
         });
 
         const remainingActiveMembers = currentMembership.team.members.filter(
-          (m) => m.id !== currentMembership.id && m.status === 'active'
+          (m) => m.id !== currentMembership.id
         );
 
         if (remainingActiveMembers.length === 0) {
           await tx.team.update({
             where: { id: currentMembership.teamId },
-            data: { status: 'arsip', version: { increment: 1 } },
+            data: { status: 'arsip', isRecruiting: false, version: { increment: 1 } },
+          });
+          await tx.teamJoinRequest.updateMany({
+            where: { teamId: currentMembership.teamId, status: 'menunggu' },
+            data: { status: 'kedaluwarsa' },
           });
         } else {
           const nextTeamStatus =
             remainingActiveMembers.length >= currentMembership.team.competition.minTeamMembers
               ? 'terbentuk'
               : 'mencari';
+          let nextLeaderId = currentMembership.team.leaderId;
+          if (currentMembership.team.leaderId === userId) {
+            const promoted = remainingActiveMembers[0];
+            nextLeaderId = promoted.userId;
+            await tx.teamMember.update({
+              where: { id: promoted.id },
+              data: { roleInTeam: 'Ketua Tim' },
+            });
+          }
           await tx.team.update({
             where: { id: currentMembership.teamId },
-            data: { status: nextTeamStatus, version: { increment: 1 } },
+            data: {
+              status: nextTeamStatus,
+              leaderId: nextLeaderId,
+              isRecruiting:
+                currentMembership.team.recruitmentType === 'terbuka'
+                  ? true
+                  : currentMembership.team.isRecruiting,
+              version: { increment: 1 },
+            },
           });
         }
       }
+
+      // Batalkan pengajuan bergabung tertunda pada kompetisi lama
+      await tx.teamJoinRequest.updateMany({
+        where: {
+          userId,
+          status: 'menunggu',
+          team: { competitionId: currentTarget.competitionId },
+        },
+        data: { status: 'dibatalkan' },
+      });
 
       await tx.studentTarget.update({
         where: { id: currentTarget.id },
