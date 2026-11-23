@@ -41,6 +41,7 @@ export const router = createBrowserRouter(
         children: [
           { index: true, element: <Navigate to="/app/beranda" replace /> },
           { path: 'beranda', lazy: lazyRoute(() => import('../features/mahasiswa/BerandaPage'), 'BerandaPage') },
+          { path: 'persiapan', lazy: lazyRoute(() => import('../features/roadmap/PreparationHubPage'), 'PreparationHubPage') },
           { path: 'profil', lazy: lazyRoute(() => import('../features/profil/ProfilePage'), 'ProfilePage') },
           { path: 'partner', element: <Navigate to="/app/tim/cari" replace /> },
           { path: 'tim', lazy: lazyRoute(() => import('../features/tim/TeamPage'), 'TeamPage') },

@@ -7,7 +7,8 @@ Status: diselaraskan dengan Keputusan `K-19` (revisi), `K-22`, dan `K-23` (23 No
 
 ## Rute mahasiswa (`/app/*`, role `mahasiswa`)
 - `/app/beranda`: ringkasan progres, target aktif, tim, roadmap, pengajuan, poin periode berjalan, dan rekomendasi aksi nyata (`GET /me/dashboard`).
-- `/app/profil`: identitas (termasuk upload avatar privat RustFS, NIM status belum terverifikasi kampus), minat/keahlian/pengalaman, dan pengaturan target kompetisi (dengan konfirmasi arsip tim lama bila mengganti target).
+- `/app/persiapan`: **Ruang Persiapan** (menu utama Navbar mahasiswa) menampilkan lomba aktif yang sedang diikuti, riwayat target lomba sebelumnya, serta pilihan lomba lain untuk masuk langsung ke ruang persiapan masing-masing.
+- `/app/profil`: diakses dari dropdown menu akun pojok kanan atas (**Pengaturan Profil & Target** bersama **Keluar**); berisi identitas (termasuk upload avatar privat RustFS, NIM status belum terverifikasi kampus), minat/keahlian/pengalaman, dan pengaturan target kompetisi (dengan konfirmasi arsip/keluar tim lama bila mengganti target).
 - `/app/tim`:
   - Jika belum memiliki tim (lomba beregu): Hub **Cara Mengikuti Lomba** (3 jalur: *Buat Tim Baru* `?mode=buat`, *Cari Tim Terbuka*, *Sudah Punya Tim* `?mode=kode` via modal kode undangan). Jika lomba individu, menampilkan arahan langsung menuju Ruang Persiapan.
   - Jika sudah memiliki tim: **Ruang Tim Saya** (3 metrik ringkas, daftar anggota dengan penanda `Ketua` berdasarkan `leaderId`, kotak Kesiapan Tim 3 lapis + akses roadmap lebih awal + tombol *Daftar Seleksi Internal*, panel *Permintaan Bergabung* khusus ketua, serta kotak *Kode Undangan Tim* dengan salin & putar ulang kode).

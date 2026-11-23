@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  BookOpen,
+  ChevronDown,
   Compass,
   LayoutDashboard,
   Trophy,
@@ -28,8 +30,33 @@ export const Navbar: React.FC = () => {
   const { currentUser, currentRole, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setProfileMenuOpen(false);
+    setMobileOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProfileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileMenuOpen]);
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   const strippedPath =
@@ -61,7 +88,7 @@ export const Navbar: React.FC = () => {
     if (currentRole === 'mahasiswa') {
       return [
         { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
-        { to: '/app/profil', label: 'Profil & Target', icon: UserCircle2 },
+        { to: '/app/persiapan', label: 'Ruang Persiapan', icon: BookOpen },
         { to: '/app/tim/cari', label: 'Cari Tim', icon: Users },
         { to: '/app/tim', label: 'Tim Saya', icon: Users },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
@@ -93,6 +120,12 @@ export const Navbar: React.FC = () => {
 
   const isActive = (to: string) => {
     const cleanTarget = to.split('?')[0];
+    if (cleanTarget === '/app/persiapan') {
+      return (
+        strippedPath === '/app/persiapan' ||
+        (strippedPath.startsWith('/app/kompetisi/') && strippedPath.endsWith('/persiapan'))
+      );
+    }
     if (
       cleanTarget === '/' ||
       cleanTarget === '/validator' ||
@@ -105,6 +138,7 @@ export const Navbar: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    setProfileMenuOpen(false);
     await logout();
     setMobileOpen(false);
     navigate('/masuk');
@@ -203,22 +237,33 @@ export const Navbar: React.FC = () => {
         {/* User / Action Buttons */}
         <div className="flex items-center gap-2.5">
           {currentUser ? (
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-3 border-l ${
-                  isLanding ? 'border-white/20' : 'border-slate-200/80'
+            <div ref={profileMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+                aria-label="Menu akun dan profil"
+                className={`flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-3 pr-2 py-1 rounded-2xl border transition-colors cursor-pointer min-h-[42px] ${
+                  isLanding
+                    ? profileMenuOpen
+                      ? 'bg-white/15 border-white/30'
+                      : 'border-white/15 hover:bg-white/10'
+                    : profileMenuOpen
+                      ? 'bg-slate-100 border-blue-300'
+                      : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 {currentUser.avatar ? (
                   <img
                     src={assetUrl(currentUser.avatar)}
                     alt={currentUser.nama}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
+                    className="w-8 h-8 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
                   />
                 ) : (
                   <div
                     aria-hidden="true"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
+                    className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
                   >
                     {getInitials(currentUser.nama)}
                   </div>
@@ -239,19 +284,61 @@ export const Navbar: React.FC = () => {
                     {formatRole(currentRole || 'mahasiswa')}
                   </span>
                 </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                title="Keluar"
-                className={`p-2 rounded-xl transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer ${
-                  isLanding
-                    ? 'text-slate-300 hover:text-rose-400 hover:bg-white/10'
-                    : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
-                }`}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="sr-only">Keluar</span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    profileMenuOpen ? 'rotate-180' : ''
+                  } ${isLanding ? 'text-slate-300' : 'text-slate-500'}`}
+                  aria-hidden="true"
+                />
               </button>
+
+              {profileMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Pilihan akun"
+                  className="absolute right-0 mt-2 w-60 rounded-2xl bg-white text-slate-800 border border-slate-200 shadow-xl py-1.5 z-50"
+                >
+                  <div className="px-4 py-2.5 border-b border-slate-100">
+                    <div className="text-xs font-extrabold text-slate-900 truncate">
+                      {currentUser.nama}
+                    </div>
+                    <div className="text-[11px] font-semibold text-blue-700">
+                      {formatRole(currentRole || 'mahasiswa')}
+                    </div>
+                    {currentUser.email && (
+                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {currentUser.email}
+                      </div>
+                    )}
+                  </div>
+
+                  {currentRole === 'mahasiswa' && (
+                    <div className="py-1">
+                      <Link
+                        to="/app/profil"
+                        role="menuitem"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-800 transition-colors"
+                      >
+                        <UserCircle2 className="w-4 h-4 text-blue-700" aria-hidden="true" />
+                        <span>Pengaturan Profil &amp; Target</span>
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="border-t border-slate-100 pt-1">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" aria-hidden="true" />
+                      <span>Keluar dari Akun</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2.5">
@@ -380,18 +467,34 @@ export const Navbar: React.FC = () => {
           })}
 
           <div
-            className={`pt-2 border-t mt-2 ${
+            className={`pt-2 border-t mt-2 space-y-1 ${
               isLanding ? 'border-white/10' : 'border-slate-100'
             }`}
           >
             {currentUser ? (
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 text-sm text-rose-400 font-bold px-3 py-2.5 rounded-xl hover:bg-rose-500/10 min-h-[44px] transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                Keluar dari Akun
-              </button>
+              <>
+                {currentRole === 'mahasiswa' && (
+                  <Link
+                    to="/app/profil"
+                    onClick={() => setMobileOpen(false)}
+                    className={`w-full flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl min-h-[44px] transition-colors ${
+                      isLanding
+                        ? 'text-sky-300 hover:bg-white/10'
+                        : 'text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    <UserCircle2 className="w-4 h-4" aria-hidden="true" />
+                    Pengaturan Profil &amp; Target
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 text-sm text-rose-500 font-bold px-3 py-2.5 rounded-xl hover:bg-rose-500/10 min-h-[44px] transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
+                  Keluar dari Akun
+                </button>
+              </>
             ) : (
               <Link
                 to="/masuk"

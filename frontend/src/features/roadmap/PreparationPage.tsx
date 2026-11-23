@@ -103,13 +103,13 @@ export const PreparationPage: React.FC = () => {
         <Link to="/app/beranda" className="hover:text-blue-700 font-medium">
           Beranda
         </Link>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <Link to={`/kompetisi/${competition.slug}`} className="hover:text-blue-700 font-medium">
-          {competition.namaResmi}
+        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+        <Link to="/app/persiapan" className="hover:text-blue-700 font-medium">
+          Ruang Persiapan
         </Link>
-        <ChevronRight className="w-3.5 h-3.5" />
-        <span aria-current="page" className="text-slate-700 font-bold">
-          Ruang Persiapan Mandiri
+        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+        <span aria-current="page" className="text-slate-700 font-bold truncate max-w-xs sm:max-w-md">
+          {competition.namaResmi}
         </span>
       </nav>
 
