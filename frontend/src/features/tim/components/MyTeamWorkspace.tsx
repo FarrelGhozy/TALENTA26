@@ -26,6 +26,7 @@ import { EditTeamModal } from './EditTeamModal';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Modal } from '../../../components/ui/Modal';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 
 interface MyTeamWorkspaceProps {
   team: Team;
@@ -447,10 +448,13 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
               <div className="space-y-3">
                 {pendingRequests.map((req) => {
                   const applicantName = req.applicant?.nama || 'Mahasiswa';
+                  const extraApplicantRoles = (req.applicant?.peranBisa || []).filter(
+                    (r) => !req.preferredRole || r.toLowerCase() !== req.preferredRole.toLowerCase()
+                  );
                   const applicantSub = [
                     req.applicant?.prodi,
                     req.preferredRole,
-                    ...(req.applicant?.peranBisa || []).slice(0, 2),
+                    ...extraApplicantRoles.slice(0, 2),
                   ]
                     .filter(Boolean)
                     .join(' · ');
@@ -461,12 +465,13 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
                       className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-3"
                     >
                       <div className="flex items-start gap-3">
-                        <div
-                          aria-hidden="true"
-                          className="w-9 h-9 rounded-full bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0"
-                        >
-                          {applicantName.slice(0, 2).toUpperCase()}
-                        </div>
+                        <UserAvatar
+                          src={req.applicant?.avatarUrl}
+                          name={applicantName}
+                          size="sm"
+                          shape="circle"
+                          tone="amber"
+                        />
                         <div className="min-w-0 space-y-1">
                           <h3 className="text-xs font-extrabold text-slate-900">
                             {applicantName}

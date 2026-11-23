@@ -5,6 +5,7 @@ import { teamService } from '@talenta/services';
 import { useToast } from '../../../components/ui/Toast';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 
 function formatRequestStatus(status: TeamJoinRequestItem['status']) {
   switch (status) {
@@ -87,7 +88,7 @@ export const MyJoinRequestsPanel: React.FC<MyJoinRequestsPanelProps> = ({
             key={req.id}
             className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
           >
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-extrabold text-slate-900">
                   {req.team?.name || 'Tim Kompetisi'}
@@ -96,6 +97,20 @@ export const MyJoinRequestsPanel: React.FC<MyJoinRequestsPanelProps> = ({
                   {st.label}
                 </Badge>
               </div>
+              {req.team?.leaderName && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                  <UserAvatar
+                    src={req.team.leaderAvatarUrl}
+                    name={req.team.leaderName}
+                    size="xs"
+                    shape="circle"
+                    tone="blue"
+                  />
+                  <span>
+                    Ketua: <strong className="text-slate-700">{req.team.leaderName}</strong>
+                  </span>
+                </div>
+              )}
               <p className="text-xs text-slate-500">
                 {req.team?.competitionName || ''}
                 {req.preferredRole ? ` · Peran dilamar: ${req.preferredRole}` : ''}

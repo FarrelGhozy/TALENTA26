@@ -213,6 +213,7 @@ function mapBackendJoinRequestToFrontend(raw: any): TeamJoinRequestItem {
           prodi: applicantProfile?.studyProgram || '',
           fakultas: applicantProfile?.faculty || '',
           angkatan: applicantProfile?.enrollmentYear ?? null,
+          avatarUrl: applicantProfile?.avatarUrl || null,
           bio: applicantProfile?.bio || null,
           pengalaman: applicantProfile?.experience || null,
           peranBisa: Array.isArray(applicantProfile?.rolesCapable) ? applicantProfile.rolesCapable : [],
@@ -231,6 +232,7 @@ function mapBackendJoinRequestToFrontend(raw: any): TeamJoinRequestItem {
           competitionSlug: raw.team.competition?.slug || '',
           competitionName: raw.team.competition?.name || '',
           leaderName: raw.team.leader?.studentProfile?.fullName || undefined,
+          leaderAvatarUrl: raw.team.leader?.studentProfile?.avatarUrl || null,
         }
       : undefined,
   };
@@ -276,6 +278,7 @@ function mapBackendTeamToFrontend(raw: any): Team | null {
         prodi: sp?.studyProgram || m.prodi || '',
         fakultas: sp?.faculty || m.fakultas || '',
         angkatan: sp?.enrollmentYear ?? m.angkatan ?? null,
+        avatarUrl: sp?.avatarUrl ?? m.avatarUrl ?? null,
         bio: sp?.bio ?? null,
         peranBisa: Array.isArray(sp?.rolesCapable) ? sp.rolesCapable : m.peranBisa || [],
         skill: Array.isArray(sp?.skills) ? sp.skills : m.skill || [],

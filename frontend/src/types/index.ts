@@ -102,6 +102,7 @@ export interface TeamMember {
   prodi?: string;
   fakultas?: string;
   angkatan?: number | null;
+  avatarUrl?: string | null;
   bio?: string | null;
   peranBisa?: string[];
   skill?: Skill[];
@@ -141,6 +142,7 @@ export interface TeamJoinRequestItem {
     prodi: string;
     fakultas?: string;
     angkatan?: number | null;
+    avatarUrl?: string | null;
     bio?: string | null;
     pengalaman?: string | null;
     peranBisa: string[];
@@ -157,6 +159,7 @@ export interface TeamJoinRequestItem {
     competitionSlug: string;
     competitionName: string;
     leaderName?: string;
+    leaderAvatarUrl?: string | null;
   };
 }
 
@@ -179,6 +182,7 @@ export interface TeamDirectoryItem {
     id: string;
     fullName: string;
     studyProgram: string;
+    avatarUrl?: string | null;
   };
   isMyTeam: boolean;
   myRequestId: string | null;

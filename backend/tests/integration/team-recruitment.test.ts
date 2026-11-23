@@ -267,12 +267,15 @@ describe('Fase 3B — Rekrutmen Tim Berbasis Pengajuan, Kode Undangan & Aturan D
       })
     );
     expect(myRes.status).toBe(200);
-    const myTeam = ((await myRes.json()) as any).data;
+    const myTeamText = await myRes.text();
+    expect(myTeamText).not.toContain('avatarObjectKey');
+    const myTeam = JSON.parse(myTeamText).data;
     expect(myTeam.isLeader).toBe(true);
     expect(myTeam.inviteCode).toBe(openTeamCode);
     expect(myTeam.readiness.level).toBe('dibuat');
     expect(myTeam.readiness.canAccessRoadmap).toBe(true);
     expect(myTeam.readiness.isSelectionReady).toBe(false);
+    expect('avatarUrl' in myTeam.members[0].user.studentProfile).toBe(true);
   });
 
   it('4. Direktori tim terbuka menampilkan lowongan tanpa PII, mendukung filter, dan menyembunyikan tim privat', async () => {
@@ -306,6 +309,7 @@ describe('Fase 3B — Rekrutmen Tim Berbasis Pengajuan, Kode Undangan & Aturan D
 
     const serialized = JSON.stringify(payload);
     expect(serialized).not.toContain('passwordHash');
+    expect(serialized).not.toContain('avatarObjectKey');
     expect(serialized).not.toContain(`RECldr${suffix}`);
     expect(serialized).not.toContain('@unida.gontor.ac.id');
     expect(serialized).not.toContain('08123456');

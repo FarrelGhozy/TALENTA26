@@ -18,6 +18,7 @@ import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Modal } from '../../../components/ui/Modal';
 import { Input } from '../../../components/ui/Input';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 
 interface TeamDirectoryPanelProps {
   competition: Competition;
@@ -213,10 +214,19 @@ export const TeamDirectoryPanel: React.FC<TeamDirectoryPanelProps> = ({
 
                       <div>
                         <h3 className="text-base font-extrabold text-slate-900">{team.name}</h3>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Ketua: <strong className="text-slate-700">{team.leader.fullName}</strong>
-                          {team.leader.studyProgram ? ` · ${team.leader.studyProgram}` : ''}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <UserAvatar
+                            src={team.leader.avatarUrl}
+                            name={team.leader.fullName}
+                            size="xs"
+                            shape="circle"
+                            tone="blue"
+                          />
+                          <p className="text-[11px] text-slate-500 truncate">
+                            Ketua: <strong className="text-slate-700">{team.leader.fullName}</strong>
+                            {team.leader.studyProgram ? ` · ${team.leader.studyProgram}` : ''}
+                          </p>
+                        </div>
                         {team.description && (
                           <p className="text-xs text-slate-600 mt-2 leading-relaxed line-clamp-3">
                             {team.description}

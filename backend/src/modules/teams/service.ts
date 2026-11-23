@@ -19,6 +19,8 @@ const SAFE_MEMBER_USER_SELECT = {
       studyProgram: true,
       faculty: true,
       enrollmentYear: true,
+      avatarObjectKey: true,
+      updatedAt: true,
       bio: true,
       experience: true,
       rolesCapable: true,
@@ -28,6 +30,49 @@ const SAFE_MEMBER_USER_SELECT = {
     },
   },
 } as const;
+
+function resolveSafeAvatarUrl(
+  userId: string,
+  profile?: { avatarObjectKey?: string | null; updatedAt?: Date } | null
+): string | null {
+  if (!profile?.avatarObjectKey) return null;
+  const ver = profile.updatedAt ? profile.updatedAt.getTime() : 1;
+  return `/api/v1/users/${userId}/avatar?v=${ver}`;
+}
+
+function sanitizeMemberUser<
+  T extends {
+    id: string;
+    role: string;
+    studentProfile: {
+      fullName: string;
+      studyProgram: string;
+      faculty: string;
+      enrollmentYear: number | null;
+      avatarObjectKey?: string | null;
+      updatedAt?: Date;
+      bio: string | null;
+      experience: string | null;
+      rolesCapable: unknown;
+      skills: unknown;
+      interests: unknown;
+      availability: unknown;
+    } | null;
+  },
+>(user: T) {
+  if (!user.studentProfile) {
+    return { id: user.id, role: user.role, studentProfile: null };
+  }
+  const { avatarObjectKey, updatedAt, ...restProfile } = user.studentProfile;
+  return {
+    id: user.id,
+    role: user.role,
+    studentProfile: {
+      ...restProfile,
+      avatarUrl: resolveSafeAvatarUrl(user.id, { avatarObjectKey, updatedAt }),
+    },
+  };
+}
 
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -189,14 +234,30 @@ export async function getMyTeam(userId: string) {
 
   const latestSelection = team.selections[0] || null;
 
+  const sanitizedMembers = team.members.map((m) => ({
+    ...m,
+    user: sanitizeMemberUser(m.user),
+  }));
+  const sanitizedInvites = team.invites.map((inv) => ({
+    ...inv,
+    receiver: sanitizeMemberUser(inv.receiver),
+  }));
+  const sanitizedJoinRequests = team.joinRequests.map((req) => ({
+    ...req,
+    user: sanitizeMemberUser(req.user),
+  }));
+
   return {
     ...team,
+    leader: sanitizeMemberUser(team.leader),
+    members: sanitizedMembers,
+    invites: sanitizedInvites,
     isLeader,
     readiness,
     latestSelection,
-    pendingJoinRequestsCount: team.joinRequests.length,
+    pendingJoinRequestsCount: sanitizedJoinRequests.length,
     inviteCode: isLeader ? team.inviteCode : null,
-    joinRequests: isLeader ? team.joinRequests : [],
+    joinRequests: isLeader ? sanitizedJoinRequests : [],
   };
 }
 
@@ -304,6 +365,7 @@ export async function getOpenTeamsDirectory(
           id: t.leader.id,
           fullName: t.leader.studentProfile?.fullName || 'Mahasiswa',
           studyProgram: t.leader.studentProfile?.studyProgram || '',
+          avatarUrl: resolveSafeAvatarUrl(t.leader.id, t.leader.studentProfile),
         },
         isMyTeam,
         myRequestId: myLatestRequest?.id || null,
@@ -340,7 +402,7 @@ export async function getOpenTeamsDirectory(
 }
 
 export async function getMyJoinRequests(userId: string, institutionId: string) {
-  return prisma.teamJoinRequest.findMany({
+  const list = await prisma.teamJoinRequest.findMany({
     where: {
       userId,
       team: {
@@ -378,6 +440,16 @@ export async function getMyJoinRequests(userId: string, institutionId: string) {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return list.map((req) => ({
+    ...req,
+    team: req.team
+      ? {
+          ...req.team,
+          leader: sanitizeMemberUser(req.team.leader),
+        }
+      : req.team,
+  }));
 }
 
 export async function createTeam(
@@ -1590,7 +1662,23 @@ export async function getMyInvites(userId: string) {
     orderBy: { createdAt: 'desc' },
   });
 
-  return { incoming, outgoing };
+  return {
+    incoming: incoming.map((inv) => ({
+      ...inv,
+      sender: sanitizeMemberUser(inv.sender),
+      team: {
+        ...inv.team,
+        members: inv.team.members.map((m) => ({
+          ...m,
+          user: sanitizeMemberUser(m.user),
+        })),
+      },
+    })),
+    outgoing: outgoing.map((inv) => ({
+      ...inv,
+      receiver: sanitizeMemberUser(inv.receiver),
+    })),
+  };
 }
 
 export async function cancelInvite(
