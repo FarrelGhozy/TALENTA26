@@ -140,10 +140,33 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleSaveProfileOnly = async () => {
+    const err = validateStep(step);
+    if (err) {
+      setFormError(err);
+      return;
+    }
+    if (!currentUser) return;
+    setSaving(true);
+    setFormError('');
+    try {
+      await userService.updateProfile(currentUser.id, userData);
+      await refreshUser();
+      notify('Perubahan profil berhasil disimpan!');
+    } catch (e: any) {
+      const msg = e?.message || 'Gagal menyimpan profil. Coba lagi.';
+      setFormError(msg);
+      notify(msg, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const executeSaveAll = async () => {
     if (!currentUser) return;
     setSaving(true);
     setConfirmSwitchOpen(false);
+    setFormError('');
     try {
       await userService.updateProfile(currentUser.id, userData);
       if (targetSlug) {
@@ -161,7 +184,9 @@ export const ProfilePage: React.FC = () => {
         navigate('/app/tim');
       }
     } catch (err: any) {
-      notify(err?.message || 'Gagal menyimpan profil. Coba lagi.', 'error');
+      const msg = err?.message || 'Gagal menyimpan profil. Coba lagi.';
+      setFormError(msg);
+      notify(msg, 'error');
     } finally {
       setSaving(false);
     }
@@ -302,16 +327,27 @@ export const ProfilePage: React.FC = () => {
             <span />
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {step < 3 ? (
-              <Button
-                type="button"
-                size="md"
-                onClick={goNext}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
-                Lanjutkan Langkah
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  size="md"
+                  variant="outline"
+                  onClick={handleSaveProfileOnly}
+                  isLoading={saving}
+                >
+                  Simpan Profil
+                </Button>
+                <Button
+                  type="button"
+                  size="md"
+                  onClick={goNext}
+                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Lanjutkan Langkah
+                </Button>
+              </>
             ) : (
               <Button
                 type="button"

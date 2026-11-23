@@ -36,18 +36,18 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
     },
     {
       body: t.Object({
-        fullName: t.Optional(t.String()),
-        studyProgram: t.Optional(t.String()),
-        faculty: t.Optional(t.String()),
-        enrollmentYear: t.Optional(t.Number()),
-        avatarUrl: t.Optional(t.String()),
-        phone: t.Optional(t.String()),
-        bio: t.Optional(t.String()),
+        fullName: t.Optional(t.Nullable(t.String())),
+        studyProgram: t.Optional(t.Nullable(t.String())),
+        faculty: t.Optional(t.Nullable(t.String())),
+        enrollmentYear: t.Optional(t.Nullable(t.Number())),
+        avatarUrl: t.Optional(t.Nullable(t.String())),
+        phone: t.Optional(t.Nullable(t.String())),
+        bio: t.Optional(t.Nullable(t.String())),
         skills: t.Optional(t.Any()),
         interests: t.Optional(t.Any()),
         availability: t.Optional(t.Any()),
         rolesCapable: t.Optional(t.Any()),
-        experience: t.Optional(t.String()),
+        experience: t.Optional(t.Nullable(t.String())),
       }),
     }
   )

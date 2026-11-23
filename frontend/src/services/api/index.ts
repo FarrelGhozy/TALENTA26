@@ -108,13 +108,13 @@ function mapBackendUserToFrontend(raw: any): User {
     institutionId: raw.institutionId || 'unida-gontor',
     nama,
     email: raw.email || '',
-    nim: profile?.nim,
+    nim: profile?.nim ?? undefined,
     prodi: profile?.studyProgram || (role === 'mahasiswa' ? 'Teknik Informatika' : '-'),
-    fakultas: profile?.faculty,
-    angkatan: profile?.enrollmentYear,
-    phone: profile?.phone,
-    bio: profile?.bio,
-    pengalaman: profile?.experience,
+    fakultas: profile?.faculty ?? undefined,
+    angkatan: profile?.enrollmentYear ?? undefined,
+    phone: profile?.phone ?? undefined,
+    bio: profile?.bio ?? undefined,
+    pengalaman: profile?.experience ?? undefined,
     avatar: profile?.avatarUrl || raw?.avatarUrl || raw?.avatar || undefined,
     role: [role],
     skill: Array.isArray(profile?.skills) ? profile.skills : [],
@@ -378,21 +378,25 @@ export const userApiService: IUserService & {
       body: JSON.stringify({ token, password }),
     }),
   updateProfile: async (_userId, data) => {
+    const payload: Record<string, unknown> = {
+      fullName: data.nama,
+      studyProgram: data.prodi,
+      faculty: data.fakultas || undefined,
+      enrollmentYear:
+        typeof data.angkatan === 'number' && Number.isFinite(data.angkatan)
+          ? data.angkatan
+          : undefined,
+      phone: data.phone ?? '',
+      bio: data.bio ?? '',
+      experience: data.pengalaman ?? '',
+      skills: data.skill,
+      interests: data.minat,
+      availability: data.ketersediaan,
+      rolesCapable: data.peranBisa,
+    };
     const res = await apiFetch<any>('/me/profile', {
       method: 'PATCH',
-      body: JSON.stringify({
-        fullName: data.nama,
-        studyProgram: data.prodi,
-        faculty: data.fakultas,
-        enrollmentYear: data.angkatan,
-        phone: data.phone,
-        bio: data.bio,
-        experience: data.pengalaman,
-        skills: data.skill,
-        interests: data.minat,
-        availability: data.ketersediaan,
-        rolesCapable: data.peranBisa,
-      }),
+      body: JSON.stringify(payload),
     });
     return mapBackendUserToFrontend({
       id: res.userId || _userId,

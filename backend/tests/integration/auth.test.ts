@@ -306,6 +306,36 @@ describe('Stage 2 — Backend Auth, RBAC & Profile Test Suite', () => {
       // NIM tidak berubah meskipun mencoba dimutasi
       expect(json.data.nim).toBe(testNim);
     });
+
+    it('PATCH /api/v1/me/profile menerima nilai null/kosong pada field opsional (phone, bio, experience, faculty) tanpa 422', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/api/v1/me/profile', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mhsToken}`,
+          },
+          body: JSON.stringify({
+            fullName: 'Mahasiswa Uji Profil',
+            studyProgram: 'Teknik Informatika',
+            faculty: '',
+            phone: null,
+            bio: null,
+            experience: null,
+            skills: [{ nama: 'React', level: 2 }],
+            interests: ['Web'],
+            rolesCapable: ['Programmer'],
+          }),
+        })
+      );
+
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      expect(json.data.fullName).toBe('Mahasiswa Uji Profil');
+      expect(json.data.phone).toBeNull();
+      expect(json.data.bio).toBeNull();
+      expect(json.data.experience).toBeNull();
+    });
   });
 
   // 6. Logout dan Pencabutan Sesi

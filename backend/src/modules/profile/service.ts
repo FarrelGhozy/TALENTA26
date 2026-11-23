@@ -11,18 +11,18 @@ const ALLOWED_AVATAR_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_AVATAR_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 export interface UpdateStudentProfileDto {
-  fullName?: string;
-  studyProgram?: string;
-  faculty?: string;
-  enrollmentYear?: number;
-  avatarUrl?: string;
-  phone?: string;
-  bio?: string;
+  fullName?: string | null;
+  studyProgram?: string | null;
+  faculty?: string | null;
+  enrollmentYear?: number | null;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  bio?: string | null;
   skills?: any;
   interests?: any;
   availability?: any;
   rolesCapable?: any;
-  experience?: string;
+  experience?: string | null;
 }
 
 function validateAvatarBuffer(fileName: string, mimeType: string, buffer: Buffer): void {
@@ -102,47 +102,50 @@ export async function updateStudentProfile(
     bio?: string | null;
   } = {};
 
-  if (dto.fullName !== undefined) {
+  if (dto.fullName !== undefined && dto.fullName !== null) {
     if (dto.fullName.trim().length < 2) {
       throw new ValidationError('Nama lengkap minimal 2 karakter');
     }
     updateData.fullName = dto.fullName.trim();
   }
 
-  if (dto.studyProgram !== undefined) {
+  if (dto.studyProgram !== undefined && dto.studyProgram !== null) {
     if (!dto.studyProgram.trim()) {
       throw new ValidationError('Program studi tidak boleh kosong');
     }
     updateData.studyProgram = dto.studyProgram.trim();
   }
 
-  if (dto.faculty !== undefined) {
-    if (!dto.faculty.trim()) {
-      throw new ValidationError('Fakultas tidak boleh kosong');
+  if (dto.faculty !== undefined && dto.faculty !== null) {
+    if (dto.faculty.trim()) {
+      updateData.faculty = dto.faculty.trim();
     }
-    updateData.faculty = dto.faculty.trim();
   }
 
   if (dto.enrollmentYear !== undefined) {
-    const currentYear = Number(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())
-    );
-    if (!Number.isInteger(dto.enrollmentYear) || dto.enrollmentYear < 1900 || dto.enrollmentYear > currentYear + 1) {
-      throw new ValidationError('Tahun angkatan tidak valid');
+    if (dto.enrollmentYear === null) {
+      updateData.enrollmentYear = null;
+    } else {
+      const currentYear = Number(
+        new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())
+      );
+      if (!Number.isInteger(dto.enrollmentYear) || dto.enrollmentYear < 1900 || dto.enrollmentYear > currentYear + 1) {
+        throw new ValidationError('Tahun angkatan tidak valid');
+      }
+      updateData.enrollmentYear = dto.enrollmentYear;
     }
-    updateData.enrollmentYear = dto.enrollmentYear;
   }
 
   if (dto.phone !== undefined) {
-    updateData.phone = dto.phone ? dto.phone.trim() : null;
+    updateData.phone = dto.phone && dto.phone.trim() ? dto.phone.trim() : null;
   }
 
   if (dto.bio !== undefined) {
-    updateData.bio = dto.bio ? dto.bio.trim() : null;
+    updateData.bio = dto.bio && dto.bio.trim() ? dto.bio.trim() : null;
   }
 
   if (dto.avatarUrl !== undefined) {
-    const val = dto.avatarUrl.trim();
+    const val = (dto.avatarUrl || '').trim();
     if (!val) {
       updateData.avatarUrl = null;
       updateData.avatarObjectKey = null;
@@ -161,7 +164,9 @@ export async function updateStudentProfile(
   if (dto.interests !== undefined) jsonUpdateData.interests = dto.interests;
   if (dto.availability !== undefined) jsonUpdateData.availability = dto.availability;
   if (dto.rolesCapable !== undefined) jsonUpdateData.rolesCapable = dto.rolesCapable;
-  if (dto.experience !== undefined) jsonUpdateData.experience = dto.experience;
+  if (dto.experience !== undefined) {
+    jsonUpdateData.experience = dto.experience && dto.experience.trim() ? dto.experience.trim() : null;
+  }
 
   const updatedProfile = await prisma.$transaction(async (tx) => {
     const prof = await tx.studentProfile.update({
