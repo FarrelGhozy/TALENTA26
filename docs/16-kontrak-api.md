@@ -1,6 +1,6 @@
 # 16 — Kontrak API
 
-Endpoint produksi berada di `/api/v1` pada origin yang sama. JSON UTF-8; timestamp ISO 8601 UTC (validasi/tampilan tanggal `Asia/Jakarta`); ID opaque; pagination dan filter konsisten. Kontrak ini diselaraskan dengan Keputusan `K-15`–`K-22` (21 November 2026); seluruh rute legacy yang bertentangan atau rawan IDOR (`/users/:userId/target`, `/matching/invites`, `POST /competitions`) dicabut.
+Endpoint produksi berada di `/api/v1` pada origin yang sama. JSON UTF-8; timestamp ISO 8601 UTC (validasi/tampilan tanggal `Asia/Jakarta`); ID opaque; pagination dan filter konsisten. Kontrak ini diselaraskan dengan Keputusan `K-15`–`K-23` (23 November 2026); seluruh rute legacy yang bertentangan atau rawan IDOR (`/users/:userId/target`, `/matching/invites`, `POST /competitions`) dicabut.
 
 ## Konvensi
 Sukses: HTTP sesuai aksi dan body `{data, meta?}`. Gagal: `{error:{code,message,fieldErrors?,requestId}}` tanpa stack/SQL/rahasia. `401` belum login, `403` tak berwenang, `404` tak ditemukan/tak boleh diketahui, `409` konflik/versi, `422` validasi, `429` rate limit. Mutasi berbasis cookie memakai CSRF (`Origin`). Operasi rentan klik ganda memakai `idempotencyKey` dan/atau `version`. Respons tidak pernah memuat `passwordHash`, URL permanen bucket RustFS, atau PII lintas pengguna.
@@ -27,16 +27,22 @@ Prefix `/admin` pada API adalah ruang kelola konten untuk `validator` dan `super
 - **Publik (hanya konten `published`)**:
   - `GET /competitions` (filter `q`, `category`, `level`, `format`, `periodId`), `GET /competitions/:slug` (termasuk sub-lomba & ringkasan aturan poin), `GET /competitions/:slug/point-rules`, `GET /periods/current`, `GET /competition-categories` (jenis & sub-lomba aktif).
 - **Kelola Konten Validator & Super Admin (`/admin/*`)**:
-  - `GET / POST /admin/competitions`, `PATCH /admin/competitions/:id` (lengkap dengan `requirements`, `scheduleTimeline`, `requiredRoles`, `level`, `format`, `min/maxTeamMembers`, `sourceUrl`, `pointDescription`), `POST /admin/competitions/:id/publish`, `POST /admin/competitions/:id/archive`.
+  - `GET / POST /admin/competitions`, `PATCH /admin/competitions/:id` (lengkap dengan `requirements`, `scheduleTimeline`, `requiredRoles`, `level`, `format`, `min/maxTeamMembers`, `registrationStatus` `buka|tutup`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, `singleTeamPerCompetition`, `sourceUrl`, `pointDescription`), `POST /admin/competitions/:id/publish`, `POST /admin/competitions/:id/archive`.
   - `GET / PUT /admin/competitions/:id/point-rules` (pilih template poin atau atur bobot custom per perlombaan/sub-lomba beserta keterangan poin).
   - `GET / POST / PATCH /admin/competition-categories` & `POST / PATCH /admin/competition-subcategories` (kelola jenis lomba & sub-lomba/cabang beserta keterangan poin default).
   - `GET / POST /admin/roadmaps/:slug` (simpan multi-fase & multi-tugas secara non-destruktif tanpa menghapus progres mahasiswa).
   - `GET / POST /admin/consultants`, `PATCH / DELETE /admin/consultants/:id` (kelola kontak WA, `capacityNote`, persetujuan publikasi, dan arsip).
   - `GET /admin/competitions/:id/participants` (daftar tim beregu & mahasiswa target individu untuk dropdown seleksi), `GET / POST /admin/selections` (mendukung `teamId` atau `userId`, `stage`, `result`, `organizerVerified`, `notes`; menyimpan `confirmedAt` & `validatorId`; lolos terkonfirmasi mengunci tim beregu).
-- **Mahasiswa (kolaborasi & persiapan)**:
-  - `GET /matching/candidates` (khusus lomba beregu; filter opsional prodi/skill; mengembalikan `labelKesesuaian` & alasan konkret, nol PII), `GET /students/directory` (pencarian rekan mahasiswa satu institusi minimal nama+prodi untuk memilih anggota kelompok prestasi).
-  - `GET /teams/my`, `POST /teams`, `POST /teams/:id/invites`, `POST /teams/:id/leave`.
-  - `GET /me/invites`, `POST /invites/:id/respond` (penerima: `diterima` | `ditolak`), `POST /invites/:id/cancel` (pengirim: `dibatalkan`).
+- **Mahasiswa (rekrutmen tim, kode undangan & persiapan)**:
+  - `GET /teams/my` (tim aktif lengkap dengan profil aman anggota, `leaderId`, evaluasi kesiapan 3 lapis `readiness`, status seleksi internal, serta — khusus ketua tim — `inviteCode` & daftar `joinRequests` berstatus `menunggu`).
+  - `GET /teams/directory?competitionSlug=...&q=...&role=...` (direktori tim `terbuka` yang sedang merekrut pada kompetisi sama + `myRequestStatus`, nol PII).
+  - `GET /me/join-requests` (riwayat pengajuan gabung milik mahasiswa saat ini).
+  - `POST /teams` (buat ruang tim baru sebagai ketua: `competitionSlug`, `teamName`, `description?`, `neededRoles?`, `recruitmentType?`, `targetMaxMembers?`, `roleInTeam?`; menghasilkan `inviteCode` acak aman).
+  - `PATCH /teams/:id` (khusus ketua: ubah nama, deskripsi, kebutuhan peran, `recruitmentType`, `isRecruiting`, `targetMaxMembers`) & `POST /teams/:id/invite-code/rotate` (khusus ketua: putar ulang kode undangan).
+  - `POST /teams/:id/join-requests` (ajukan bergabung ke tim terbuka: `preferredRole?`, `note?`), `POST /join-requests/:id/cancel` (pelamar batalkan), `POST /join-requests/:id/decide` (khusus ketua: `{ action: 'disetujui' | 'ditolak' }` dengan row lock `FOR UPDATE`).
+  - `POST /teams/join-by-code` (gabung langsung via `{ inviteCode }` dengan row lock `FOR UPDATE` & cek konflik target/tim).
+  - `POST /teams/:id/members/:userId/remove` (khusus ketua: keluarkan anggota sebelum `terkunci_seleksi`), `POST /teams/:id/leave` (keluar tim; bila ketua keluar otomatis transfer ke anggota terlama atau arsipkan bila sendirian), `POST /teams/:id/register-selection` (khusus ketua saat `readiness.isSelectionReady`: buat entri `InternalSelection` status `menunggu`).
+  - `GET /students/directory` (pencarian rekan mahasiswa satu institusi minimal nama+prodi untuk memilih anggota kelompok prestasi). *(Endpoint lama `/matching/candidates`, `/teams/:id/invites`, `/me/invites`, `/invites/:id/*` dipertahankan sementara untuk kompatibilitas riwayat/tes tetapi tidak dipakai sebagai alur utama UI mahasiswa).*
   - `GET /roadmaps/:slug` (hanya bila kompetisi `published`), `GET /roadmaps/:slug/checklist` (milik user sesi, tanpa `?userId=`), `PUT /me/roadmap-progress/:taskId`.
   - `GET /consultants?slug=...` (hanya kontak `published` & `isApproved` milik kompetisi `published`).
 

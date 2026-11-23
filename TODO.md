@@ -1,6 +1,6 @@
 # TODO — Rencana bertahap TALENTA menuju produksi
 
-Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di `docs/14-keputusan-terbuka.md`). Tanda `[x]` hanya untuk bukti yang sudah ada dan terverifikasi; pekerjaan kode sistem pada Fase 1–4 dijalankan berurutan setelah Fase 0 (dokumentasi) selesai. Lihat `docs/13-peta-jalan.md` untuk dependensi dan gate yang rinci.
+Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di `docs/14-keputusan-terbuka.md`, termasuk revisi alur rekrutmen tim berbasis pengajuan & aturan dinamis per kompetisi). Tanda `[x]` hanya untuk bukti yang sudah ada dan terverifikasi; pekerjaan kode sistem pada setiap fase dijalankan berurutan setelah penyelarasan dokumentasi selesai. Lihat `docs/13-peta-jalan.md` untuk dependensi dan gate yang rinci.
 
 ## Kondisi awal yang terverifikasi
 - [x] Frontend React/Vite dengan rute publik, mahasiswa, validator, super admin, serta adapter mock/API.
@@ -94,6 +94,30 @@ Status diperbarui 21 November 2026 (selaras keputusan produk `K-01`–`K-22` di 
   - Optimasi `backend/src/lib/storage-archive.ts` (`HeadObjectCommand` pada listing agar tidak mengunduh 2×), validasi nama DB pada `infra/scripts/backup-db.sh`, dan uji nyata `./infra/scripts/backup-db.sh --test-restore talenta_restore_check` (30 tabel pulih + SHA-256 OK); dicatat di `docs/23-validasi-stage-5.md`.
 - [ ] Catatan gate operasional/kebijakan yang masih menunggu pengesahan eksternal sebelum go-live data nyata: sesi pembaca layar manusia, ambang kapasitas `O-06`, retensi/RTO/RPO `O-03`, uji restore bucket RustFS uji nyata di server, dan pengesahan publikasi ranking `O-01`/`O-02`.
 - **Gate Fase 3 (Stage 5)**: **LULUS teknis (21 November 2026)** — seluruh kriteria teknis `docs/18` lulus tanpa temuan kritis terbuka; commit Git lokal.
+
+---
+
+## Fase 3B — Revisi Rekrutmen Tim Berbasis Pengajuan & Aturan Dinamis per Kompetisi (`K-19` revisi & `K-23`)
+### 3B.1 Penyelarasan Dokumentasi & Kontrak
+- [x] Perbarui `docs/14-keputusan-terbuka.md` (`K-19` revisi & `K-23`), `PRD_TALENTA.md`, `docs/03-alur-pengguna.md`, `docs/04-sitemap.md`, `docs/06-spesifikasi-matching.md`, `docs/16-kontrak-api.md`, dan `TODO.md` untuk sistem rekrutmen tim berbasis pengajuan, kode undangan acak, persetujuan ketua tim, 3 lapis kesiapan tim, serta aturan dinamis per kompetisi.
+
+### 3B.2 Skema Database & Migrasi Prisma MySQL
+- [ ] Tambah kolom pada `Competition` (`registrationStatus`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, `singleTeamPerCompetition`), `Team` (`leaderId`, `description`, `recruitmentType`, `isRecruiting`, `neededRoles`, `targetMaxMembers`, `inviteCode`, `inviteCodeUpdatedAt`), dan model `TeamJoinRequest` dengan migrasi non-destruktif terhadap data lama di `talenta_dev` & `talenta_test`.
+- [ ] Perbarui `backend/prisma/seed.ts` (khusus non-production) dengan contoh lomba beregu/individu dengan aturan berbeda serta tim terbuka/privat untuk verifikasi lokal.
+
+### 3B.3 Backend Domain, Otorisasi Ketua Tim & Kontrak API
+- [ ] Implementasikan `evaluateTeamReadiness` (3 lapis: `dibuat`, `anggota_cukup`, `siap_seleksi`, serta `terkunci_seleksi`) beserta unit test aturan bisnisnya.
+- [ ] Implementasikan endpoint rekrutmen tim & otorisasi ketua (`GET /teams/directory`, `GET /me/join-requests`, `POST /teams`, `PATCH /teams/:id`, `POST /teams/:id/invite-code/rotate`, `POST /teams/:id/join-requests`, `POST /join-requests/:id/cancel`, `POST /join-requests/:id/decide`, `POST /teams/join-by-code`, `POST /teams/:id/members/:userId/remove`, `POST /teams/:id/register-selection`, serta transfer ketua otomatis pada `leaveTeam` & cleanup request pada ganti target/periode).
+- [ ] Perbarui endpoint kompetisi admin (`POST`/`PATCH /admin/competitions`) dan ringkasan dashboard mahasiswa (`GET /me/dashboard`).
+
+### 3B.4 Frontend UI/UX, Adapter Service & Rute Mahasiswa/Admin
+- [ ] Perbarui tipe & adapter `@talenta/services` (API & mock), rute `/app/tim`, `/app/tim/cari`, redirect `/app/partner`, Navbar (`Cari Tim`), `ProfilePage`, dan `BerandaPage` (bebas ketergantungan `userService.getAll()` pada halaman tim).
+- [ ] Bangun tampilan Visual 1–6: Hub 3 Jalur (*Buat Tim*, *Cari Tim Terbuka*, *Sudah Punya Tim*), Form Buat Tim + live preview, Direktori Tim Terbuka + tab pengajuan saya, Ruang Tim Saya (approval ketua, kode undangan + rotasi, 3 lapis kesiapan tim + tombol Daftar Seleksi Internal, akses roadmap awal), banner jalur individu di `PreparationPage`, serta panel pengaturan aturan lomba di `/validator/konten?tab=kompetisi` & `TeamRuleBox`.
+
+### 3B.5 Pengujian Unit, Integrasi, E2E & Gate Fase 3B
+- [ ] Tambah unit test `team-readiness.test.ts`, integration test `team-recruitment.test.ts` (otorisasi ketua 403, race condition `FOR UPDATE`, kode undangan & rotasi, transfer ketua, seleksi internal), serta perbarui E2E `02-mahasiswa-flows.ts`.
+- [ ] Lulus seluruh gate: `bun run typecheck`, `bun run lint`, `bun run test`, `bun run build`, `bun run build:demo`, dan `bun run test:e2e` (termasuk uji responsif mobile/tablet/desktop).
+- **Gate Fase 3B**: seluruh 10 aturan sistem rekrutmen tim & pengaturan lomba dinamis terverifikasi otomatis dan manual tanpa regresi Stage 5; commit Git lokal.
 
 ---
 

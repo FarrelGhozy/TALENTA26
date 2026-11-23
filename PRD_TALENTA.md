@@ -1,6 +1,6 @@
 # PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.1, 21 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-22`); implementasi kode masih memerlukan perbaikan keamanan, kelengkapan alur, dan verifikasi menurut TODO.md dan docs/24. Keputusan yang disepakati dan yang masih terbuka tercatat di docs/14-keputusan-terbuka.md.
+Versi rancangan: 2.2, 23 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-23`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
 
 ## 1. Masalah dan tujuan
 
@@ -42,7 +42,7 @@ Akun super admin dibuat lewat seed/bootstrap awal yang aman; validator ditunjuk 
 
 ### Mahasiswa
 - Daftar/login email dan password (langsung aktif pada rilis pertama; verifikasi email ditunda ke pasca-rilis awal); nama dan NIM unik; pemulihan akun via SMTP; profil minat, keahlian, pengalaman, waktu tersedia, serta foto profil (avatar) privat yang disimpan di RustFS; pilih target aktif.
-- Rekomendasi calon partner yang dapat dijelaskan, undangan (termasuk pembatalan undangan keluar), dan tim. Lomba individu tidak memaksa alur tim dan langsung mengarah ke ruang persiapan.
+- Pembentukan tim berbasis pengajuan & kode undangan untuk lomba beregu: 3 jalur (*Buat Tim Baru*, *Cari Tim Terbuka*, *Sudah Punya Tim* via kode undangan acak), persetujuan anggota khusus oleh ketua tim, dan 3 lapis status kesiapan tim (*tim dibuat*, *anggota cukup*, *siap seleksi*). Lomba individu tidak melewati alur tim dan langsung mengarah ke ruang persiapan. Skor matching/AI ditunda di luar alur wajib rilis awal.
 - Persiapan: roadmap berisi fase, materi, tugas, tenggat, progres, dan kontak WA konsultan yang telah diterbitkan validator.
 - Pengajuan prestasi lomba (individu maupun kelompok) dan prestasi mandiri lain lengkap dengan jenis lomba, sub-lomba/cabang, peserta tim (jika kelompok), keterangan aturan poin, dan bukti privat; lihat detail/antrean/status, catatan, revisi penuh (termasuk mengganti berkas bukti), pembatalan saat menunggu, dan riwayat.
 - Tampilan kontribusi poin pribadi berdasarkan keputusan sah dan aturan/override poin yang berlaku.
@@ -58,7 +58,7 @@ Akun super admin dibuat lewat seed/bootstrap awal yang aman; validator ditunjuk 
 
 ## 5. Alur inti dan kriteria penerimaan
 ### J1 Mahasiswa menuju persiapan
-Daftar → login → lengkapi profil (termasuk avatar privat opsional) → pilih lomba → jika individu langsung menuju persiapan; jika beregu lihat rekomendasi, kelola undangan, dan bentuk tim → baca roadmap → tandai progres. Berhasil jika data tetap ada setelah refresh dan login di perangkat lain, batas jumlah anggota dipenuhi, pembatalan undangan bekerja, dan transisi target/periode tidak menghapus riwayat.
+Daftar → login → lengkapi profil (termasuk avatar privat opsional) → pilih lomba → jika individu langsung menuju persiapan; jika beregu pilih 1 dari 3 jalur (*Buat Tim Baru*, *Cari Tim Terbuka* lalu ajukan gabung, atau *Sudah Punya Tim* via kode undangan) → ketua tim menyetujui/menolak pelamar dan mengelola kode undangan → baca roadmap (tetap dapat dibuka meski tim belum lengkap) → tandai progres → ajukan siap seleksi internal saat seluruh syarat lomba terpenuhi. Berhasil jika data tetap ada setelah refresh dan login di perangkat lain, batas jumlah anggota & anti-tim-ganda ditegakkan secara atomik, non-ketua tidak bisa menyetujui anggota, dan transisi target/periode tidak menghapus riwayat.
 
 ### J2 Prestasi
 Mahasiswa mengajukan prestasi (individu atau kelompok, lengkap dengan jenis & sub-lomba serta 1–3 bukti privat) → status menunggu (dapat dibatalkan pemilik sebelum diputuskan) → validator melihat detail lomba, anggota, bukti, poin rekomendasi + keterangan → setuju (memakai poin rekomendasi atau override poin dengan alasan wajib), meminta perbaikan dengan alasan, atau menolak dengan alasan → mahasiswa melihat alasan dan dapat revisi penuh (termasuk mengganti berkas bukti) jika diminta → hanya yang disetujui masuk statistik; pada prestasi kelompok seluruh anggota terdaftar menerima poin penuh. Berhasil jika keputusan, override poin, dan perubahan bukti memiliki riwayat, file privat, dan tidak ada penghitungan ganda.
@@ -74,7 +74,7 @@ Super admin menambah/mengelola staf dengan nama asli, mengatur template poin, je
 
 ## 6. Aturan domain utama
 - Satu target lomba aktif per mahasiswa per periode akademik; pergantian target maupun aktivasi periode baru mengarsipkan target dan tim lama secara logis/atomik, bukan menghapus riwayat.
-- Peraturan tim berasal dari kompetisi yang berlaku; default global rilis pertama adalah maksimum 5 undangan aktif dan masa berlaku 14 hari. Status `terbentuk` di backend ditentukan oleh pemenuhan rentang jumlah anggota (`min`–`max`); peran wajib dan lintas prodi ditampilkan sebagai indikator/saran di UI.
+- Peraturan tim berasal dari konfigurasi masing-masing kompetisi (`format`, `minTeamMembers`–`maxTeamMembers`, `registrationStatus`, `internalSelectionDeadline`, toggle wajib/opsional `requireRoles` & `requireCrossStudyProgram`, `singleTeamPerCompetition`). Status `terbentuk` menandai anggota cukup, sedangkan kesiapan mengikuti seleksi mengevaluasi seluruh syarat wajib lomba tersebut; mahasiswa tetap boleh membuka roadmap saat tim masih mencari anggota. Persetujuan anggota tim sepenuhnya di tangan ketua tim (`leaderId`), bukan validator prestasi.
 - Mahasiswa bebas mengajukan prestasi di luar target lombanya, baik individu maupun kelompok (memilih tim pembinaan atau rekan mahasiswa satu institusi). Hanya prestasi berjenis lomba yang masuk ranking; kategori lain tetap tercatat dan dapat masuk statistik sesuai definisi.
 - Status pengajuan aktif rilis pertama: `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`, `dibatalkan` (status `draft` ditunda ke pasca-rilis awal). Transisi, alasan, override poin, aktor, dan waktu dicatat. Pengajuan yang disetujui tidak diedit langsung; koreksi memakai tindakan khusus yang membalik poin seluruh anggota terkait.
 - Bukti prestasi dan avatar mahasiswa adalah objek privat RustFS; database menyimpan metadata dan kunci objek, bukan Base64 atau URL publik permanen. Avatar tidak ditampilkan pada halaman ranking publik.
