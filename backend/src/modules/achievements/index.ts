@@ -75,12 +75,18 @@ export const achievementRoutes = new Elysia()
   .use(authPlugin)
 
   // ==========================================
-  // Rute Publik: Ranking Prestasi
+  // Rute Publik & Terotorisasi: Ranking Prestasi
   // ==========================================
   .get(
     '/api/v1/ranking',
-    async ({ query }) => {
-      const data = await achService.getPublicRanking(query.periodId);
+    async ({ auth, query, set }) => {
+      const isAuthenticated = Boolean(auth?.user);
+      set.headers['vary'] = 'Cookie, Authorization';
+      set.headers['cache-control'] = isAuthenticated ? 'private, no-store' : 'public, max-age=30';
+      const data = await achService.getPublicRanking(query.periodId, {
+        includeAvatar: isAuthenticated,
+        viewerInstitutionId: auth?.user?.institutionId,
+      });
       return { data };
     },
     {
@@ -89,8 +95,14 @@ export const achievementRoutes = new Elysia()
       }),
     }
   )
-  .get('/api/v1/ranking/lifetime', async () => {
-    const data = await achService.getLifetimeRanking();
+  .get('/api/v1/ranking/lifetime', async ({ auth, set }) => {
+    const isAuthenticated = Boolean(auth?.user);
+    set.headers['vary'] = 'Cookie, Authorization';
+    set.headers['cache-control'] = isAuthenticated ? 'private, no-store' : 'public, max-age=30';
+    const data = await achService.getLifetimeRanking({
+      includeAvatar: isAuthenticated,
+      viewerInstitutionId: auth?.user?.institutionId,
+    });
     return { data };
   })
 

@@ -575,6 +575,64 @@ describe('Fase 2 — Fitur Utama, Sistem Poin 3 Lapis, Prestasi Kelompok, Avatar
     );
     expect(authStream.status).toBe(200);
     expect(authStream.headers.get('content-type')).toBe('image/png');
+
+    // Re-approve prestasi kelompok agar mhs1 masuk daftar ranking untuk uji visibilitas avatar
+    const achNow = await prisma.achievement.findUnique({ where: { id: groupAchId } });
+    const reApproveRes = await app.handle(
+      new Request(`http://localhost/api/v1/admin/achievements/${groupAchId}/decisions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${validatorToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'approve',
+          version: achNow?.version,
+        }),
+      })
+    );
+    expect(reApproveRes.status).toBe(200);
+
+    // 1. Ranking PUBLIK (tanpa sesi) TIDAK BOLEH mengembalikan avatarUrl maupun avatarObjectKey
+    const pubRankRes = await app.handle(new Request('http://localhost/api/v1/ranking'));
+    expect(pubRankRes.status).toBe(200);
+    expect(pubRankRes.headers.get('vary')).toContain('Cookie');
+    const pubRankText = await pubRankRes.text();
+    expect(pubRankText).not.toContain('avatarUrl');
+    expect(pubRankText).not.toContain('avatarObjectKey');
+    const pubRankJson = JSON.parse(pubRankText);
+    const pubMhs1 = pubRankJson.data.ranking.find((r: any) => r.userId === mhs1Id);
+    expect(pubMhs1).toBeDefined();
+    expect(pubMhs1.avatarUrl).toBeUndefined();
+
+    const pubLifeRes = await app.handle(new Request('http://localhost/api/v1/ranking/lifetime'));
+    expect(pubLifeRes.status).toBe(200);
+    const pubLifeText = await pubLifeRes.text();
+    expect(pubLifeText).not.toContain('avatarUrl');
+    expect(pubLifeText).not.toContain('avatarObjectKey');
+
+    // 2. Ranking TEROTORISASI (mahasiswa satu kampus yang login) menyertakan avatarUrl privat
+    const authRankRes = await app.handle(
+      new Request('http://localhost/api/v1/ranking', {
+        headers: { Authorization: `Bearer ${mhs2Token}` },
+      })
+    );
+    expect(authRankRes.status).toBe(200);
+    expect(authRankRes.headers.get('cache-control')).toContain('private');
+    const authRankJson = (await authRankRes.json()) as any;
+    const authMhs1 = authRankJson.data.ranking.find((r: any) => r.userId === mhs1Id);
+    expect(authMhs1).toBeDefined();
+    expect(authMhs1.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    const authLifeRes = await app.handle(
+      new Request('http://localhost/api/v1/ranking/lifetime', {
+        headers: { Authorization: `Bearer ${mhs2Token}` },
+      })
+    );
+    expect(authLifeRes.status).toBe(200);
+    const authLifeJson = (await authLifeRes.json()) as any;
+    const authLifeMhs1 = authLifeJson.data.ranking.find((r: any) => r.userId === mhs1Id);
+    expect(authLifeMhs1?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
   });
 
   it('6. Roadmap non-destruktif mempertahankan progres mahasiswa & Seleksi Internal mendukung peserta individu', async () => {

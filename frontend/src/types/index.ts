@@ -411,6 +411,7 @@ export interface RankingItem {
   userId: string;
   fullName: string;
   studyProgram: string;
+  avatarUrl?: string;
   points: number;
   approvedCount: number;
   juara1Count: number;

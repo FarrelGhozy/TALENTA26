@@ -6,6 +6,7 @@ Status: diselaraskan dengan Keputusan `K-19` (revisi), `K-22`, dan `K-23` (23 No
 - `/` landing; `/kompetisi` katalog (pencarian, kategori/jenis, tingkat, format, periode); `/kompetisi/:slug` detail (termasuk sub-lomba & keterangan aturan poin); `/ranking` leaderboard (periode aktif & lifetime); `/masuk` login manual (kartu peran instan hanya ada di mode dev/demo, tidak masuk bundle produksi); `/daftar` registrasi manual mahasiswa; `/lupa-password` & `/reset-password` pemulihan sandi SMTP; `/403` dan `/404`.
 
 ## Rute mahasiswa (`/app/*`, role `mahasiswa`)
+Urutan menu utama Navbar mahasiswa: **Beranda** (`/app/beranda`) → **Ruang Persiapan** (`/app/persiapan`) → **Tim** (`/app/tim`) → **Katalog Lomba** (`/kompetisi`) → **Prestasi** (`/app/prestasi`) → **Ranking** (`/ranking`, paling belakang).
 - `/app/beranda`: ringkasan progres, target aktif, tim, roadmap, pengajuan, poin periode berjalan, dan rekomendasi aksi nyata (`GET /me/dashboard`).
 - `/app/persiapan`: **Ruang Persiapan** (menu utama Navbar mahasiswa) menampilkan lomba aktif yang sedang diikuti, riwayat target lomba sebelumnya, serta pilihan lomba lain untuk masuk langsung ke ruang persiapan masing-masing.
 - `/app/profil`: diakses dari dropdown menu akun pojok kanan atas (**Pengaturan Profil & Target** bersama **Keluar**); berisi identitas (termasuk upload avatar privat RustFS, NIM status belum terverifikasi kampus), minat/keahlian/pengalaman, dan pengaturan target kompetisi (dengan konfirmasi arsip/keluar tim lama bila mengganti target).

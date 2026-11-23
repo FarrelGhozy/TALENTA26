@@ -60,9 +60,9 @@ Prefix `/admin` pada API adalah ruang kelola konten untuk `validator` dan `super
   - `GET /admin/dashboard` (statistik terfilter `periodId`, termasuk peserta per kompetisi & delegasi seleksi terkonfirmasi) dan `GET /admin/export` (CSV UTF-8 BOM aman formula injection dengan filter `status`, `academicPeriodId`, `category`).
 
 ## Ranking dan sistem super admin
-- **Publik**:
-  - `GET /ranking?periodId=...` (nama tampilan, prodi, poin, posisi, jumlah Juara 1 unik, prestasi sah unik, metadata periode & versi aturan; tanpa `periodId` dan tanpa periode aktif wajib kosong; tanpa avatar/NIM/email/WA).
-  - `GET /ranking/lifetime` (akumulasi sepanjang waktu terpisah).
+- **Publik & Civitas Terotorisasi**:
+  - `GET /ranking?periodId=...` (nama tampilan, prodi, poin, posisi, jumlah Juara 1 unik, prestasi sah unik, metadata periode; tanpa `periodId` dan tanpa periode aktif wajib kosong; pada akses publik tanpa sesi tidak mengirim `avatarUrl`/NIM/email/WA; pada sesi terautentikasi satu institusi menyertakan `avatarUrl` privat `/api/v1/users/:id/avatar?v=...` dengan header `Vary: Cookie, Authorization` dan `Cache-Control: private, no-store`).
+  - `GET /ranking/lifetime` (akumulasi sepanjang waktu terpisah dengan aturan visibilitas avatar yang sama).
 - **Super Admin (`/system/*`)**:
   - `GET /system/users` (paginasi + filter `role`, `status`, `q`), `POST /system/users/staff` (wajib `fullName`, `email`, `password`, `role`), `PATCH /system/users/:id/role` (mencabut sesi target & melarang downgrade super admin terakhir), `PATCH /system/users/:id/status` (suspend langsung cabut sesi & melarang suspend diri sendiri).
   - `GET / POST /system/academic-periods`, `GET /system/academic-periods/:id/activation-preview` (jumlah target & tim aktif periode lama yang akan diarsipkan), `POST /system/academic-periods/:id/activate` (aktivasi & arsip atomik periode lama).

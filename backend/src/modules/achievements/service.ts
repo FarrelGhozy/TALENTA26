@@ -1405,6 +1405,11 @@ export async function correctAchievement(
   return result.updated;
 }
 
+export interface RankingViewOptions {
+  includeAvatar?: boolean;
+  viewerInstitutionId?: string;
+}
+
 // Helper agregasi ranking deterministik (menghindari double-count achievementId)
 function aggregateRankingEntries(
   ledgerEntries: Array<{
@@ -1412,9 +1417,12 @@ function aggregateRankingEntries(
     points: number;
     type: string;
     user: {
+      institutionId?: string;
       studentProfile: {
         fullName: string;
         studyProgram: string;
+        avatarObjectKey?: string | null;
+        updatedAt?: Date;
       } | null;
     };
     achievement: {
@@ -1422,14 +1430,18 @@ function aggregateRankingEntries(
       result: string;
       status: string;
     } | null;
-  }>
+  }>,
+  options: RankingViewOptions = {}
 ) {
+  const allowAvatar = Boolean(options.includeAvatar && options.viewerInstitutionId);
+
   const userStats = new Map<
     string,
     {
       userId: string;
       fullName: string;
       studyProgram: string;
+      avatarUrl?: string;
       points: number;
       approvedIds: Set<string>;
       juara1Ids: Set<string>;
@@ -1438,10 +1450,20 @@ function aggregateRankingEntries(
 
   for (const entry of ledgerEntries) {
     const uId = entry.userId;
+    const profile = entry.user.studentProfile;
+    const canExposeAvatar =
+      allowAvatar &&
+      entry.user.institutionId === options.viewerInstitutionId &&
+      Boolean(profile?.avatarObjectKey);
+    const resolvedAvatarUrl = canExposeAvatar
+      ? `/api/v1/users/${uId}/avatar?v=${profile?.updatedAt ? profile.updatedAt.getTime() : 1}`
+      : undefined;
+
     const existing = userStats.get(uId) || {
       userId: uId,
-      fullName: entry.user.studentProfile?.fullName || 'Mahasiswa',
-      studyProgram: entry.user.studentProfile?.studyProgram || '-',
+      fullName: profile?.fullName || 'Mahasiswa',
+      studyProgram: profile?.studyProgram || '-',
+      ...(resolvedAvatarUrl ? { avatarUrl: resolvedAvatarUrl } : {}),
       points: 0,
       approvedIds: new Set<string>(),
       juara1Ids: new Set<string>(),
@@ -1472,14 +1494,15 @@ function aggregateRankingEntries(
       userId: item.userId,
       fullName: item.fullName,
       studyProgram: item.studyProgram,
+      ...(item.avatarUrl ? { avatarUrl: item.avatarUrl } : {}),
       points: item.points,
       approvedCount: item.approvedIds.size,
       juara1Count: item.juara1Ids.size,
     }));
 }
 
-// 9. Mesin Ranking Publik — Bebas PII & Stabil
-export async function getPublicRanking(periodId?: string) {
+// 9. Mesin Ranking Publik & Internal Terotorisasi — Bebas PII & Stabil
+export async function getPublicRanking(periodId?: string, options: RankingViewOptions = {}) {
   let activePeriodId = periodId;
 
   if (!activePeriodId) {
@@ -1494,6 +1517,7 @@ export async function getPublicRanking(periodId?: string) {
   }
 
   const periodData = await prisma.academicPeriod.findUnique({ where: { id: activePeriodId } });
+  const includeAvatar = Boolean(options.includeAvatar && options.viewerInstitutionId);
 
   const ledgerEntries = await prisma.pointLedger.findMany({
     where: {
@@ -1503,10 +1527,12 @@ export async function getPublicRanking(periodId?: string) {
       user: {
         select: {
           id: true,
+          ...(includeAvatar ? { institutionId: true } : {}),
           studentProfile: {
             select: {
               fullName: true,
               studyProgram: true,
+              ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
             },
           },
         },
@@ -1521,7 +1547,7 @@ export async function getPublicRanking(periodId?: string) {
     },
   });
 
-  const ranking = aggregateRankingEntries(ledgerEntries);
+  const ranking = aggregateRankingEntries(ledgerEntries, options);
 
   return {
     period: periodData
@@ -1537,16 +1563,20 @@ export async function getPublicRanking(periodId?: string) {
 }
 
 // 10. Ranking Sepanjang Waktu (Lifetime Ranking)
-export async function getLifetimeRanking() {
+export async function getLifetimeRanking(options: RankingViewOptions = {}) {
+  const includeAvatar = Boolean(options.includeAvatar && options.viewerInstitutionId);
+
   const ledgerEntries = await prisma.pointLedger.findMany({
     include: {
       user: {
         select: {
           id: true,
+          ...(includeAvatar ? { institutionId: true } : {}),
           studentProfile: {
             select: {
               fullName: true,
               studyProgram: true,
+              ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
             },
           },
         },
@@ -1561,7 +1591,7 @@ export async function getLifetimeRanking() {
     },
   });
 
-  const ranking = aggregateRankingEntries(ledgerEntries);
+  const ranking = aggregateRankingEntries(ledgerEntries, options);
 
   return {
     period: {

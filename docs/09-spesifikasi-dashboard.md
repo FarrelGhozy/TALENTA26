@@ -12,8 +12,8 @@ Konten draft/usang, jadwal mendekat, antrean pengajuan, perbaikan yang kembali, 
 ## Dashboard super admin
 Jumlah akun dan staf aktif, aktivitas konten, tren pengajuan dan prestasi sah, ringkasan ranking, audit tindakan sensitif, status API/database/storage/backup, dan pengingat operasional. Status infrastruktur tidak boleh mengungkap rahasia.
 
-## Ranking publik
-Default: tahun akademik aktif (bila tidak ada periode aktif, respons periode berjalan wajib kosong tanpa mencampur seluruh periode). Riwayat sepanjang waktu (`lifetime`) ditampilkan sebagai tampilan terpisah. Hanya prestasi kategori lomba berstatus disetujui yang memberi poin. Tidak ada filter bidang pada rilis awal. Nama tampilan dan poin dipublikasikan; NIM, email, kontak, berkas dan detail internal tetap privat. **Foto profil/avatar mahasiswa yang tersimpan privat di RustFS tidak dipublikasikan di halaman ranking publik** (K-20).
+## Ranking publik & civitas masuk
+Default: tahun akademik aktif (bila tidak ada periode aktif, respons periode berjalan wajib kosong tanpa mencampur seluruh periode). Riwayat sepanjang waktu (`lifetime`) ditampilkan sebagai tampilan terpisah. Hanya prestasi kategori lomba berstatus disetujui yang memberi poin. Tidak ada filter bidang pada rilis awal (hanya pencarian nama/prodi di antarmuka). Nama tampilan, program studi, jumlah capaian sah, dan poin dipublikasikan; NIM, email, kontak, berkas dan detail internal tetap privat. **Foto profil/avatar mahasiswa yang tersimpan privat di RustFS tidak dipublikasikan dan tidak dikirim API pada akses ranking publik (belum login)** (`K-20`), dan hanya ditampilkan melalui endpoint terotorisasi `/api/v1/users/:id/avatar` ketika diakses pengguna UNIDA Gontor yang sudah login.
 
 ### Sistem Poin 3 Lapis (`K-15` & `K-16`)
 1. **Lapis 1 — Template Poin Berversi (`PointTemplate`)**: Super admin mengelola template bobot standar berversi berdasarkan `level × result` lengkap dengan nama template dan keterangan. Tabel berikut adalah bobot awal usulan untuk template v1:

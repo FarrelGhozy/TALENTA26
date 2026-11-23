@@ -91,8 +91,8 @@ export const Navbar: React.FC = () => {
         { to: '/app/persiapan', label: 'Ruang Persiapan', icon: BookOpen },
         { to: '/app/tim', label: 'Tim', icon: Users },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
-        { to: '/ranking', label: 'Ranking', icon: Medal },
         { to: '/app/prestasi', label: 'Prestasi', icon: Award },
+        { to: '/ranking', label: 'Ranking', icon: Medal },
       ];
     }
     if (currentRole === 'super_admin' || currentRole === 'validator') {
