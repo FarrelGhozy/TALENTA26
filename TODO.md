@@ -115,9 +115,9 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 - [x] Bangun tampilan Visual 1–6: Hub 3 Jalur (`TeamOnboardingHub`), Form Buat Tim + live preview (`TeamCreateForm`), Modal Kode Undangan (`JoinByCodeModal`), Direktori Tim Terbuka + tab pengajuan saya (`TeamDirectoryPage`), Ruang Tim Saya (`TeamPage` — approval ketua, kode undangan + rotasi, keluarkan anggota, 3 lapis kesiapan tim + tombol Daftar Seleksi Internal, akses roadmap awal), panel jalur individu di `PreparationPage`, serta panel pengaturan aturan lomba dinamis di `/validator/konten?tab=kompetisi` & `TeamRuleBox`. (`typecheck`, `lint` 0 warning, `build:demo`, dan `build` produksi bersih lulus).
 
 ### 3B.5 Pengujian Unit, Integrasi, E2E & Gate Fase 3B
-- [ ] Tambah unit test `team-readiness.test.ts`, integration test `team-recruitment.test.ts` (otorisasi ketua 403, race condition `FOR UPDATE`, kode undangan & rotasi, transfer ketua, seleksi internal), serta perbarui E2E `02-mahasiswa-flows.ts`.
-- [ ] Lulus seluruh gate: `bun run typecheck`, `bun run lint`, `bun run test`, `bun run build`, `bun run build:demo`, dan `bun run test:e2e` (termasuk uji responsif mobile/tablet/desktop).
-- **Gate Fase 3B**: seluruh 10 aturan sistem rekrutmen tim & pengaturan lomba dinamis terverifikasi otomatis dan manual tanpa regresi Stage 5; commit Git lokal.
+- [x] Tambah unit test `backend/tests/unit/team-readiness.test.ts` (6/6 lulus), integration test `backend/tests/integration/team-recruitment.test.ts` (8/8 lulus, 68 assertions: otorisasi ketua 403, race condition `FOR UPDATE`, kode undangan & rotasi, transfer ketua, seleksi internal), serta perbarui E2E `tests/e2e/specs/02-mahasiswa-flows.ts`.
+- [x] Lulus seluruh gate: `bun run typecheck`, `bun run lint` (0 warning), `bun run test` (19/19 unit + 8/8 integration suites), `bun run build:demo`, `bun run build` (bundle produksi bersih), dan `bun run test:e2e` (seluruh alur Publik, Mahasiswa, Validator, Super Admin + responsif 390×844 & 768×1024 lulus 100%).
+- **Gate Fase 3B**: **LULUS (23 November 2026)** — seluruh 10 aturan sistem rekrutmen tim & pengaturan lomba dinamis terverifikasi otomatis dan visual tanpa regresi Stage 5; commit Git lokal.
 
 ---
 

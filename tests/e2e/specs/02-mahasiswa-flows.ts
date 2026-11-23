@@ -51,8 +51,109 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
   await greeting.waitFor({ state: 'visible', timeout: 5000 });
   log.pass('Beranda Mahasiswa tampil dengan benar');
 
-  // 3. Roadmap & Checklist Persiapan
+  // 2B. Alur Rekrutmen Tim Berbasis Pengajuan (Visual 1 -> 3 -> 4 -> 2 -> Approval Ketua)
+  log.step('Memilih lomba beregu PKM 2026 dan memeriksa Hub 3 Jalur (/app/tim)');
+  await page.goto(`${CONFIG.baseUrl}/kompetisi/pkm-2026`);
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+  await page.waitForURL((url) => url.pathname.includes('/app/tim'), { timeout: 8000 });
+  await page.locator('text=Mau ikut lomba dengan cara apa?').waitFor({ state: 'visible', timeout: 6000 });
+  log.pass('Hub 3 Jalur Cara Mengikuti Lomba tampil setelah memilih lomba beregu');
+
+  // Buat Tim Baru (Visual 3)
+  const e2eTeamName = `Tim E2E Alpha ${Date.now().toString().slice(-4)}`;
+  log.step(`Membuat tim terbuka baru: ${e2eTeamName}`);
+  await page.locator('button:has-text("Buat Tim Baru")').click();
+  await page.locator('input[placeholder*="Tim Riset Alpha"]').fill(e2eTeamName);
+  await page.locator('#team-desc').fill('Riset inovasi teknologi kampus untuk pengujian E2E.');
+  await page.locator('button[type="submit"]:has-text("Buat Tim")').click();
+
+  // Verifikasi Ruang Tim Saya (Visual 4)
+  await page.locator(`h1:has-text("${e2eTeamName}")`).waitFor({ state: 'visible', timeout: 8000 });
+  await page.locator('text=Kode undangan tim').waitFor({ state: 'visible', timeout: 5000 });
+  const inviteCodeText = (await page.locator('code').first().textContent())?.trim() || '';
+  if (!/^TLN-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(inviteCodeText)) {
+    throw new Error(`Format kode undangan tim tidak sesuai: "${inviteCodeText}"`);
+  }
+  log.pass(`Ruang tim terbentuk dengan kode undangan aman (${inviteCodeText})`);
+
+  // Cek redirect rute lama /app/partner -> /app/tim/cari
+  await page.goto(`${CONFIG.baseUrl}/app/partner`);
+  await page.waitForURL((url) => url.pathname.includes('/app/tim/cari'), { timeout: 6000 });
+  log.pass('Rute lama /app/partner berhasil diarahkan ke /app/tim/cari');
+
+  // Mahasiswa 2: daftar di konteks browser terpisah, cari tim di /app/tim/cari, ajukan gabung
+  const browser = page.context().browser();
+  if (browser) {
+    const student2 = generateTestStudent();
+    const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page2 = await ctx2.newPage();
+    try {
+      log.step(`Mendaftarkan Mahasiswa 2 (${student2.fullName}) untuk menguji pengajuan gabung & persetujuan ketua`);
+      await page2.goto(`${CONFIG.baseUrl}/daftar`);
+      await page2.locator('input[placeholder*="432026101"]').fill(student2.nim);
+      await page2.locator('input[placeholder*="identitas"]').fill(student2.fullName);
+      await page2.locator('input[type="email"]').fill(student2.email);
+      await page2.locator('input[type="password"]').first().fill(student2.password);
+      await page2.locator('input[type="password"]').nth(1).fill(student2.password);
+      await page2.locator('button[type="submit"]').click();
+      await page2.waitForURL((url) => url.pathname.includes('/app/beranda'), { timeout: 8000 });
+
+      // Pilih PKM 2026 -> Cari Tim Terbuka
+      await page2.goto(`${CONFIG.baseUrl}/kompetisi/pkm-2026`);
+      await page2.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+      await page2.waitForURL((url) => url.pathname.includes('/app/tim'), { timeout: 8000 });
+      await page2.locator('a:has-text("Cari Tim Terbuka")').click();
+      await page2.waitForURL((url) => url.pathname.includes('/app/tim/cari'), { timeout: 8000 });
+
+      // Cari tim yang dibuat Mahasiswa 1 & Ajukan Gabung
+      await page2.locator('input[aria-label="Cari nama tim atau kebutuhan skill"]').fill(e2eTeamName);
+      const teamCard = page2.locator('article', { hasText: e2eTeamName }).first();
+      await teamCard.waitFor({ state: 'visible', timeout: 6000 });
+      await teamCard.locator('button:has-text("Ajukan Gabung")').click();
+      await page2.locator('button[type="submit"]:has-text("Kirim Pengajuan")').click();
+      await teamCard.locator('text=Menunggu Ketua').waitFor({ state: 'visible', timeout: 6000 });
+      log.pass('Mahasiswa 2 berhasil mengirim pengajuan bergabung dari Direktori Tim Terbuka');
+
+      // Ketua (Mahasiswa 1) membuka /app/tim dan menyetujui Mahasiswa 2
+      await page.goto(`${CONFIG.baseUrl}/app/tim`);
+      await page.locator(`text=${student2.fullName}`).waitFor({ state: 'visible', timeout: 6000 });
+      await page.locator('button:has-text("Terima")').first().click();
+      await page.locator('text=2/5').waitFor({ state: 'visible', timeout: 6000 });
+      log.pass('Ketua berhasil menyetujui pelamar dan jumlah anggota naik menjadi 2/5');
+
+      // Uji jalur lomba individu (ONMIPA) dengan Mahasiswa 2 setelah keluar/ganti target
+      await page2.goto(`${CONFIG.baseUrl}/kompetisi/onmipa-2026`);
+      await page2.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+      await page2.waitForURL((url) => url.pathname.includes('/app/kompetisi/onmipa-2026/persiapan'), { timeout: 8000 });
+      await page2.locator('text=Alur otomatis untuk lomba individu').waitFor({ state: 'visible', timeout: 6000 });
+      log.pass('Lomba individu ONMIPA langsung diarahkan ke Ruang Persiapan tanpa langkah tim');
+    } finally {
+      await ctx2.close();
+    }
+  }
+
+  // Uji responsif mobile (390x844) & tablet (768x1024) pada Ruang Tim & Direktori
+  for (const vp of [
+    { width: 390, height: 844, name: 'mobile' },
+    { width: 768, height: 1024, name: 'tablet' },
+  ]) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+    await page.goto(`${CONFIG.baseUrl}/app/tim`);
+    await page.waitForLoadState('domcontentloaded');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+    if (overflow) {
+      throw new Error(`Terdeteksi horizontal overflow pada /app/tim (${vp.name})`);
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  log.pass('Tampilan responsif /app/tim pada mobile (390x844) dan tablet (768x1024) bebas overflow');
+
+  // 3. Roadmap & Checklist Persiapan (kembali ke Gemastik untuk tes checklist)
   log.step('Memeriksa Roadmap & Checklist Lomba (/app/kompetisi/gemastik-2026/persiapan)');
+  await page.goto(`${CONFIG.baseUrl}/kompetisi/gemastik-2026`);
+  await page.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+  await page.waitForURL((url) => url.pathname.includes('/app/tim'), { timeout: 8000 });
   await page.goto(`${CONFIG.baseUrl}/app/kompetisi/gemastik-2026/persiapan`);
   await page.waitForLoadState('domcontentloaded');
 

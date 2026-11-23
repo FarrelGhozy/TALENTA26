@@ -4,6 +4,7 @@ export function formatDate(dateString: string): string {
   if (!dateString) return '-';
   try {
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'short',
