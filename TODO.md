@@ -102,8 +102,8 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 - [x] Perbarui `docs/14-keputusan-terbuka.md` (`K-19` revisi & `K-23`), `PRD_TALENTA.md`, `docs/03-alur-pengguna.md`, `docs/04-sitemap.md`, `docs/06-spesifikasi-matching.md`, `docs/16-kontrak-api.md`, dan `TODO.md` untuk sistem rekrutmen tim berbasis pengajuan, kode undangan acak, persetujuan ketua tim, 3 lapis kesiapan tim, serta aturan dinamis per kompetisi.
 
 ### 3B.2 Skema Database & Migrasi Prisma MySQL
-- [ ] Tambah kolom pada `Competition` (`registrationStatus`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, `singleTeamPerCompetition`), `Team` (`leaderId`, `description`, `recruitmentType`, `isRecruiting`, `neededRoles`, `targetMaxMembers`, `inviteCode`, `inviteCodeUpdatedAt`), dan model `TeamJoinRequest` dengan migrasi non-destruktif terhadap data lama di `talenta_dev` & `talenta_test`.
-- [ ] Perbarui `backend/prisma/seed.ts` (khusus non-production) dengan contoh lomba beregu/individu dengan aturan berbeda serta tim terbuka/privat untuk verifikasi lokal.
+- [x] Tambah kolom pada `Competition` (`registrationStatus`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, `singleTeamPerCompetition`), `Team` (`leaderId`, `description`, `recruitmentType`, `isRecruiting`, `neededRoles`, `targetMaxMembers`, `inviteCode`, `inviteCodeUpdatedAt`), dan model `TeamJoinRequest` dengan migrasi non-destruktif (`20261123173000_add_team_recruitment_and_competition_rules`) terhadap data lama di `talenta_dev` & `talenta_test`.
+- [x] Perbarui `backend/prisma/seed.ts` (khusus non-production) dengan contoh lomba beregu/individu dengan aturan berbeda serta tim terbuka untuk verifikasi lokal.
 
 ### 3B.3 Backend Domain, Otorisasi Ketua Tim & Kontrak API
 - [ ] Implementasikan `evaluateTeamReadiness` (3 lapis: `dibuat`, `anggota_cukup`, `siap_seleksi`, serta `terkunci_seleksi`) beserta unit test aturan bisnisnya.

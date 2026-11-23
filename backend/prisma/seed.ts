@@ -211,6 +211,10 @@ async function main() {
       minTeamMembers: 3,
       maxTeamMembers: 3,
       requiredRoles: ['Hacker (Programmer)', 'Hipster (UI/UX Designer)', 'Hustler (Pitch/Product)'],
+      registrationStatus: 'buka' as const,
+      requireRoles: false,
+      requireCrossStudyProgram: false,
+      singleTeamPerCompetition: true,
       description: 'Pagelaran Mahasiswa Nasional Bidang Teknologi Informasi dan Komunikasi untuk mendorong talenta digital Indonesia.',
       requirements: [
         'Mahasiswa aktif jenjang S1/D4/D3 UNIDA Gontor',
@@ -234,7 +238,11 @@ async function main() {
       format: 'beregu' as const,
       minTeamMembers: 3,
       maxTeamMembers: 5,
-      requiredRoles: ['Ketua Tim', 'Anggota Tim'],
+      requiredRoles: ['Ketua Tim', 'Penulis Proposal', 'Analis Data'],
+      registrationStatus: 'buka' as const,
+      requireRoles: false,
+      requireCrossStudyProgram: false,
+      singleTeamPerCompetition: true,
       description: 'Program peningkatan mutu peserta didik di perguruan tinggi untuk menumbuhkan, mewadahi, dan mewujudkan ide kreatif mahasiswa.',
       requirements: [
         'Mahasiswa aktif jenjang sarjana',
@@ -258,6 +266,10 @@ async function main() {
       minTeamMembers: 3,
       maxTeamMembers: 4,
       requiredRoles: ['Lead Innovator', 'Media Specialist', 'Technical Developer'],
+      registrationStatus: 'buka' as const,
+      requireRoles: false,
+      requireCrossStudyProgram: false,
+      singleTeamPerCompetition: true,
       description: 'Kompetisi pengembangan inovasi digital dalam dunia pendidikan untuk mencapai tujuan pembangunan berkelanjutan.',
       requirements: ['Mahasiswa aktif', 'Tim beranggotakan 3-4 orang'],
       scheduleTimeline: [
@@ -276,6 +288,10 @@ async function main() {
       minTeamMembers: 1,
       maxTeamMembers: 1,
       requiredRoles: ['Peserta'],
+      registrationStatus: 'buka' as const,
+      requireRoles: false,
+      requireCrossStudyProgram: false,
+      singleTeamPerCompetition: true,
       description: 'Olimpiade sains mahasiswa perguruan tinggi tingkat nasional bidang Matematika, Fisika, Kimia, dan Biologi.',
       requirements: ['Mahasiswa aktif', 'Perseorangan / Individu'],
       scheduleTimeline: [
@@ -298,6 +314,10 @@ async function main() {
         minTeamMembers: compData.minTeamMembers,
         maxTeamMembers: compData.maxTeamMembers,
         requiredRoles: compData.requiredRoles,
+        registrationStatus: compData.registrationStatus,
+        requireRoles: compData.requireRoles,
+        requireCrossStudyProgram: compData.requireCrossStudyProgram,
+        singleTeamPerCompetition: compData.singleTeamPerCompetition,
         description: compData.description,
         requirements: compData.requirements,
         scheduleTimeline: compData.scheduleTimeline,
@@ -315,6 +335,10 @@ async function main() {
         minTeamMembers: compData.minTeamMembers,
         maxTeamMembers: compData.maxTeamMembers,
         requiredRoles: compData.requiredRoles,
+        registrationStatus: compData.registrationStatus,
+        requireRoles: compData.requireRoles,
+        requireCrossStudyProgram: compData.requireCrossStudyProgram,
+        singleTeamPerCompetition: compData.singleTeamPerCompetition,
         description: compData.description,
         requirements: compData.requirements,
         scheduleTimeline: compData.scheduleTimeline,
@@ -419,6 +443,98 @@ async function main() {
           },
         });
         console.log(`[SEED] Kontak konsultasi terdaftar untuk: ${comp.name}`);
+      }
+    }
+
+    if (comp.slug === 'onmipa-2026') {
+      const existingOnmipaRoadmap = await prisma.roadmap.findFirst({
+        where: { competitionId: comp.id },
+      });
+      if (!existingOnmipaRoadmap) {
+        const roadmap = await prisma.roadmap.create({
+          data: { competitionId: comp.id, version: 1, status: 'published' },
+        });
+        const phase = await prisma.roadmapPhase.create({
+          data: {
+            roadmapId: roadmap.id,
+            orderIndex: 1,
+            title: 'Fase 1: Pemetaan Materi & Latihan Mandiri ONMIPA',
+            description: 'Mempelajari silabus nasional bidang MIPA dan latihan soal seleksi wilayah.',
+            targetDays: 21,
+          },
+        });
+        await prisma.roadmapTask.createMany({
+          data: [
+            {
+              phaseId: phase.id,
+              orderIndex: 1,
+              title: 'Membaca pedoman dan kisi-kisi ONMIPA-PT terbaru',
+              isRequired: true,
+            },
+            {
+              phaseId: phase.id,
+              orderIndex: 2,
+              title: 'Latihan soal bidang pilihan minimal 2 paket soal',
+              isRequired: true,
+            },
+            {
+              phaseId: phase.id,
+              orderIndex: 3,
+              title: 'Mengikuti simulasi seleksi internal kampus',
+              isRequired: true,
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  // 7B. Contoh Tim Rekrutmen Terbuka khusus development/test
+  if (!isProd) {
+    const zaidanUser = await prisma.user.findUnique({ where: { email: 'zaidan@unida.gontor.ac.id' } });
+    const pkmComp = await prisma.competition.findUnique({ where: { slug: 'pkm-2026' } });
+    if (zaidanUser && pkmComp) {
+      const existingZaidanTeam = await prisma.team.findFirst({
+        where: { creatorId: zaidanUser.id, competitionId: pkmComp.id, status: { not: 'arsip' } },
+      });
+      if (!existingZaidanTeam) {
+        await prisma.studentTarget.updateMany({
+          where: { userId: zaidanUser.id, status: 'active' },
+          data: { status: 'archived' },
+        });
+        await prisma.studentTarget.create({
+          data: {
+            userId: zaidanUser.id,
+            competitionId: pkmComp.id,
+            academicPeriodId: activePeriod?.id || null,
+            status: 'active',
+          },
+        });
+        const openTeam = await prisma.team.create({
+          data: {
+            competitionId: pkmComp.id,
+            name: 'Tim Riset Gontor Digital',
+            creatorId: zaidanUser.id,
+            leaderId: zaidanUser.id,
+            description: 'Mengembangkan ide riset mahasiswa berbasis teknologi tepat guna untuk PKM.',
+            recruitmentType: 'terbuka',
+            isRecruiting: true,
+            neededRoles: ['Penulis Proposal', 'Analis Data'],
+            targetMaxMembers: 5,
+            inviteCode: 'TLN-PKM7-842K',
+            inviteCodeUpdatedAt: new Date(),
+            status: 'mencari',
+          },
+        });
+        await prisma.teamMember.create({
+          data: {
+            teamId: openTeam.id,
+            userId: zaidanUser.id,
+            roleInTeam: 'Ketua Tim',
+            status: 'active',
+          },
+        });
+        console.log(`[SEED:DEV] Contoh tim rekrutmen terbuka dibuat: ${openTeam.name}`);
       }
     }
   }

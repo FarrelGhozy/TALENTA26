@@ -110,6 +110,7 @@ export async function createTeam(
         competitionId: comp.id,
         name: dto.teamName.trim(),
         creatorId: userId,
+        leaderId: userId,
         status: 'mencari',
         version: 1,
       },

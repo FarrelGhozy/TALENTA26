@@ -96,6 +96,24 @@ enum ParticipationType {
   kelompok
 }
 
+enum TeamRecruitmentType {
+  terbuka
+  privat
+}
+
+enum JoinRequestStatus {
+  menunggu
+  disetujui
+  ditolak
+  dibatalkan
+  kedaluwarsa
+}
+
+enum RegistrationStatus {
+  buka
+  tutup
+}
+
 model Institution {
   id        String   @id @default(cuid())
   code      String   @unique
@@ -159,9 +177,12 @@ model User {
   auditEvents             AuditEvent[]
   studentTargets          StudentTarget[]
   createdTeams            Team[]                   @relation("TeamCreator")
+  ledTeams                Team[]                   @relation("TeamLeader")
   teamMemberships         TeamMember[]
   sentInvites             TeamInvite[]             @relation("SentInvites")
   receivedInvites         TeamInvite[]             @relation("ReceivedInvites")
+  joinRequests            TeamJoinRequest[]        @relation("JoinRequestApplicant")
+  reviewedJoinRequests    TeamJoinRequest[]        @relation("JoinRequestReviewer")
   roadmapProgress         RoadmapProgress[]
   achievements            Achievement[]
   achievementParticipants AchievementParticipant[]
@@ -271,10 +292,15 @@ model Competition {
   format                CompetitionFormat @default(beregu)
   minTeamMembers        Int               @default(1)
   maxTeamMembers        Int               @default(1)
-  requiredRoles         Json?
-  registrationDeadline  DateTime?
-  competitionDate       DateTime?
-  description           String            @db.Text
+  requiredRoles             Json?
+  registrationDeadline      DateTime?
+  competitionDate           DateTime?
+  registrationStatus        RegistrationStatus @default(buka) @map("registration_status")
+  internalSelectionDeadline DateTime?          @map("internal_selection_deadline")
+  requireRoles              Boolean            @default(false) @map("require_roles")
+  requireCrossStudyProgram  Boolean            @default(false) @map("require_cross_study_program")
+  singleTeamPerCompetition  Boolean            @default(true) @map("single_team_per_competition")
+  description               String             @db.Text
   requirements          Json?
   scheduleTimeline      Json?
   sourceUrl             String?           @map("source_url")
@@ -323,24 +349,36 @@ model StudentTarget {
 }
 
 model Team {
-  id            String     @id @default(cuid())
-  competitionId String
-  name          String
-  creatorId     String
-  status        TeamStatus @default(mencari)
-  version       Int        @default(1)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                  String              @id @default(cuid())
+  competitionId       String
+  name                String
+  creatorId           String
+  leaderId            String              @map("leader_id")
+  description         String?             @db.Text
+  recruitmentType     TeamRecruitmentType @default(terbuka) @map("recruitment_type")
+  isRecruiting        Boolean             @default(true) @map("is_recruiting")
+  neededRoles         Json?               @map("needed_roles")
+  targetMaxMembers    Int?                @map("target_max_members")
+  inviteCode          String?             @unique @map("invite_code")
+  inviteCodeUpdatedAt DateTime?           @map("invite_code_updated_at")
+  status              TeamStatus          @default(mencari)
+  version             Int                 @default(1)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   competition  Competition         @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   creator      User                @relation("TeamCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  leader       User                @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: Restrict)
   members      TeamMember[]
   invites      TeamInvite[]
+  joinRequests TeamJoinRequest[]
   selections   InternalSelection[]
   achievements Achievement[]
 
   @@index([competitionId, status])
+  @@index([competitionId, recruitmentType, isRecruiting, status])
   @@index([creatorId])
+  @@index([leaderId])
   @@map("teams")
 }
 
@@ -378,6 +416,27 @@ model TeamInvite {
   @@index([teamId, status])
   @@index([receiverId, status])
   @@map("team_invites")
+}
+
+model TeamJoinRequest {
+  id            String            @id @default(cuid())
+  teamId        String            @map("team_id")
+  userId        String            @map("user_id")
+  preferredRole String?           @map("preferred_role")
+  note          String?           @db.Text
+  status        JoinRequestStatus @default(menunggu)
+  reviewedById  String?           @map("reviewed_by_id")
+  reviewedAt    DateTime?         @map("reviewed_at")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  team       Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user       User  @relation("JoinRequestApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("JoinRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([teamId, status])
+  @@index([userId, status])
+  @@map("team_join_requests")
 }
 
 model Roadmap {
