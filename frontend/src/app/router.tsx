@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, useLocation, useParams, useSearchParams 
 import type { ComponentType } from 'react';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
+import { AdminLayout } from './layouts/AdminLayout';
 import { RequireRole, RequireTarget } from './guards';
 import { NotFoundPage, ForbiddenPage, RouteErrorPage } from './ErrorPages';
 import { PageLoading } from '../components/ui/Skeleton';
@@ -84,7 +85,7 @@ export const router = createBrowserRouter(
     children: [
       {
         path: '/admin',
-        element: <AppLayout />,
+        element: <AdminLayout />,
         children: [
           { index: true, lazy: lazyRoute(() => import('../features/dashboard/AdminDashboardPage'), 'AdminDashboardPage') },
           { path: 'konten', lazy: lazyRoute(() => import('../features/validator/ValidatorContentPage'), 'ValidatorContentPage') },

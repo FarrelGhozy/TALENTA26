@@ -1,18 +1,68 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Menu, Search } from 'lucide-react';
 import { Achievement } from '../../types';
 import { achievementService } from '@talenta/services';
 import { AchievementTable } from '../prestasi/components/AchievementTable';
-import { Tabs } from '../../components/ui/Tabs';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { useAdminNav } from '../admin/AdminNavContext';
+
+type VerificationStatusFilter = 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak' | 'semua';
+
+const VALID_STATUSES: VerificationStatusFilter[] = [
+  'menunggu',
+  'perlu_perbaikan',
+  'disetujui',
+  'ditolak',
+  'semua',
+];
+
+const STATUS_META: Record<
+  VerificationStatusFilter,
+  { label: string; description: string; badgeClass: string }
+> = {
+  menunggu: {
+    label: 'Menunggu Verifikasi',
+    description:
+      'Periksa keabsahan berkas sertifikat, SK lomba, dan rekognisi yang menunggu keputusan verifikator.',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  perlu_perbaikan: {
+    label: 'Perlu Perbaikan',
+    description:
+      'Pengajuan yang dikembalikan kepada mahasiswa untuk melengkapi data atau mengganti berkas bukti.',
+    badgeClass: 'bg-orange-50 text-orange-800 border-orange-200',
+  },
+  disetujui: {
+    label: 'Telah Disetujui',
+    description:
+      'Prestasi yang telah disahkan validator dan tercatat pada statistik serta papan peringkat.',
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  },
+  ditolak: {
+    label: 'Ditolak',
+    description:
+      'Pengajuan prestasi yang tidak memenuhi syarat atau tidak dapat diverifikasi keabsahannya.',
+    badgeClass: 'bg-rose-50 text-rose-800 border-rose-200',
+  },
+  semua: {
+    label: 'Semua Riwayat',
+    description: 'Seluruh riwayat pengajuan prestasi mahasiswa lintas status verifikasi.',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+  },
+};
 
 export const VerificationListPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const rawStatus = searchParams.get('status') as VerificationStatusFilter | null;
+  const filterStatus: VerificationStatusFilter =
+    rawStatus && VALID_STATUSES.includes(rawStatus) ? rawStatus : 'menunggu';
+
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [filterTab, setFilterTab] = useState('menunggu');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
+  const { openMobileDrawer } = useAdminNav();
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +84,7 @@ export const VerificationListPage: React.FC = () => {
   if (loading) return <PageLoading message="Memuat antrean verifikasi..." />;
 
   const filtered = achievements.filter((a) => {
-    const matchTab = filterTab === 'semua' || a.status === filterTab;
+    const matchStatus = filterStatus === 'semua' || a.status === filterStatus;
     const q = query.trim().toLowerCase();
     const matchQuery =
       !q ||
@@ -43,68 +93,67 @@ export const VerificationListPage: React.FC = () => {
       (a.submitterName || '').toLowerCase().includes(q) ||
       (a.submitterNim || '').toLowerCase().includes(q) ||
       (a.subCategoryName || '').toLowerCase().includes(q);
-    return matchTab && matchQuery;
+    return matchStatus && matchQuery;
   });
 
-  const counts = {
-    menunggu: achievements.filter((a) => a.status === 'menunggu').length,
-    perlu_perbaikan: achievements.filter((a) => a.status === 'perlu_perbaikan').length,
-    disetujui: achievements.filter((a) => a.status === 'disetujui').length,
-    ditolak: achievements.filter((a) => a.status === 'ditolak').length,
-  };
+  const statusMeta = STATUS_META[filterStatus];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
+    <div className="space-y-5">
+      {/* Header Antrean */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-              Portal Admin
+              Validasi Prestasi
             </span>
-            <span className="text-[11px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
-              {counts.menunggu} Menunggu Tindakan
+            <span
+              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusMeta.badgeClass}`}
+            >
+              {statusMeta.label}: {filtered.length}
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
             Antrean Verifikasi Prestasi
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Periksa keabsahan berkas sertifikat, SK lomba, dan rekognisi sebelum disahkan ke dashboard institusi.
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
+            {statusMeta.description}
           </p>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nama lomba, penyelenggara, nama/NIM mahasiswa..."
-            aria-label="Cari antrean verifikasi"
-            className="w-full pl-9 pr-3 py-2 min-h-[40px] text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={openMobileDrawer}
+            className="lg:hidden inline-flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 shrink-0 cursor-pointer"
+          >
+            <Menu className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Status</span>
+          </button>
+
+          <div className="relative flex-1 sm:w-72">
+            <Search
+              className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari nama lomba, penyelenggara, nama/NIM mahasiswa..."
+              aria-label="Cari antrean verifikasi"
+              className="w-full pl-9 pr-3 py-2 min-h-[40px] text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-2xs"
+            />
+          </div>
         </div>
       </div>
 
-      <Tabs
-        tabs={[
-          { id: 'menunggu', label: 'Menunggu Verifikasi', badge: counts.menunggu },
-          { id: 'perlu_perbaikan', label: 'Perlu Perbaikan', badge: counts.perlu_perbaikan },
-          { id: 'disetujui', label: 'Telah Disetujui', badge: counts.disetujui },
-          { id: 'ditolak', label: 'Ditolak', badge: counts.ditolak },
-          { id: 'semua', label: 'Semua Riwayat', badge: achievements.length },
-        ]}
-        activeTab={filterTab}
-        onChange={setFilterTab}
-      />
-
-      <div id={`panel-${filterTab}`} role="tabpanel" aria-labelledby={`tab-${filterTab}`}>
+      <section aria-label={`Daftar pengajuan ${statusMeta.label}`}>
         <AchievementTable
           achievements={filtered}
           onSelect={(item) => navigate(`/admin/prestasi/${item.id}`)}
         />
-      </div>
+      </section>
     </div>
   );
 };

@@ -23,11 +23,13 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { useAdminNav } from '../admin/AdminNavContext';
 
 export const VerificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { notify } = useToast();
+  const { refreshNavCounts } = useAdminNav();
   const [achievement, setAchievement] = useState<Achievement | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -67,6 +69,7 @@ export const VerificationDetailPage: React.FC = () => {
         overrideReason: override?.overrideReason,
         idempotencyKey: `ui-${id}-v${achievement.version || 1}`,
       });
+      void refreshNavCounts();
       notify(
         status === 'disetujui'
           ? 'Prestasi disetujui validator. Poin lomba telah dicatat ke buku besar.'
@@ -98,6 +101,7 @@ export const VerificationDetailPage: React.FC = () => {
     try {
       if (achievementService.correct) {
         await achievementService.correct(id, correctionReason.trim(), achievement.version, correctionTarget);
+        void refreshNavCounts();
         notify('Koreksi keputusan berhasil disimpan. Poin lomba telah dibalikkan secara otomatis.');
         setShowCorrectionModal(false);
         navigate('/admin/prestasi');

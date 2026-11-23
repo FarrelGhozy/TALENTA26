@@ -20,16 +20,16 @@ Urutan menu utama Navbar mahasiswa: **Beranda** (`/app/beranda`) → **Ruang Per
 - `/app/prestasi/:id`: detail pengajuan prestasi milik mahasiswa (bukti privat, keterangan poin/override, riwayat revisi & keputusan, tombol revisi penuh saat `perlu_perbaikan`, dan tombol batalkan saat `menunggu`).
 
 ## Rute admin terpadu (`/admin/*`, role `validator` dan `super_admin`)
-Validator dan Super Admin digabung menjadi satu peran dan portal **Admin** dengan 4 menu Navbar:
+Validator dan Super Admin digabung menjadi satu peran dan portal **Admin** dengan tata letak **Sidebar Kiri Accordion** (desktop tetap kiri dengan opsi collapse + top breadcrumb bar; mobile/tablet menggunakan slide-over drawer dari kiri) berisi 4 menu utama + sub-menu ber-lencana angka live:
 - `/admin` (**Dashboard**): gabungan analitik peserta/prestasi institusi, filter & ekspor CSV terpadu, serta 6 kartu pintasan modul menuju tab pengelolaan lomba dan antrean validasi prestasi.
-- `/admin/konten` (**Kelola Lomba**): ruang pengelolaan konten terpadu berbasis tab tersinkronisasi URL (`?tab=...`):
+- `/admin/prestasi` (**Validasi Prestasi**) & `/admin/prestasi/:id`: sub-menu accordion di sidebar tersinkronisasi URL (`?status=menunggu|perlu_perbaikan|disetujui|ditolak|semua`) lengkap dengan badge angka live per status, pencarian nama/NIM/kegiatan, detail pemeriksaan bukti privat, jenis/sub-lomba, anggota kelompok, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + keterangan, panel keputusan (dengan input override poin + alasan wajib saat approve), dan modal koreksi keputusan pasca-persetujuan.
+- `/admin/konten` (**Kelola Lomba**): sub-menu accordion di sidebar tersinkronisasi URL (`?tab=kompetisi|poin|roadmap|konsultan|seleksi`):
   - `?tab=kompetisi`: daftar, buat, edit penuh (termasuk jenis/sub-lomba, format individu/beregu, min/max anggota, status pendaftaran buka/tutup, tenggat seleksi internal, syarat peran & lintas prodi wajib/opsional, batas satu tim per cabang, jadwal, sumber/pedoman, aturan poin template/custom + keterangan), pratinjau, terbitkan, dan arsipkan.
   - `?tab=poin`: master jenis & sub-lomba serta pengaturan bobot poin khusus per perlombaan/sub-lomba.
   - `?tab=roadmap`: editor multi-fase & multi-tugas non-destruktif (mempertahankan progres mahasiswa).
   - `?tab=konsultan`: daftar, tambah, edit, persetujuan publikasi, dan arsip kontak konsultasi WA.
   - `?tab=seleksi`: catat & perbarui hasil seleksi internal untuk tim beregu maupun peserta individu (dropdown peserta, bukan input ID mentah).
-- `/admin/prestasi` (**Validasi Prestasi**) & `/admin/prestasi/:id`: antrean pengajuan dengan filter status & pencarian nama/NIM/kegiatan, detail pemeriksaan bukti privat, jenis/sub-lomba, anggota kelompok, potensi duplikat, riwayat revisi/keputusan, kalkulasi poin rekomendasi + keterangan, panel keputusan (dengan input override poin + alasan wajib saat approve), dan modal koreksi keputusan pasca-persetujuan.
-- `/admin/sistem` (**Pengaturan Sistem**): pusat kendali sistem berbasis tab tersinkronisasi URL (`?tab=...`):
+- `/admin/sistem` (**Pengaturan Sistem**): sub-menu accordion di sidebar tersinkronisasi URL (`?tab=users|periods|points|audit|health`):
   - `?tab=users`: manajemen akun Admin & mahasiswa (tambah admin wajib nama asli `fullName`, ubah nama, suspend/aktifkan dengan konfirmasi dan pencabutan sesi instan).
   - `?tab=periods`: manajemen pergantian periode akademik (buat periode dengan tanggal mulai/akhir, pratinjau dampak aktivasi, konfirmasi, dan aktivasi atomik dengan pengarsipan target & tim lama).
   - `?tab=points`: manajemen template poin berversi dan matriks bobot standar default kampus.

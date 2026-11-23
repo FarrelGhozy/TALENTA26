@@ -358,32 +358,41 @@ export async function getAdminDashboardStats(institutionId: string) {
     revisionNeededCount,
     approvedCount,
     rejectedCount,
+    totalAchievements,
     totalCompetitions,
     draftCompetitions,
+    allCompetitionsCount,
     teamsFormed,
     teamsLockedSelection,
     teamsSearching,
     totalStudents,
     totalStaff,
+    totalUsers,
     approvedConsultants,
+    totalConsultants,
     categoryRaw,
     levelRaw,
     targetsByCompetition,
     confirmedSelectionsCount,
+    totalSelectionsCount,
     upcomingDeadlines,
   ] = await Promise.all([
     prisma.achievement.count({ where: { institutionId, status: 'menunggu' } }),
     prisma.achievement.count({ where: { institutionId, status: 'perlu_perbaikan' } }),
     prisma.achievement.count({ where: { institutionId, status: 'disetujui' } }),
     prisma.achievement.count({ where: { institutionId, status: 'ditolak' } }),
+    prisma.achievement.count({ where: { institutionId } }),
     prisma.competition.count({ where: { institutionId, status: 'published' } }),
     prisma.competition.count({ where: { institutionId, status: 'draft' } }),
+    prisma.competition.count({ where: { institutionId } }),
     prisma.team.count({ where: { competition: { institutionId }, status: 'terbentuk' } }),
     prisma.team.count({ where: { competition: { institutionId }, status: 'terkunci_seleksi' } }),
     prisma.team.count({ where: { competition: { institutionId }, status: 'mencari' } }),
     prisma.user.count({ where: { institutionId, role: 'mahasiswa', status: 'active' } }),
     prisma.user.count({ where: { institutionId, role: { in: ['validator', 'super_admin'] } } }),
+    prisma.user.count({ where: { institutionId } }),
     prisma.consultantContact.count({ where: { competition: { institutionId }, isApproved: true } }),
+    prisma.consultantContact.count({ where: { competition: { institutionId } } }),
     prisma.achievement.groupBy({
       by: ['category'],
       where: { institutionId, status: 'disetujui' },
@@ -407,6 +416,9 @@ export async function getAdminDashboardStats(institutionId: string) {
     }),
     prisma.internalSelection.count({
       where: { institutionId, result: 'lolos', organizerVerified: true },
+    }),
+    prisma.internalSelection.count({
+      where: { institutionId },
     }),
     prisma.competition.findMany({
       where: {
@@ -448,10 +460,12 @@ export async function getAdminDashboardStats(institutionId: string) {
       revisionNeededCount,
       approvedCount,
       rejectedCount,
+      total: totalAchievements,
     },
     competitions: {
       published: totalCompetitions,
       draft: draftCompetitions,
+      total: allCompetitionsCount,
     },
     teams: {
       terbentuk: teamsFormed + teamsLockedSelection,
@@ -460,10 +474,16 @@ export async function getAdminDashboardStats(institutionId: string) {
     },
     selections: {
       confirmedPassed: confirmedSelectionsCount,
+      total: totalSelectionsCount,
+    },
+    consultants: {
+      approved: approvedConsultants,
+      total: totalConsultants,
     },
     users: {
       totalStudents,
       totalStaff,
+      total: totalUsers,
       approvedConsultants,
     },
     distribution: {

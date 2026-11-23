@@ -18,13 +18,13 @@ import {
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
-import { Tabs } from '../../components/ui/Tabs';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
+import { useAdminNav } from '../admin/AdminNavContext';
 import { systemService } from '@talenta/services';
 import type {
   AcademicPeriodActivationPreview,
@@ -77,18 +77,12 @@ const DEFAULT_RULES_MATRIX: PointRuleItem[] = [
 ];
 
 export const SuperAdminDashboardPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const activeTab = normalizeTab(searchParams.get('tab'));
-  const setActiveTab = (tabId: string) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('tab', tabId);
-      return next;
-    });
-  };
 
   const [loading, setLoading] = useState(false);
   const { notify } = useToast();
+  const { refreshNavCounts } = useAdminNav();
 
   // Tab 1: Pengguna & Staf
   const [users, setUsers] = useState<any[]>([]);
@@ -258,6 +252,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
       setIsCreateStaffOpen(false);
       setStaffForm({ fullName: '', email: '', password: '' });
       await loadUsers(1);
+      void refreshNavCounts();
     } catch (err: any) {
       notify(err.message || 'Gagal membuat akun admin', 'error');
     }
@@ -384,20 +379,20 @@ export const SuperAdminDashboardPage: React.FC = () => {
     }
   };
 
-  const tabs = [
-    { id: 'users', label: 'Akun & Admin' },
-    { id: 'periods', label: 'Periode Akademik' },
-    { id: 'points', label: 'Template & Aturan Poin' },
-    { id: 'audit', label: 'Jejak Audit' },
-    { id: 'health', label: 'Kesehatan Sistem' },
-  ];
+  const sectionLabels: Record<typeof activeTab, string> = {
+    users: 'Akun & Admin',
+    periods: 'Periode Akademik',
+    points: 'Template & Aturan Poin',
+    audit: 'Jejak Audit',
+    health: 'Kesehatan Sistem',
+  };
 
   const activePeriodObj = periods.find((p) => p.isActive);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Administrasi Sistem TALENTA"
+        eyebrow={`Pengaturan Sistem · ${sectionLabels[activeTab]}`}
         title="Pengaturan Sistem & Operasional"
         description="Kelola akun admin dan mahasiswa, siklus pergantian periode akademik, template bobot poin kompetisi, jejak audit, dan kesehatan sistem."
         actions={
@@ -435,9 +430,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
         }
       />
 
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-
-      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
+      <div id={`panel-${activeTab}`} className="space-y-4">
         {loading && <PageLoading message="Memuat data pengaturan sistem..." />}
 
         {/* TAB 1: PENGGUNA & STAF */}

@@ -11,11 +11,10 @@ Semua ikon produk berasal dari Lucide React. Emoji, SVG ikon buatan tangan, dan 
 Identitas UNIDA yang sudah ada menjadi bahan awal, bukan persetujuan brand resmi. Gunakan palet biru utama, aksen seperlunya, tipografi terbaca, ruang putih cukup, dan komponen konsisten. Hindari klaim pemasaran seperti jaminan beasiswa/SKPI/BAAK. Landing harus menjelaskan manfaat dan alur, lalu menampilkan lomba terbit serta ranking terverifikasi dengan sumber/periode.
 
 ## Struktur navigasi
-- Publik: Beranda, Kompetisi, Ranking, Masuk/Daftar. CTA utama Jelajahi lomba atau Mulai.
-- Mahasiswa: Beranda, Profil, Target/Kompetisi, Partner/Tim, Persiapan, Prestasi. Pada mobile gunakan menu ringkas dengan posisi jelas.
-- Validator: Ringkasan, Kompetisi, Roadmap, Konsultan, Seleksi, Verifikasi, Laporan.
-- Super admin: Ringkasan, Pengguna/Staf, Periode, Poin, Audit, Sistem; akses fungsi validator tetap jelas.
-- Breadcrumb pada halaman detail/edit; peran dan institusi terlihat di area akun. Tidak ada role switcher pada akun produksi.
+- Publik: Beranda, Katalog Lomba, Ranking, Masuk/Daftar. CTA utama Jelajahi Lomba atau Masuk Portal.
+- Mahasiswa: Top bar dengan Beranda, Ruang Persiapan, Tim, Katalog Lomba, Prestasi, Ranking (paling belakang); profil/target di dropdown akun. Pada mobile gunakan menu ringkas dengan posisi jelas.
+- Admin (`/admin/*`, peran validator & super admin): Sidebar Kiri Accordion (desktop tetap kiri dengan opsi collapse + top breadcrumb bar; mobile/tablet memakai slide-over sidebar drawer dari kiri) berisi Dashboard, Validasi Prestasi (sub-status + badge angka live), Kelola Lomba (Kompetisi, Poin, Roadmap, Konsultan, Seleksi), dan Pengaturan Sistem (Akun, Periode, Template Poin, Audit, Kesehatan).
+- Breadcrumb pada top utility bar admin serta halaman detail/edit; peran dan institusi terlihat di area akun. Tidak ada role switcher pada akun produksi.
 
 ## Pola halaman
 ### Landing dan ranking

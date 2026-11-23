@@ -55,24 +55,24 @@ export async function runSuperAdminFlows(page: Page): Promise<void> {
     log.info('Ekspor data diproses melalui in-memory blob trigger');
   }
 
-  // 3. Halaman Pengaturan Sistem & Operasional (/admin/sistem)
-  log.step('Memeriksa Pengaturan Sistem (/admin/sistem) & perpindahan seluruh tab');
+  // 3. Halaman Pengaturan Sistem & Operasional (/admin/sistem) via Sidebar Accordion
+  log.step('Memeriksa Pengaturan Sistem (/admin/sistem) & perpindahan seluruh sub-menu sidebar');
   await page.goto(`${CONFIG.baseUrl}/admin/sistem`);
   await page.waitForLoadState('domcontentloaded');
   await page.locator('text=Pengaturan Sistem & Operasional').waitFor({ state: 'visible', timeout: 6000 });
 
-  const tabButtons = page.locator('[role="tab"]');
-  const count = await tabButtons.count();
-  log.info(`Ditemukan ${count} tab tata kelola di Pengaturan Sistem`);
+  const sidebarSubLinks = page.locator('#admin-sidebar-group-sistem a');
+  const count = await sidebarSubLinks.count();
+  log.info(`Ditemukan ${count} sub-menu tata kelola di sidebar Pengaturan Sistem`);
 
   for (let i = 0; i < count; i++) {
-    const tab = tabButtons.nth(i);
-    const tabText = await tab.textContent();
-    await tab.click();
+    const link = sidebarSubLinks.nth(i);
+    const linkText = await link.textContent();
+    await link.click();
     await page.waitForTimeout(250);
-    log.info(`Tab "${tabText?.trim()}" dapat diakses dengan baik`);
+    log.info(`Sub-menu "${linkText?.trim()}" dapat diakses dengan baik`);
   }
-  log.pass('Seluruh tab pengaturan sistem responsif');
+  log.pass('Seluruh sub-menu pengaturan sistem di sidebar responsif');
 
   // 4. Halaman Kelola Lomba (/admin/konten)
   log.step('Memeriksa halaman Kelola Lomba (/admin/konten)');

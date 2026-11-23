@@ -136,7 +136,7 @@ export const AdminDashboardPage: React.FC = () => {
       description:
         'Periksa data, bukti sertifikat, revisi, dan keputusan pengajuan prestasi mahasiswa.',
       icon: ClipboardCheck,
-      to: '/admin/prestasi',
+      to: '/admin/prestasi?status=menunggu',
       status: `${pendingCount} menunggu`,
     },
   ];
@@ -196,7 +196,7 @@ export const AdminDashboardPage: React.FC = () => {
           >
             {exporting ? 'Mengunduh...' : 'Ekspor Data'}
           </Button>
-          <Link to="/admin/prestasi">
+          <Link to="/admin/prestasi?status=menunggu">
             <Button size="sm" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
               Antrean Verifikasi
             </Button>

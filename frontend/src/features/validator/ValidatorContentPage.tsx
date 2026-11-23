@@ -21,7 +21,6 @@ import type {
 } from '../../services/types';
 import type { AchievementLevel, AchievementType, CompetitionCategoryItem } from '../../types';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { Tabs } from '../../components/ui/Tabs';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -31,8 +30,17 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
 import { formatAchievementType } from '../../lib/format';
+import { useAdminNav } from '../admin/AdminNavContext';
 
 const VALID_TABS = ['kompetisi', 'poin', 'roadmap', 'konsultan', 'seleksi'] as const;
+
+const TAB_LABELS: Record<(typeof VALID_TABS)[number], string> = {
+  kompetisi: 'Kompetisi',
+  poin: 'Aturan Poin & Sub-Lomba',
+  roadmap: 'Roadmap',
+  konsultan: 'Kontak Konsultasi',
+  seleksi: 'Seleksi Internal',
+};
 
 const emptyCompForm = {
   name: '',
@@ -70,6 +78,7 @@ export const ValidatorContentPage: React.FC = () => {
   };
 
   const { notify } = useToast();
+  const { refreshNavCounts } = useAdminNav();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -153,6 +162,7 @@ export const ValidatorContentPage: React.FC = () => {
       setCategories(cats);
       setTemplates(tpls);
       setConsultants(cons);
+      void refreshNavCounts();
     } catch (err: any) {
       setError(err?.message || 'Gagal memuat konten pembinaan validator.');
     } finally {
@@ -449,26 +459,17 @@ export const ValidatorContentPage: React.FC = () => {
   const activePointSubCats =
     categories.find((c) => c.id === compPointCategoryId)?.subCategories || [];
 
+  const currentTabLabel = TAB_LABELS[tab as (typeof VALID_TABS)[number]] || 'Kompetisi';
+
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Manajemen Lomba & Pembinaan"
+        eyebrow={`Kelola Lomba · ${currentTabLabel}`}
         title="Kelola Lomba & Konten Pembinaan"
         description="Kelola katalog perlombaan, bobot poin per lomba/sub-lomba, roadmap non-destruktif, kontak konsultan, dan seleksi internal."
       />
-      <Tabs
-        tabs={[
-          { id: 'kompetisi', label: 'Kompetisi', badge: items.length },
-          { id: 'poin', label: 'Aturan Poin & Sub-Lomba' },
-          { id: 'roadmap', label: 'Roadmap' },
-          { id: 'konsultan', label: 'Kontak Konsultasi', badge: consultants.length },
-          { id: 'seleksi', label: 'Seleksi Internal', badge: selections.length },
-        ]}
-        activeTab={tab}
-        onChange={setTab}
-      />
 
-      <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={0} className="space-y-5">
+      <div id={`panel-${tab}`} className="space-y-5">
         {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>}
         {loading ? <PageLoading message="Memuat konten pembinaan..." /> : null}
 
