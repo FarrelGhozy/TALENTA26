@@ -5,6 +5,7 @@ import {
   BookOpen,
   Check,
   ChevronRight,
+  Clock,
   Hash,
   Info,
   Plus,
@@ -17,50 +18,82 @@ import { Badge } from '../../../components/ui/Badge';
 interface TeamOnboardingHubProps {
   competition: Competition;
   onCreateNew: () => void;
+  onBrowseTeams: () => void;
   onOpenCodeModal: () => void;
+  openTeamsCount?: number;
+  pendingRequestsCount?: number;
+  onViewRequests?: () => void;
+  embedded?: boolean;
 }
 
 export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
   competition,
   onCreateNew,
+  onBrowseTeams,
   onOpenCodeModal,
+  openTeamsCount,
+  pendingRequestsCount = 0,
+  onViewRequests,
+  embedded = false,
 }) => {
   const isClosed = competition.registrationStatus === 'tutup';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-400">
-        <Link to="/app/beranda" className="hover:text-blue-700 font-medium">
-          Beranda
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-        <Link to="/app/profil" className="hover:text-blue-700 font-medium">
-          Profil &amp; Target
-        </Link>
-        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-        <span aria-current="page" className="text-slate-700 font-bold">
-          Cara Mengikuti Lomba
-        </span>
-      </nav>
+    <div className={embedded ? 'space-y-5' : 'max-w-5xl mx-auto space-y-6'}>
+      {!embedded && (
+        <>
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Link to="/app/beranda" className="hover:text-blue-700 font-medium">
+              Beranda
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+            <Link to="/app/profil" className="hover:text-blue-700 font-medium">
+              Profil &amp; Target
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+            <span aria-current="page" className="text-slate-700 font-bold">
+              Cara Mengikuti Lomba
+            </span>
+          </nav>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-            Langkah Setelah Profil Selesai
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
-            Mau ikut lomba dengan cara apa?
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kamu sudah memilih kompetisi target. Sekarang pilih cara membentuk atau bergabung dengan tim.
-          </p>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div>
+              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                Langkah Setelah Profil Selesai
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+                Mau ikut lomba dengan cara apa?
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Kamu sudah memilih kompetisi target. Sekarang pilih cara membentuk atau bergabung
+                dengan tim.
+              </p>
+            </div>
+            <Badge color="emerald" size="md" dot>
+              Profil &amp; Target Tersimpan
+            </Badge>
+          </div>
+        </>
+      )}
+
+      {embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              Mau ikut lomba dengan cara apa?
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Pilih salah satu jalur di bawah untuk membentuk tim baru, mengajukan gabung ke tim
+              terbuka, atau masuk dengan kode undangan.
+            </p>
+          </div>
+          <Badge color="emerald" size="sm" dot>
+            Profil &amp; Target Tersimpan
+          </Badge>
         </div>
-        <Badge color="emerald" size="md" dot>
-          Profil &amp; Target Tersimpan
-        </Badge>
-      </div>
+      )}
 
       {/* 4-step journey bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5" aria-label="Tahapan bergabung lomba">
@@ -83,35 +116,66 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
         </Link>
       </div>
 
-      {/* Active Target Banner */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#10347A] via-[#154194] to-[#1A4DB0] text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1.5">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-widest bg-white/15 px-2.5 py-1 rounded-full">
-            Target Kompetisi Aktif
-          </span>
-          <h2 className="text-lg sm:text-xl font-black tracking-tight">{competition.namaResmi}</h2>
-          <p className="text-xs text-blue-100">
-            Kompetisi beregu &middot; Ketentuan {competition.komposisi.min}–{competition.komposisi.max} anggota
-            {isClosed ? ' · Pendaftaran internal sedang ditutup' : ' · Rekrutmen internal terbuka'}
-          </p>
+      {!embedded && (
+        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#10347A] via-[#154194] to-[#1A4DB0] text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <span className="inline-block text-[10px] font-bold uppercase tracking-widest bg-white/15 px-2.5 py-1 rounded-full">
+              Target Kompetisi Aktif
+            </span>
+            <h2 className="text-lg sm:text-xl font-black tracking-tight">
+              {competition.namaResmi}
+            </h2>
+            <p className="text-xs text-blue-100">
+              Kompetisi beregu &middot; Ketentuan {competition.komposisi.min}–
+              {competition.komposisi.max} anggota
+              {isClosed ? ' · Pendaftaran internal sedang ditutup' : ' · Rekrutmen internal terbuka'}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-white text-blue-900 hover:bg-blue-50 border-0"
+                leftIcon={<BookOpen className="w-3.5 h-3.5" aria-hidden="true" />}
+              >
+                Lihat Roadmap Awal
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="bg-white text-blue-900 hover:bg-blue-50 border-0"
-              leftIcon={<BookOpen className="w-3.5 h-3.5" aria-hidden="true" />}
-            >
-              Lihat Roadmap Awal
-            </Button>
-          </Link>
+      )}
+
+      {pendingRequestsCount > 0 && onViewRequests && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-xs text-amber-950 leading-relaxed">
+              Kamu memiliki <strong>{pendingRequestsCount} pengajuan bergabung</strong> yang sedang
+              menunggu keputusan ketua tim. Kamu tetap bisa memantau statusnya atau memilih jalur
+              lain.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="shrink-0 bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+            onClick={onViewRequests}
+          >
+            Lihat Pengajuan Saya
+          </Button>
         </div>
-      </div>
+      )}
 
       {isClosed && (
-        <div role="alert" className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold">
-          Pendaftaran / rekrutmen internal untuk kompetisi ini sedang ditutup oleh pengelola lomba. Kamu tetap bisa membuka roadmap persiapan atau memilih target kompetisi lain di halaman Profil.
+        <div
+          role="alert"
+          className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold"
+        >
+          Pendaftaran / rekrutmen internal untuk kompetisi ini sedang ditutup oleh pengelola lomba.
+          Kamu tetap bisa membuka roadmap persiapan atau memilih target kompetisi lain di halaman
+          Profil.
         </div>
       )}
 
@@ -131,7 +195,8 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
             <div>
               <h3 className="text-base font-extrabold text-slate-900">Buat Tim Baru</h3>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                Saya mau jadi ketua tim, menentukan kebutuhan anggota, dan membuka rekrutmen terbuka atau privat.
+                Saya mau jadi ketua tim, menentukan kebutuhan anggota, dan membuka rekrutmen
+                terbuka atau privat.
               </p>
             </div>
           </div>
@@ -142,18 +207,27 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
         </button>
 
         {/* Path 2: Cari Tim Terbuka */}
-        <Link
-          to={`/app/tim/cari?kompetisi=${encodeURIComponent(competition.slug)}`}
-          className="group text-left p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all flex flex-col justify-between gap-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+        <button
+          type="button"
+          onClick={onBrowseTeams}
+          className="group text-left p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all flex flex-col justify-between gap-5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           <div className="space-y-3">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <Search className="w-5 h-5" aria-hidden="true" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                <Search className="w-5 h-5" aria-hidden="true" />
+              </div>
+              {typeof openTeamsCount === 'number' && (
+                <Badge color={openTeamsCount > 0 ? 'emerald' : 'slate'} size="sm">
+                  {openTeamsCount} Terbuka
+                </Badge>
+              )}
             </div>
             <div>
               <h3 className="text-base font-extrabold text-slate-900">Cari Tim Terbuka</h3>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                Saya belum punya tim. Tampilkan tim {competition.namaResmi} yang sedang mencari anggota.
+                Saya belum punya tim. Tampilkan tim {competition.namaResmi} yang sedang mencari
+                anggota.
               </p>
             </div>
           </div>
@@ -161,7 +235,7 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
             <span>Lihat Tim</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </span>
-        </Link>
+        </button>
 
         {/* Path 3: Sudah Punya Tim */}
         <button
@@ -177,7 +251,8 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
             <div>
               <h3 className="text-base font-extrabold text-slate-900">Sudah Punya Tim</h3>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                Ketua tim sudah membuat ruang. Saya ingin langsung masuk menggunakan kode undangan tim.
+                Ketua tim sudah membuat ruang. Saya ingin langsung masuk menggunakan kode undangan
+                tim.
               </p>
             </div>
           </div>
@@ -192,9 +267,10 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
       <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-start gap-3">
         <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
         <p className="text-xs text-slate-600 leading-relaxed">
-          <strong className="text-slate-900">Alur kolaborasi mandiri:</strong> profil dan target lomba telah disimpan.
-          Kamu memilih sendiri salah satu jalur di atas tanpa dipasangkan otomatis. Meskipun tim belum lengkap, kamu
-          tetap dapat membuka materi roadmap persiapan lebih awal.
+          <strong className="text-slate-900">Alur kolaborasi mandiri:</strong> profil dan target
+          lomba telah disimpan. Kamu memilih sendiri salah satu jalur di atas tanpa dipasangkan
+          otomatis. Meskipun tim belum lengkap, kamu tetap dapat membuka materi roadmap persiapan
+          lebih awal.
         </p>
       </div>
     </div>

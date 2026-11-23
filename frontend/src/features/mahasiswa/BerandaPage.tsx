@@ -252,9 +252,9 @@ export const BerandaPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {!isIndividualTarget && (
-              <Link to="/app/tim/cari">
+              <Link to={team ? '/app/tim' : '/app/tim?tab=cari'}>
                 <Button size="sm" variant="outline" leftIcon={<Users className="w-3.5 h-3.5" aria-hidden="true" />}>
-                  Cari Tim
+                  {team ? 'Ruang Tim Saya' : 'Cari Tim'}
                 </Button>
               </Link>
             )}

@@ -373,7 +373,7 @@ export const LandingPage: React.FC = () => {
               </span>
             </div>
             <div className="pt-4">
-              <Link to="/app/tim/cari">
+              <Link to="/app/tim?tab=cari">
                 <Button size="md" variant="white" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
                   Jelajahi Direktori Tim
                 </Button>

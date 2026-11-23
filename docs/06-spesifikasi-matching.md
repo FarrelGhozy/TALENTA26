@@ -8,7 +8,7 @@ Menyediakan alur pembentukan tim yang sederhana, realistis, dan bebas jalan bunt
 ## Tiga jalur lomba beregu
 Setelah melengkapi profil dan memilih target lomba beregu (`format === 'beregu'`), mahasiswa masuk ke Hub *Cara Mengikuti Lomba* (`/app/tim`) dengan 3 pilihan:
 1. **Buat Tim Baru**: mahasiswa menjadi ketua tim (`leaderId`), mengisi nama tim, deskripsi proyek, kebutuhan posisi/skill (`neededRoles`), batas anggota maksimal (tidak melebihi `competition.maxTeamMembers`), dan tipe rekrutmen (`terbuka` atau `privat`).
-2. **Cari Tim Terbuka**: mahasiswa menjelajahi direktori tim berstatus `terbuka` & `isRecruiting = true` untuk target kompetisi yang sama (`/app/tim/cari`), memfilter berdasarkan pencarian/peran, lalu mengirim pengajuan bergabung (`TeamJoinRequest` status `menunggu`). Jika daftar kosong, sistem menampilkannya sebagai keadaan normal disertai tombol membuat tim sendiri.
+2. **Cari Tim Terbuka**: mahasiswa menjelajahi direktori tim berstatus `terbuka` & `isRecruiting = true` untuk target kompetisi yang sama pada tab `?tab=cari` di `/app/tim` (rute lama `/app/tim/cari` dan `/app/partner` diarahkan ke sini), memfilter berdasarkan pencarian/peran, lalu mengirim pengajuan bergabung (`TeamJoinRequest` status `menunggu`) serta memantaunya di tab `?tab=pengajuan`. Jika daftar kosong, sistem menampilkannya sebagai keadaan normal disertai tombol membuat tim sendiri.
 3. **Sudah Punya Tim**: mahasiswa yang sudah sepakat tim di luar aplikasi memasukkan kode undangan acak (`TLN-XXXX-XXXX`) yang dibagikan ketua untuk bergabung langsung (*direct join*) dalam satu transaksi tervalidasi.
 
 ## Otorisasi dan pemisahan tugas

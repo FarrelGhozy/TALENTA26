@@ -77,12 +77,20 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
   }
   log.pass(`Ruang tim terbentuk dengan kode undangan aman (${inviteCodeText})`);
 
-  // Cek redirect rute lama /app/partner -> /app/tim/cari
+  // Cek redirect rute lama /app/partner & /app/tim/cari -> /app/tim?tab=cari
   await page.goto(`${CONFIG.baseUrl}/app/partner`);
-  await page.waitForURL((url) => url.pathname.includes('/app/tim/cari'), { timeout: 6000 });
-  log.pass('Rute lama /app/partner berhasil diarahkan ke /app/tim/cari');
+  await page.waitForURL(
+    (url) => url.pathname.endsWith('/app/tim') && url.searchParams.get('tab') === 'cari',
+    { timeout: 6000 },
+  );
+  await page.goto(`${CONFIG.baseUrl}/app/tim/cari`);
+  await page.waitForURL(
+    (url) => url.pathname.endsWith('/app/tim') && url.searchParams.get('tab') === 'cari',
+    { timeout: 6000 },
+  );
+  log.pass('Rute lama /app/partner dan /app/tim/cari berhasil diarahkan ke /app/tim?tab=cari');
 
-  // Mahasiswa 2: daftar di konteks browser terpisah, cari tim di /app/tim/cari, ajukan gabung
+  // Mahasiswa 2: daftar di konteks browser terpisah, cari tim di /app/tim?tab=cari, ajukan gabung
   const browser = page.context().browser();
   if (browser) {
     const student2 = generateTestStudent();
@@ -99,12 +107,15 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
       await page2.locator('button[type="submit"]').click();
       await page2.waitForURL((url) => url.pathname.includes('/app/beranda'), { timeout: 8000 });
 
-      // Pilih PKM 2026 -> Cari Tim Terbuka
+      // Pilih PKM 2026 -> klik kartu Cari Tim Terbuka -> berpindah ke tab ?tab=cari di halaman /app/tim
       await page2.goto(`${CONFIG.baseUrl}/kompetisi/pkm-2026`);
       await page2.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
-      await page2.waitForURL((url) => url.pathname.includes('/app/tim'), { timeout: 8000 });
-      await page2.locator('a:has-text("Cari Tim Terbuka")').click();
-      await page2.waitForURL((url) => url.pathname.includes('/app/tim/cari'), { timeout: 8000 });
+      await page2.waitForURL((url) => url.pathname.endsWith('/app/tim'), { timeout: 8000 });
+      await page2.locator('[role="tabpanel"] button:has-text("Cari Tim Terbuka")').click();
+      await page2.waitForURL(
+        (url) => url.pathname.endsWith('/app/tim') && url.searchParams.get('tab') === 'cari',
+        { timeout: 8000 },
+      );
 
       // Cari tim yang dibuat Mahasiswa 1 & Ajukan Gabung
       await page2.locator('input[aria-label="Cari nama tim atau kebutuhan skill"]').fill(e2eTeamName);
@@ -113,13 +124,19 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
       await teamCard.locator('button:has-text("Ajukan Gabung")').click();
       await page2.locator('button[type="submit"]:has-text("Kirim Pengajuan")').click();
       await teamCard.locator('text=Menunggu Ketua').waitFor({ state: 'visible', timeout: 6000 });
-      log.pass('Mahasiswa 2 berhasil mengirim pengajuan bergabung dari Direktori Tim Terbuka');
+
+      // Verifikasi tab Pengajuan Saya pada halaman /app/tim yang sama
+      await page2.locator('#tab-pengajuan').click();
+      const reqPanel = page2.locator('#panel-pengajuan');
+      await reqPanel.locator(`h3:has-text("${e2eTeamName}")`).waitFor({ state: 'visible', timeout: 6000 });
+      await reqPanel.locator('text=Menunggu Persetujuan').waitFor({ state: 'visible', timeout: 6000 });
+      log.pass('Mahasiswa 2 berhasil mengirim pengajuan & memantau statusnya pada halaman /app/tim terpadu');
 
       // Ketua (Mahasiswa 1) membuka /app/tim dan menyetujui Mahasiswa 2
       await page.goto(`${CONFIG.baseUrl}/app/tim`);
       await page.locator(`text=${student2.fullName}`).waitFor({ state: 'visible', timeout: 6000 });
       await page.locator('button:has-text("Terima")').first().click();
-      await page.locator('text=2/5').waitFor({ state: 'visible', timeout: 6000 });
+      await page.locator('#panel-tim-saya').locator('text=2/5').waitFor({ state: 'visible', timeout: 6000 });
       log.pass('Ketua berhasil menyetujui pelamar dan jumlah anggota naik menjadi 2/5');
 
       // Uji jalur lomba individu (ONMIPA) dengan Mahasiswa 2 setelah keluar/ganti target
@@ -133,21 +150,23 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
     }
   }
 
-  // Uji responsif mobile (390x844) & tablet (768x1024) pada Ruang Tim & Direktori
+  // Uji responsif mobile (390x844) & tablet (768x1024) pada Ruang Tim & Direktori terpadu
   for (const vp of [
     { width: 390, height: 844, name: 'mobile' },
     { width: 768, height: 1024, name: 'tablet' },
   ]) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
-    await page.goto(`${CONFIG.baseUrl}/app/tim`);
-    await page.waitForLoadState('domcontentloaded');
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
-    if (overflow) {
-      throw new Error(`Terdeteksi horizontal overflow pada /app/tim (${vp.name})`);
+    for (const pathUrl of ['/app/tim', '/app/tim?tab=cari']) {
+      await page.goto(`${CONFIG.baseUrl}${pathUrl}`);
+      await page.waitForLoadState('domcontentloaded');
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 2);
+      if (overflow) {
+        throw new Error(`Terdeteksi horizontal overflow pada ${pathUrl} (${vp.name})`);
+      }
     }
   }
   await page.setViewportSize({ width: 1280, height: 800 });
-  log.pass('Tampilan responsif /app/tim pada mobile (390x844) dan tablet (768x1024) bebas overflow');
+  log.pass('Tampilan responsif /app/tim & /app/tim?tab=cari pada mobile (390x844) dan tablet (768x1024) bebas overflow');
 
   // 3. Roadmap & Checklist Persiapan (kembali ke Gemastik untuk tes checklist)
   log.step('Memeriksa Roadmap & Checklist Lomba (/app/kompetisi/gemastik-2026/persiapan)');

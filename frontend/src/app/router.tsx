@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useSearchParams } from 'react-router-dom';
 import type { ComponentType } from 'react';
 import { PublicLayout } from './layouts/PublicLayout';
 import { AppLayout } from './layouts/AppLayout';
@@ -9,6 +9,18 @@ import { PageLoading } from '../components/ui/Skeleton';
 const lazyRoute = <T extends Record<string, unknown>>(loader: () => Promise<T>, name: keyof T) => async () => {
   const module = await loader();
   return { Component: module[name] as ComponentType };
+};
+
+const LegacyTeamSearchRedirect = () => {
+  const [searchParams] = useSearchParams();
+  const next = new URLSearchParams(searchParams);
+  const tab = next.get('tab');
+  if (tab === 'pengajuan-saya' || tab === 'pengajuan') {
+    next.set('tab', 'pengajuan');
+  } else {
+    next.set('tab', 'cari');
+  }
+  return <Navigate to={`/app/tim?${next.toString()}`} replace />;
 };
 
 export const router = createBrowserRouter(
@@ -43,9 +55,9 @@ export const router = createBrowserRouter(
           { path: 'beranda', lazy: lazyRoute(() => import('../features/mahasiswa/BerandaPage'), 'BerandaPage') },
           { path: 'persiapan', lazy: lazyRoute(() => import('../features/roadmap/PreparationHubPage'), 'PreparationHubPage') },
           { path: 'profil', lazy: lazyRoute(() => import('../features/profil/ProfilePage'), 'ProfilePage') },
-          { path: 'partner', element: <Navigate to="/app/tim/cari" replace /> },
+          { path: 'partner', element: <Navigate to="/app/tim?tab=cari" replace /> },
           { path: 'tim', lazy: lazyRoute(() => import('../features/tim/TeamPage'), 'TeamPage') },
-          { path: 'tim/cari', lazy: lazyRoute(() => import('../features/tim/TeamDirectoryPage'), 'TeamDirectoryPage') },
+          { path: 'tim/cari', element: <LegacyTeamSearchRedirect /> },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/prestasi/AchievementListPage'), 'AchievementListPage') },
           { path: 'prestasi/baru', lazy: lazyRoute(() => import('../features/prestasi/AchievementNewPage'), 'AchievementNewPage') },
           { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/prestasi/AchievementDetailPage'), 'AchievementDetailPage') },

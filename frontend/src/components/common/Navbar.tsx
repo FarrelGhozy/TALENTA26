@@ -89,8 +89,7 @@ export const Navbar: React.FC = () => {
       return [
         { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
         { to: '/app/persiapan', label: 'Ruang Persiapan', icon: BookOpen },
-        { to: '/app/tim/cari', label: 'Cari Tim', icon: Users },
-        { to: '/app/tim', label: 'Tim Saya', icon: Users },
+        { to: '/app/tim', label: 'Tim', icon: Users },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
         { to: '/ranking', label: 'Ranking', icon: Medal },
         { to: '/app/prestasi', label: 'Prestasi', icon: Award },
@@ -128,8 +127,7 @@ export const Navbar: React.FC = () => {
     if (
       cleanTarget === '/' ||
       cleanTarget === '/validator' ||
-      cleanTarget === '/super-admin' ||
-      cleanTarget === '/app/tim'
+      cleanTarget === '/super-admin'
     ) {
       return strippedPath === cleanTarget;
     }
