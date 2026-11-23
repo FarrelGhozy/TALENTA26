@@ -102,7 +102,6 @@ export const Navbar: React.FC = () => {
         { to: '/super-admin/analitik', label: 'Analitik', icon: LayoutDashboard },
         { to: '/validator', label: 'Ruang Validator', icon: CheckCheck },
         { to: '/validator/konten', label: 'Kelola Konten', icon: Trophy },
-        { to: '/super-admin/design-system', label: 'UI System', icon: Compass },
       ];
     }
     if (currentRole === 'validator') {

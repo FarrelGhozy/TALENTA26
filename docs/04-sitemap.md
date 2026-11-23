@@ -36,7 +36,6 @@ Status: diselaraskan dengan Keputusan `K-19` (revisi), `K-22`, dan `K-23` (23 No
   - `?tab=audit`: penelusuran jejak audit berpaginasi & terfilter (aksi, aktor bernamakan asli, tipe target).
   - `?tab=sistem`: telemetri kesehatan API, MySQL, RustFS, dan status antrean tanpa kebocoran kredensial.
 - `/super-admin/analitik`: ringkasan analitik peserta per kompetisi, delegasi terkonfirmasi, sebaran prestasi, dan ekspor CSV terfilter.
-- `/super-admin/design-system`: rujukan komponen antarmuka (hanya jalur internal/pengembangan).
 
 ## Perilaku guard & build
 - Pengunjung belum login yang mengakses rute terproteksi diarahkan ke `/masuk?redirect=...`.

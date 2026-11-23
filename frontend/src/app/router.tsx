@@ -69,7 +69,6 @@ export const router = createBrowserRouter(
         children: [
           { index: true, lazy: lazyRoute(() => import('../features/super-admin/SuperAdminDashboardPage'), 'SuperAdminDashboardPage') },
           { path: 'analitik', lazy: lazyRoute(() => import('../features/dashboard/AdminDashboardPage'), 'AdminDashboardPage') },
-          { path: 'design-system', lazy: lazyRoute(() => import('../features/super-admin/DesignSystemPage'), 'DesignSystemPage') },
         ],
       },
     ],
