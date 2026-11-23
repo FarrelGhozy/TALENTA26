@@ -10,6 +10,7 @@ import type {
   RankingResponse,
   Role,
   Team,
+  TeamJoinRequestItem,
   User,
 } from '../../types';
 import {
@@ -17,6 +18,7 @@ import {
   AcademicPeriodItem,
   AuditLogItem,
   CompetitionParticipantOption,
+  CreateTeamOptions,
   IAchievementService,
   ICompetitionService,
   IConsultantService,
@@ -32,6 +34,8 @@ import {
   PointTemplateItem,
   StudentDashboardData,
   SystemHealthSummary,
+  TeamDirectoryResponse,
+  UpdateTeamOptions,
   ValidatorCompetitionItem,
   ValidatorConsultantItem,
   ValidatorRoadmapDetail,
@@ -130,6 +134,12 @@ function mapBackendCompetitionToFrontend(raw: any): Competition {
     kategori: raw.category || raw.kategori || '',
     tingkat: raw.level || raw.tingkat || '',
     format: raw.format,
+    registrationStatus: raw.registrationStatus || 'buka',
+    internalSelectionDeadline: raw.internalSelectionDeadline || null,
+    requireRoles: Boolean(raw.requireRoles),
+    requireCrossStudyProgram: Boolean(raw.requireCrossStudyProgram),
+    singleTeamPerCompetition: raw.singleTeamPerCompetition !== false,
+    sourceUrl: raw.sourceUrl || null,
     deskripsi: raw.description || raw.deskripsi || '',
     syarat: Array.isArray(raw.requirements) ? raw.requirements : raw.syarat || [],
     komposisi: {
@@ -180,17 +190,97 @@ function mapBackendInviteToFrontend(inv: any): Invite {
   };
 }
 
+function mapBackendJoinRequestToFrontend(raw: any): TeamJoinRequestItem {
+  const applicantProfile = raw.user?.studentProfile;
+  const maxAllowed =
+    raw.team?.targetMaxMembers && raw.team?.competition?.maxTeamMembers
+      ? Math.min(raw.team.targetMaxMembers, raw.team.competition.maxTeamMembers)
+      : raw.team?.competition?.maxTeamMembers ?? 5;
+
+  return {
+    id: raw.id,
+    teamId: raw.teamId,
+    userId: raw.userId,
+    preferredRole: raw.preferredRole || null,
+    note: raw.note || null,
+    status: raw.status,
+    createdAt: raw.createdAt || '',
+    reviewedAt: raw.reviewedAt || null,
+    applicant: raw.user
+      ? {
+          id: raw.user.id || raw.userId,
+          nama: applicantProfile?.fullName || 'Mahasiswa',
+          prodi: applicantProfile?.studyProgram || '',
+          fakultas: applicantProfile?.faculty || '',
+          angkatan: applicantProfile?.enrollmentYear ?? null,
+          bio: applicantProfile?.bio || null,
+          pengalaman: applicantProfile?.experience || null,
+          peranBisa: Array.isArray(applicantProfile?.rolesCapable) ? applicantProfile.rolesCapable : [],
+          skill: Array.isArray(applicantProfile?.skills) ? applicantProfile.skills : [],
+        }
+      : undefined,
+    team: raw.team
+      ? {
+          id: raw.team.id,
+          name: raw.team.name,
+          description: raw.team.description || null,
+          status: raw.team.status,
+          recruitmentType: raw.team.recruitmentType || 'terbuka',
+          activeMemberCount: Array.isArray(raw.team.members) ? raw.team.members.length : 0,
+          maxAllowed,
+          competitionSlug: raw.team.competition?.slug || '',
+          competitionName: raw.team.competition?.name || '',
+          leaderName: raw.team.leader?.studentProfile?.fullName || undefined,
+        }
+      : undefined,
+  };
+}
+
 function mapBackendTeamToFrontend(raw: any): Team | null {
   if (!raw) return null;
+  const membersRaw = raw.members || raw.anggota || [];
   return {
     id: raw.id,
     institutionId: raw.institutionId || 'unida-gontor',
     competitionSlug: raw.competition?.slug || raw.competitionSlug || '',
     nama: raw.name || raw.nama || '',
-    anggota: (raw.members || raw.anggota || []).map((m: any) => ({
-      userId: m.userId,
-      status: m.status === 'active' || m.status === 'diterima' ? 'diterima' : 'diajukan',
-    })),
+    leaderId: raw.leaderId || raw.creatorId,
+    leaderName: raw.leader?.studentProfile?.fullName || undefined,
+    isLeader: raw.isLeader,
+    description: raw.description ?? null,
+    recruitmentType: raw.recruitmentType || 'terbuka',
+    isRecruiting: raw.isRecruiting !== false,
+    neededRoles: Array.isArray(raw.neededRoles) ? raw.neededRoles : [],
+    targetMaxMembers: raw.targetMaxMembers ?? null,
+    inviteCode: raw.inviteCode ?? null,
+    inviteCodeUpdatedAt: raw.inviteCodeUpdatedAt ?? null,
+    pendingJoinRequestsCount:
+      typeof raw.pendingJoinRequestsCount === 'number'
+        ? raw.pendingJoinRequestsCount
+        : Array.isArray(raw.joinRequests)
+        ? raw.joinRequests.length
+        : 0,
+    joinRequests: Array.isArray(raw.joinRequests)
+      ? raw.joinRequests.map(mapBackendJoinRequestToFrontend)
+      : [],
+    readiness: raw.readiness || null,
+    latestSelection: raw.latestSelection || null,
+    anggota: membersRaw.map((m: any) => {
+      const sp = m.user?.studentProfile;
+      return {
+        userId: m.userId,
+        status: m.status === 'active' || m.status === 'diterima' ? 'diterima' : 'diajukan',
+        roleInTeam: m.roleInTeam || 'Anggota',
+        joinedAt: m.joinedAt,
+        nama: sp?.fullName || m.nama || 'Mahasiswa',
+        prodi: sp?.studyProgram || m.prodi || '',
+        fakultas: sp?.faculty || m.fakultas || '',
+        angkatan: sp?.enrollmentYear ?? m.angkatan ?? null,
+        bio: sp?.bio ?? null,
+        peranBisa: Array.isArray(sp?.rolesCapable) ? sp.rolesCapable : m.peranBisa || [],
+        skill: Array.isArray(sp?.skills) ? sp.skills : m.skill || [],
+      };
+    }),
     isFormed: raw.status === 'terbentuk' || raw.status === 'terkunci_seleksi',
     status: raw.status,
   };
@@ -397,13 +487,76 @@ export const teamApiService: ITeamService = {
       method: 'POST',
     });
   },
-  createTeam: async (competitionSlug: string, _creatorId: string, teamName: string): Promise<Team> => {
+  createTeam: async (
+    competitionSlug: string,
+    _creatorId: string,
+    teamName: string,
+    options?: CreateTeamOptions
+  ): Promise<Team> => {
     const raw = await apiFetch<any>('/teams', {
       method: 'POST',
-      body: JSON.stringify({ competitionSlug, teamName }),
+      body: JSON.stringify({
+        competitionSlug,
+        teamName,
+        ...options,
+      }),
     });
     return mapBackendTeamToFrontend(raw)!;
   },
+  getDirectory: async (filters): Promise<TeamDirectoryResponse> => {
+    const qs = new URLSearchParams();
+    if (filters?.competitionSlug) qs.set('competitionSlug', filters.competitionSlug);
+    if (filters?.q) qs.set('q', filters.q);
+    if (filters?.role && filters.role !== 'semua') qs.set('role', filters.role);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    const raw = await apiFetch<any>(`/teams/directory${query}`);
+    return {
+      competition: raw?.competition ? mapBackendCompetitionToFrontend(raw.competition) : null,
+      teams: Array.isArray(raw?.teams) ? raw.teams : [],
+      myActiveTeamId: raw?.myActiveTeamId || null,
+    };
+  },
+  getMyJoinRequests: async (): Promise<TeamJoinRequestItem[]> => {
+    const list = await apiFetch<any[]>('/me/join-requests');
+    return Array.isArray(list) ? list.map(mapBackendJoinRequestToFrontend) : [];
+  },
+  updateTeam: async (teamId: string, options: UpdateTeamOptions): Promise<Team> => {
+    const raw = await apiFetch<any>(`/teams/${teamId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(options),
+    });
+    return mapBackendTeamToFrontend(raw)!;
+  },
+  rotateInviteCode: (teamId: string) =>
+    apiFetch<{ inviteCode: string; inviteCodeUpdatedAt: string }>(
+      `/teams/${teamId}/invite-code/rotate`,
+      { method: 'POST' }
+    ),
+  requestJoin: async (teamId: string, payload?: { preferredRole?: string; note?: string }) => {
+    const raw = await apiFetch<any>(`/teams/${teamId}/join-requests`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+    return mapBackendJoinRequestToFrontend(raw);
+  },
+  cancelJoinRequest: async (requestId: string) => {
+    await apiFetch(`/join-requests/${requestId}/cancel`, { method: 'POST' });
+  },
+  decideJoinRequest: (requestId: string, action: 'disetujui' | 'ditolak') =>
+    apiFetch<{ message: string }>(`/join-requests/${requestId}/decide`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    }),
+  joinByCode: (inviteCode: string) =>
+    apiFetch<{ teamId: string; teamName: string; message: string }>('/teams/join-by-code', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode }),
+    }),
+  removeMember: async (teamId: string, targetUserId: string) => {
+    await apiFetch(`/teams/${teamId}/members/${targetUserId}/remove`, { method: 'POST' });
+  },
+  registerSelection: (teamId: string) =>
+    apiFetch(`/teams/${teamId}/register-selection`, { method: 'POST' }),
 };
 
 export const roadmapApiService: IRoadmapService = {

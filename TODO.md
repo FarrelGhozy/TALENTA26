@@ -111,8 +111,8 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 - [x] Perbarui endpoint kompetisi admin (`POST`/`PATCH /admin/competitions`) dan ringkasan dashboard mahasiswa (`GET /me/dashboard`).
 
 ### 3B.4 Frontend UI/UX, Adapter Service & Rute Mahasiswa/Admin
-- [ ] Perbarui tipe & adapter `@talenta/services` (API & mock), rute `/app/tim`, `/app/tim/cari`, redirect `/app/partner`, Navbar (`Cari Tim`), `ProfilePage`, dan `BerandaPage` (bebas ketergantungan `userService.getAll()` pada halaman tim).
-- [ ] Bangun tampilan Visual 1–6: Hub 3 Jalur (*Buat Tim*, *Cari Tim Terbuka*, *Sudah Punya Tim*), Form Buat Tim + live preview, Direktori Tim Terbuka + tab pengajuan saya, Ruang Tim Saya (approval ketua, kode undangan + rotasi, 3 lapis kesiapan tim + tombol Daftar Seleksi Internal, akses roadmap awal), banner jalur individu di `PreparationPage`, serta panel pengaturan aturan lomba di `/validator/konten?tab=kompetisi` & `TeamRuleBox`.
+- [x] Perbarui tipe & adapter `@talenta/services` (API & mock), rute `/app/tim`, `/app/tim/cari`, redirect `/app/partner`, Navbar (`Cari Tim` tanpa double-active), `ProfilePage`, `CompetitionDetailPage`, dan `BerandaPage` (bebas ketergantungan `userService.getAll()` pada halaman tim).
+- [x] Bangun tampilan Visual 1–6: Hub 3 Jalur (`TeamOnboardingHub`), Form Buat Tim + live preview (`TeamCreateForm`), Modal Kode Undangan (`JoinByCodeModal`), Direktori Tim Terbuka + tab pengajuan saya (`TeamDirectoryPage`), Ruang Tim Saya (`TeamPage` — approval ketua, kode undangan + rotasi, keluarkan anggota, 3 lapis kesiapan tim + tombol Daftar Seleksi Internal, akses roadmap awal), panel jalur individu di `PreparationPage`, serta panel pengaturan aturan lomba dinamis di `/validator/konten?tab=kompetisi` & `TeamRuleBox`. (`typecheck`, `lint` 0 warning, `build:demo`, dan `build` produksi bersih lulus).
 
 ### 3B.5 Pengujian Unit, Integrasi, E2E & Gate Fase 3B
 - [ ] Tambah unit test `team-readiness.test.ts`, integration test `team-recruitment.test.ts` (otorisasi ketua 403, race condition `FOR UPDATE`, kode undangan & rotasi, transfer ketua, seleksi internal), serta perbarui E2E `02-mahasiswa-flows.ts`.

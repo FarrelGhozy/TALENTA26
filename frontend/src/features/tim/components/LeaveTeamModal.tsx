@@ -35,7 +35,7 @@ export const LeaveTeamModal: React.FC<LeaveTeamModalProps> = ({
         Apakah kamu yakin ingin keluar dari tim saat ini?
       </p>
       <p className="text-xs text-slate-500 mt-2">
-        Status tim akan kembali menjadi <strong>Mencari</strong> dan kamu dapat mencari tim baru atau menerima undangan lainnya sebelum seleksi internal dimulai.
+        Jika kamu ketua tim dan masih ada anggota lain, kepemimpinan akan otomatis dialihkan ke anggota yang bergabung paling awal. Jika kamu anggota terakhir, ruang tim akan diarsipkan.
       </p>
     </Modal>
   );

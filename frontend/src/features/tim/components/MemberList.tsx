@@ -1,16 +1,21 @@
 import React from 'react';
-import { User, TeamMember } from '../../../types';
+import { UserMinus } from 'lucide-react';
+import { TeamMember } from '../../../types';
 import { Badge } from '../../../components/ui/Badge';
-import { assetUrl } from '../../../lib/asset';
+import { Button } from '../../../components/ui/Button';
 
 interface MemberListProps {
   members: TeamMember[];
-  allUsers: User[];
+  leaderId?: string;
   currentUserId: string;
+  isLeader?: boolean;
+  isLocked?: boolean;
+  removingUserId?: string | null;
+  onRemoveMember?: (targetUserId: string, name: string) => void;
 }
 
 function getInitials(name?: string): string {
-  if (!name || !name.trim()) return '??';
+  if (!name || !name.trim()) return 'MH';
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -18,92 +23,82 @@ function getInitials(name?: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export const MemberList: React.FC<MemberListProps> = ({ members, allUsers, currentUserId }) => {
+export const MemberList: React.FC<MemberListProps> = ({
+  members,
+  leaderId,
+  currentUserId,
+  isLeader = false,
+  isLocked = false,
+  removingUserId = null,
+  onRemoveMember,
+}) => {
   return (
-    <div className="space-y-3.5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-800">
-          Susunan Anggota Tim ({members.length})
-        </h3>
-        <span className="text-[11px] text-slate-400">
-          Status aktif terkonfirmasi
-        </span>
-      </div>
+    <ul className="space-y-2.5">
+      {members.map((m, idx) => {
+        const isMe = m.userId === currentUserId;
+        const memberIsLeader = leaderId ? m.userId === leaderId : idx === 0;
+        const displayName = m.nama || 'Mahasiswa';
+        const subMeta = [
+          m.roleInTeam || (memberIsLeader ? 'Ketua Tim' : 'Anggota'),
+          m.prodi,
+          ...(m.peranBisa || []).slice(0, 2),
+        ]
+          .filter(Boolean)
+          .join(' · ');
 
-      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {members.map((m, idx) => {
-          const user = allUsers.find((u) => u.id === m.userId);
-          const isMe = m.userId === currentUserId;
-          const isLeader = idx === 0;
-
-          return (
-            <li
-              key={m.userId}
-              className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs space-y-3 hover:border-slate-300 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  {user?.avatar ? (
-                    <img
-                      src={assetUrl(user.avatar)}
-                      alt={user.nama}
-                      className="w-10 h-10 shrink-0 rounded-2xl object-cover border border-slate-200 shadow-xs"
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      className="w-10 h-10 shrink-0 rounded-2xl bg-gradient-to-tr from-blue-700 to-blue-900 text-white font-black text-xs flex items-center justify-center shadow-xs"
-                    >
-                      {getInitials(user?.nama)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-xs font-bold text-slate-900 truncate">
-                        {user?.nama || m.userId}
-                      </h4>
-                      {isMe && (
-                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
-                          Saya
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {user?.prodi || 'Mahasiswa'} • Angkatan {user?.angkatan || '-'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="shrink-0 flex items-center gap-1">
-                  {isLeader && (
-                    <Badge color="amber" size="sm" dot title="Ketua Tim">
-                      Ketua
-                    </Badge>
-                  )}
-                  <Badge color={m.status === 'diterima' ? 'emerald' : 'amber'} size="sm">
-                    {m.status === 'diterima' ? 'Aktif' : 'Menunggu'}
-                  </Badge>
-                </div>
+        return (
+          <li
+            key={m.userId}
+            className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                aria-hidden="true"
+                className={`w-10 h-10 shrink-0 rounded-full font-black text-xs flex items-center justify-center ${
+                  memberIsLeader
+                    ? 'bg-blue-700 text-white'
+                    : 'bg-teal-600 text-white'
+                }`}
+              >
+                {getInitials(displayName)}
               </div>
-
-              {user && (
-                <div className="flex flex-wrap gap-1.5 pt-2.5 border-t border-slate-100">
-                  {user.peranBisa.slice(0, 3).map((r) => (
-                    <Badge key={r} color="blue" size="sm" className="capitalize">
-                      {r}
-                    </Badge>
-                  ))}
-                  {user.skill.slice(0, 2).map((s) => (
-                    <Badge key={s.nama} color="emerald" size="sm">
-                      {s.nama} · Lv{s.level}
-                    </Badge>
-                  ))}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h4 className="text-xs font-extrabold text-slate-900 truncate">
+                    {displayName}
+                  </h4>
+                  {isMe && (
+                    <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60">
+                      Saya
+                    </span>
+                  )}
                 </div>
+                <p className="text-[11px] text-slate-500 truncate mt-0.5">{subMeta}</p>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2 self-end sm:self-center">
+              <Badge color={memberIsLeader ? 'emerald' : 'slate'} size="sm">
+                {memberIsLeader ? 'Ketua' : 'Aktif'}
+              </Badge>
+              {isLeader && !memberIsLeader && !isLocked && onRemoveMember && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 px-2"
+                  isLoading={removingUserId === m.userId}
+                  onClick={() => onRemoveMember(m.userId, displayName)}
+                  aria-label={`Keluarkan ${displayName} dari tim`}
+                  title={`Keluarkan ${displayName}`}
+                >
+                  <UserMinus className="w-3.5 h-3.5" aria-hidden="true" />
+                </Button>
               )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 };

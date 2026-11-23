@@ -62,7 +62,7 @@ export const Navbar: React.FC = () => {
       return [
         { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
         { to: '/app/profil', label: 'Profil & Target', icon: UserCircle2 },
-        { to: '/app/partner', label: 'Cari Partner', icon: Users },
+        { to: '/app/tim/cari', label: 'Cari Tim', icon: Users },
         { to: '/app/tim', label: 'Tim Saya', icon: Users },
         { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
         { to: '/ranking', label: 'Ranking', icon: Medal },
@@ -93,7 +93,12 @@ export const Navbar: React.FC = () => {
 
   const isActive = (to: string) => {
     const cleanTarget = to.split('?')[0];
-    if (cleanTarget === '/' || cleanTarget === '/validator' || cleanTarget === '/super-admin') {
+    if (
+      cleanTarget === '/' ||
+      cleanTarget === '/validator' ||
+      cleanTarget === '/super-admin' ||
+      cleanTarget === '/app/tim'
+    ) {
       return strippedPath === cleanTarget;
     }
     return strippedPath === cleanTarget || strippedPath.startsWith(`${cleanTarget}/`);

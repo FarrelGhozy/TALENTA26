@@ -76,6 +76,12 @@ export interface Competition {
   kategori: string;
   tingkat: string;
   format?: 'individu' | 'beregu';
+  registrationStatus?: 'buka' | 'tutup';
+  internalSelectionDeadline?: string | null;
+  requireRoles?: boolean;
+  requireCrossStudyProgram?: boolean;
+  singleTeamPerCompetition?: boolean;
+  sourceUrl?: string | null;
   deskripsi: string;
   syarat: string[];
   komposisi: KomposisiTim;
@@ -90,6 +96,94 @@ export interface Competition {
 export interface TeamMember {
   userId: string;
   status: 'diterima' | 'diajukan';
+  roleInTeam?: string;
+  joinedAt?: string;
+  nama?: string;
+  prodi?: string;
+  fakultas?: string;
+  angkatan?: number | null;
+  bio?: string | null;
+  peranBisa?: string[];
+  skill?: Skill[];
+}
+
+export interface TeamReadiness {
+  level: 'dibuat' | 'anggota_cukup' | 'siap_seleksi' | 'terkunci_seleksi';
+  activeMemberCount: number;
+  minRequired: number;
+  maxAllowed: number;
+  hasEnoughMembers: boolean;
+  isFull: boolean;
+  isRegistrationOpen: boolean;
+  uniqueStudyPrograms: string[];
+  missingRequiredRoles: string[];
+  crossStudyProgramSatisfied: boolean;
+  isSelectionReady: boolean;
+  canAccessRoadmap: boolean;
+  unmetCriteria: string[];
+  advisoryNotes: string[];
+  statusLabel: string;
+  selectionStatusLabel: string;
+}
+
+export interface TeamJoinRequestItem {
+  id: string;
+  teamId: string;
+  userId: string;
+  preferredRole?: string | null;
+  note?: string | null;
+  status: 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan' | 'kedaluwarsa';
+  createdAt: string;
+  reviewedAt?: string | null;
+  applicant?: {
+    id: string;
+    nama: string;
+    prodi: string;
+    fakultas?: string;
+    angkatan?: number | null;
+    bio?: string | null;
+    pengalaman?: string | null;
+    peranBisa: string[];
+    skill: Skill[];
+  };
+  team?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    status: string;
+    recruitmentType: 'terbuka' | 'privat';
+    activeMemberCount: number;
+    maxAllowed: number;
+    competitionSlug: string;
+    competitionName: string;
+    leaderName?: string;
+  };
+}
+
+export interface TeamDirectoryItem {
+  id: string;
+  competitionId: string;
+  competitionSlug: string;
+  competitionName: string;
+  name: string;
+  description: string;
+  recruitmentType: 'terbuka' | 'privat';
+  isRecruiting: boolean;
+  status: string;
+  activeMemberCount: number;
+  minRequired: number;
+  maxAllowed: number;
+  slotsRemaining: number;
+  neededRoles: string[];
+  leader: {
+    id: string;
+    fullName: string;
+    studyProgram: string;
+  };
+  isMyTeam: boolean;
+  myRequestId: string | null;
+  myRequestStatus: TeamJoinRequestItem['status'] | null;
+  createdAt: string;
 }
 
 export interface Team {
@@ -97,6 +191,26 @@ export interface Team {
   institutionId: string;
   competitionSlug: string;
   nama: string;
+  leaderId?: string;
+  leaderName?: string;
+  isLeader?: boolean;
+  description?: string | null;
+  recruitmentType?: 'terbuka' | 'privat';
+  isRecruiting?: boolean;
+  neededRoles?: string[];
+  targetMaxMembers?: number | null;
+  inviteCode?: string | null;
+  inviteCodeUpdatedAt?: string | null;
+  pendingJoinRequestsCount?: number;
+  joinRequests?: TeamJoinRequestItem[];
+  readiness?: TeamReadiness | null;
+  latestSelection?: {
+    id: string;
+    stage: string;
+    result: string;
+    organizerVerified: boolean;
+    notes?: string | null;
+  } | null;
   anggota: TeamMember[];
   isFormed: boolean;
   status: 'mencari' | 'menunggu_1_lagi' | 'terbentuk' | 'terkunci_seleksi' | 'arsip';

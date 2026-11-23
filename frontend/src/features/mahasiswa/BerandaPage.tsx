@@ -53,9 +53,8 @@ export const BerandaPage: React.FC = () => {
       userService.getProfile(currentUser.id),
       teamService.getTeamByUserId(currentUser.id),
       achievementService.getAll(currentUser.id),
-      userService.getAll(),
     ])
-      .then(async ([dash, prof, t, achs, users]) => {
+      .then(async ([dash, prof, t, achs]) => {
         if (cancelled) return;
         setDashboardData(dash);
         setTeam(t);
@@ -67,7 +66,7 @@ export const BerandaPage: React.FC = () => {
           if (cancelled) return;
           setTargetComp(comp);
           if (t && comp && t.competitionSlug === comp.slug) {
-            const validation = validateTeamFormation(t, users, comp);
+            const validation = validateTeamFormation(t, [], comp);
             setIsTeamFormed(validation.isFormed);
             setMissingRoles(validation.missingRoles);
           } else {
@@ -126,11 +125,11 @@ export const BerandaPage: React.FC = () => {
     : [
         { label: 'Identitas & Skill', done: (dashboardData?.profile?.completionPercentage ?? 100) >= 60, to: '/app/profil' },
         { label: 'Target Kompetisi', done: !!targetComp, to: '/app/profil?need=target' },
-        { label: 'Cari Partner', done: !!team, to: '/app/partner' },
-        { label: 'Tim Terbentuk', done: isTeamFormed, to: '/app/tim' },
+        { label: 'Cara Bergabung', done: !!team, to: '/app/tim' },
+        { label: 'Kesiapan Tim', done: isTeamFormed, to: '/app/tim' },
         {
-          label: 'Katalog & Pembinaan',
-          done: isTeamFormed && !!targetComp,
+          label: 'Roadmap & Pembinaan',
+          done: Boolean(dashboardData?.roadmapProgress && dashboardData.roadmapProgress.percentage > 0),
           to: targetComp ? `/app/kompetisi/${targetComp.slug}/persiapan` : '/kompetisi',
         },
         { label: 'Validasi Prestasi', done: verifiedCount > 0, to: '/app/prestasi' },
@@ -217,9 +216,9 @@ export const BerandaPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             {!isIndividualTarget && (
-              <Link to="/app/partner">
+              <Link to="/app/tim/cari">
                 <Button size="sm" variant="outline" leftIcon={<Users className="w-3.5 h-3.5" aria-hidden="true" />}>
-                  Cari Partner
+                  Cari Tim
                 </Button>
               </Link>
             )}
@@ -408,7 +407,7 @@ export const BerandaPage: React.FC = () => {
                         </div>
                       ) : (
                         <p className="text-[11px] text-slate-500">
-                          Undang calon partner dengan keahlian pelengkap untuk mulai berkolaborasi.
+                          Buat tim baru, cari tim yang membuka rekrutmen, atau gabung memakai kode undangan ketua.
                         </p>
                       )}
 
@@ -434,7 +433,7 @@ export const BerandaPage: React.FC = () => {
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-800">Belum Ada Target Kompetisi</h4>
                       <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                        Pilih satu kompetisi Belmawa acuan untuk mengaktifkan fitur pencocokan partner dan roadmap mandiri.
+                        Pilih satu kompetisi acuan untuk mengaktifkan alur pembentukan tim dan roadmap persiapan.
                       </p>
                     </div>
                     <Link to="/kompetisi">
@@ -456,19 +455,20 @@ export const BerandaPage: React.FC = () => {
                   Panduan Lomba <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
 
-                {isIndividualTarget || isTeamFormed ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {!isIndividualTarget && (
+                    <Link to="/app/tim">
+                      <Button size="sm" variant="outline" rightIcon={<Users className="w-3.5 h-3.5" aria-hidden="true" />}>
+                        {team ? `Ruang Tim (${team.anggota.length} Org)` : 'Atur Tim'}
+                      </Button>
+                    </Link>
+                  )}
                   <Link to={`/app/kompetisi/${targetComp.slug}/persiapan`}>
                     <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
                       Buka Ruang Persiapan
                     </Button>
                   </Link>
-                ) : (
-                  <Link to="/app/tim">
-                    <Button size="sm" variant="secondary" rightIcon={<Users className="w-3.5 h-3.5" />}>
-                      Kelola Tim ({team ? team.anggota.length : 0} Org)
-                    </Button>
-                  </Link>
-                )}
+                </div>
               </div>
             )}
           </Card>

@@ -42,6 +42,11 @@ const emptyCompForm = {
   format: 'beregu' as 'individu' | 'beregu',
   minTeamMembers: 2,
   maxTeamMembers: 5,
+  registrationStatus: 'buka' as 'buka' | 'tutup',
+  internalSelectionDeadline: '',
+  requireRoles: false,
+  requireCrossStudyProgram: false,
+  singleTeamPerCompetition: true,
   requiredRolesText: 'Ketua Tim, Anggota',
   requirementsText: '',
   scheduleText: '',
@@ -219,6 +224,13 @@ export const ValidatorContentPage: React.FC = () => {
       format: item.format,
       minTeamMembers: item.minTeamMembers,
       maxTeamMembers: item.maxTeamMembers,
+      registrationStatus: item.registrationStatus || 'buka',
+      internalSelectionDeadline: item.internalSelectionDeadline
+        ? new Date(item.internalSelectionDeadline).toISOString().split('T')[0]
+        : '',
+      requireRoles: Boolean(item.requireRoles),
+      requireCrossStudyProgram: Boolean(item.requireCrossStudyProgram),
+      singleTeamPerCompetition: item.singleTeamPerCompetition !== false,
       requiredRolesText: (item.requiredRoles || []).join(', '),
       requirementsText: (item.requirements || []).join('\n'),
       scheduleText: (item.scheduleTimeline || []).map((s) => `${s.label} | ${s.tanggal}`).join('\n'),
@@ -242,6 +254,12 @@ export const ValidatorContentPage: React.FC = () => {
       format: compForm.format,
       minTeamMembers: min,
       maxTeamMembers: max,
+      registrationStatus: compForm.registrationStatus,
+      internalSelectionDeadline: compForm.internalSelectionDeadline.trim() || null,
+      requireRoles: compForm.format === 'individu' ? false : compForm.requireRoles,
+      requireCrossStudyProgram:
+        compForm.format === 'individu' ? false : compForm.requireCrossStudyProgram,
+      singleTeamPerCompetition: compForm.singleTeamPerCompetition,
       requiredRoles: compForm.requiredRolesText
         .split(',')
         .map((s) => s.trim())
@@ -484,14 +502,14 @@ export const ValidatorContentPage: React.FC = () => {
               {compForm.format === 'beregu' && (
                 <div className="grid grid-cols-2 gap-3">
                   <Input
-                    label="Min Anggota"
+                    label="Minimal Anggota Tim"
                     type="number"
                     min={1}
                     value={String(compForm.minTeamMembers)}
                     onChange={(e) => setCompForm({ ...compForm, minTeamMembers: Number(e.target.value) })}
                   />
                   <Input
-                    label="Max Anggota"
+                    label="Maksimal Anggota Tim"
                     type="number"
                     min={1}
                     value={String(compForm.maxTeamMembers)}
@@ -500,17 +518,92 @@ export const ValidatorContentPage: React.FC = () => {
                 </div>
               )}
 
+              <Select
+                label="Status Pendaftaran Internal"
+                value={compForm.registrationStatus}
+                onChange={(e) =>
+                  setCompForm({ ...compForm, registrationStatus: e.target.value as 'buka' | 'tutup' })
+                }
+                options={[
+                  { value: 'buka', label: 'Buka rekrutmen internal' },
+                  { value: 'tutup', label: 'Tutup rekrutmen internal' },
+                ]}
+              />
               <Input
-                label="Saran Peran Tim (pisahkan koma)"
+                label="Tenggat Seleksi Internal (Opsional)"
+                type="date"
+                value={compForm.internalSelectionDeadline}
+                onChange={(e) =>
+                  setCompForm({ ...compForm, internalSelectionDeadline: e.target.value })
+                }
+              />
+
+              {compForm.format === 'beregu' && (
+                <div className="sm:col-span-2 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                  <div className="text-xs font-extrabold text-slate-800">
+                    Syarat Tambahan Dinamis (Hanya aktifkan jika tertulis pada pedoman lomba)
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={compForm.requireRoles}
+                        onChange={(e) => setCompForm({ ...compForm, requireRoles: e.target.checked })}
+                        className="accent-blue-700"
+                      />
+                      <span className="font-semibold text-slate-700">
+                        Peran anggota: {compForm.requireRoles ? 'Wajib terpenuhi' : 'Opsional (Saran)'}
+                      </span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={compForm.requireCrossStudyProgram}
+                        onChange={(e) =>
+                          setCompForm({ ...compForm, requireCrossStudyProgram: e.target.checked })
+                        }
+                        className="accent-blue-700"
+                      />
+                      <span className="font-semibold text-slate-700">
+                        Lintas prodi: {compForm.requireCrossStudyProgram ? 'Wajib (≥2 prodi)' : 'Opsional'}
+                      </span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={compForm.singleTeamPerCompetition}
+                        onChange={(e) =>
+                          setCompForm({ ...compForm, singleTeamPerCompetition: e.target.checked })
+                        }
+                        className="accent-blue-700"
+                      />
+                      <span className="font-semibold text-slate-700">
+                        Batas satu tim aktif per cabang
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <Input
+                label="Daftar Peran Tim (pisahkan koma)"
                 value={compForm.requiredRolesText}
                 onChange={(e) => setCompForm({ ...compForm, requiredRolesText: e.target.value })}
               />
               <Input
-                label="Tautan Resmi Lomba (Opsional)"
+                label="Tautan Pedoman Resmi & Sumber Aturan (Opsional)"
                 value={compForm.sourceUrl}
                 onChange={(e) => setCompForm({ ...compForm, sourceUrl: e.target.value })}
                 placeholder="https://..."
               />
+
+              <div className="sm:col-span-2 p-3.5 rounded-xl bg-blue-50/70 border border-blue-100 text-[11px] text-slate-600 space-y-1">
+                <strong className="text-slate-800 block">Perilaku sistem otomatis berdasarkan aturan ini:</strong>
+                <p>
+                  &bull; <strong>Individu:</strong> fitur buat/cari tim disembunyikan dan mahasiswa langsung diarahkan ke Ruang Persiapan.
+                  {' '}&bull; <strong>Beregu:</strong> tampilkan 3 jalur (Buat Tim, Cari Tim Terbuka, Gabung Kode); roadmap tetap terbuka sebelum anggota lengkap; tim penuh otomatis menutup pengajuan baru.
+                </p>
+              </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1">Deskripsi Perlombaan</label>
@@ -562,7 +655,11 @@ export const ValidatorContentPage: React.FC = () => {
                         </Badge>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {item.organizer} • {item.format === 'individu' ? 'Individu' : `Beregu (${item.minTeamMembers}-${item.maxTeamMembers} org)`}
+                        {item.organizer} • {item.format === 'individu' ? 'Individu (1 peserta)' : `Beregu (${item.minTeamMembers}–${item.maxTeamMembers} org)`}
+                        {' • '}
+                        {item.registrationStatus === 'tutup' ? 'Rekrutmen Tutup' : 'Rekrutmen Buka'}
+                        {item.requireCrossStudyProgram ? ' • Wajib Lintas Prodi' : ''}
+                        {item.requireRoles ? ' • Peran Wajib' : ''}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">

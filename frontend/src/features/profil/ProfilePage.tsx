@@ -158,7 +158,7 @@ export const ProfilePage: React.FC = () => {
       if (isIndividu && targetSlug) {
         navigate(`/app/kompetisi/${targetSlug}/persiapan`);
       } else {
-        navigate('/app/partner');
+        navigate('/app/tim');
       }
     } catch (err: any) {
       notify(err?.message || 'Gagal menyimpan profil. Coba lagi.', 'error');
@@ -205,7 +205,7 @@ export const ProfilePage: React.FC = () => {
           Profil, Keahlian & Target Kompetisi
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Data ini dipakai oleh fitur rekomendasi rekan tim, pembinaan roadmap, dan verifikasi prestasi kampus.
+          Data profil ini ditampilkan secara aman saat kamu mengajukan bergabung ke tim, mengikuti roadmap, dan mengajukan prestasi kampus.
         </p>
       </div>
 

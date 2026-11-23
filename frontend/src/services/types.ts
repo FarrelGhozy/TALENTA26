@@ -11,6 +11,8 @@ import {
   Roadmap,
   StudentDirectoryItem,
   Team,
+  TeamDirectoryItem,
+  TeamJoinRequestItem,
   User,
 } from '../types';
 
@@ -46,10 +48,48 @@ export interface IMatchingService {
   cancelInvite?(inviteId: string): Promise<void>;
 }
 
+export interface CreateTeamOptions {
+  description?: string;
+  neededRoles?: string[];
+  recruitmentType?: 'terbuka' | 'privat';
+  targetMaxMembers?: number;
+  roleInTeam?: string;
+}
+
+export interface UpdateTeamOptions {
+  teamName?: string;
+  description?: string | null;
+  neededRoles?: string[];
+  recruitmentType?: 'terbuka' | 'privat';
+  isRecruiting?: boolean;
+  targetMaxMembers?: number;
+}
+
+export interface TeamDirectoryResponse {
+  competition: Competition | null;
+  teams: TeamDirectoryItem[];
+  myActiveTeamId: string | null;
+}
+
 export interface ITeamService {
   getTeamByUserId(userId: string): Promise<Team | null>;
   leaveTeam(userId: string, teamId: string): Promise<void>;
-  createTeam(competitionSlug: string, creatorId: string, teamName: string): Promise<Team>;
+  createTeam(
+    competitionSlug: string,
+    creatorId: string,
+    teamName: string,
+    options?: CreateTeamOptions
+  ): Promise<Team>;
+  getDirectory?(filters?: { competitionSlug?: string; q?: string; role?: string }): Promise<TeamDirectoryResponse>;
+  getMyJoinRequests?(): Promise<TeamJoinRequestItem[]>;
+  updateTeam?(teamId: string, options: UpdateTeamOptions): Promise<Team>;
+  rotateInviteCode?(teamId: string): Promise<{ inviteCode: string; inviteCodeUpdatedAt: string }>;
+  requestJoin?(teamId: string, payload?: { preferredRole?: string; note?: string }): Promise<TeamJoinRequestItem>;
+  cancelJoinRequest?(requestId: string): Promise<void>;
+  decideJoinRequest?(requestId: string, action: 'disetujui' | 'ditolak'): Promise<{ message: string }>;
+  joinByCode?(inviteCode: string): Promise<{ teamId: string; teamName: string; message: string }>;
+  removeMember?(teamId: string, targetUserId: string): Promise<void>;
+  registerSelection?(teamId: string): Promise<unknown>;
 }
 
 export interface IRoadmapService {
@@ -101,6 +141,11 @@ export interface ValidatorCompetitionItem {
   format: 'individu' | 'beregu';
   minTeamMembers: number;
   maxTeamMembers: number;
+  registrationStatus?: 'buka' | 'tutup';
+  internalSelectionDeadline?: string | null;
+  requireRoles?: boolean;
+  requireCrossStudyProgram?: boolean;
+  singleTeamPerCompetition?: boolean;
   requiredRoles?: string[];
   requirements?: string[];
   scheduleTimeline?: Array<{ label: string; tanggal: string }>;

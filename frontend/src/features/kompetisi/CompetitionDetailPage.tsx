@@ -76,7 +76,14 @@ export const CompetitionDetailPage: React.FC = () => {
     try {
       await userService.setTargetCompetition(currentUser.id, slug);
       notify('Target kompetisi berhasil diperbarui.');
-      navigate('/app/profil?need=target');
+      const isIndividu =
+        competition?.format === 'individu' ||
+        (competition && competition.komposisi.min === 1 && competition.komposisi.max === 1);
+      if (isIndividu) {
+        navigate(`/app/kompetisi/${slug}/persiapan`);
+      } else {
+        navigate('/app/tim');
+      }
     } catch {
       notify('Gagal memilih target. Coba lagi.', 'error');
     } finally {
@@ -140,6 +147,14 @@ export const CompetitionDetailPage: React.FC = () => {
                 <Badge color="emerald" size="lg" dot>
                   Target Pembinaan Aktif Kamu
                 </Badge>
+                {competition.format !== 'individu' &&
+                  !(competition.komposisi.min === 1 && competition.komposisi.max === 1) && (
+                    <Link to="/app/tim">
+                      <Button size="md" variant="outline">
+                        Atur / Gabung Tim
+                      </Button>
+                    </Link>
+                  )}
                 <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
                   <Button size="md" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
                     Buka Ruang Persiapan
@@ -246,7 +261,11 @@ export const CompetitionDetailPage: React.FC = () => {
           )}
 
           {currentTab === 'syarat' && (
-            <TeamRuleBox komposisi={competition.komposisi} syarat={competition.syarat} />
+            <TeamRuleBox
+              komposisi={competition.komposisi}
+              syarat={competition.syarat}
+              competition={competition}
+            />
           )}
 
           {currentTab === 'jadwal' && (

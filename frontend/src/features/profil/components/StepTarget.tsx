@@ -44,7 +44,7 @@ export const StepTarget: React.FC<StepTargetProps> = ({
           <legend className="block text-xs font-bold text-slate-800">
             Pilih 1 Target Kompetisi Utama
           </legend>
-          <span className="text-[11px] text-slate-400">Dasar rekomendasi rekan</span>
+          <span className="text-[11px] text-slate-400">Menentukan alur tim / individu</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Target kompetisi">
