@@ -138,6 +138,14 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 
 ---
 
+## Tugas mandiri — Rancangan logo TALENTA (24 November 2026)
+- [x] Buat tiga papan konsep modern minimal **T Bertumbuh**, **Jalur Prestasi**, dan **Simpul Talenta** melalui imagegen; setiap papan PNG memuat simbol, tulisan TALENTA, versi satu warna, ikon aplikasi, dan navbar terang/gelap. Artefak, prompt, makna, rekomendasi, dan batas finalisasi ada di `docs/design/logo-talenta-2026-11/README.md`.
+- [x] Periksa ejaan TALENTA dan sampel simbol 16/24/32 px pada versi warna dan satu warna terang/gelap; bukti `docs/design/logo-talenta-2026-11/qa-small-sizes.png`. T Bertumbuh paling jelas; detail negatif Simpul Talenta perlu disederhanakan bila dipilih untuk 16 px. Tipografi asli, warna tepat, dan geometri master merupakan pekerjaan finalisasi vektor setelah pemilihan.
+- Verifikasi: ketiga PNG dapat dibaca dan berukuran 1536×1024; pemeriksaan visual papan dan bukti ukuran selesai; `bun run typecheck`, `bun run lint`, dan `git diff --check` lulus. Tidak ada perubahan kode atau kebutuhan uji domain/API baru.
+- Pemilihan konsep, aset vektor final, dan pemasangan logo ke aplikasi belum termasuk pekerjaan yang diselesaikan; ketiga papan adalah usulan, bukan brand resmi kampus atau penutupan gate rilis.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).
