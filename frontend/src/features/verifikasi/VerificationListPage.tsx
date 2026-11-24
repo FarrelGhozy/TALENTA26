@@ -60,28 +60,51 @@ export const VerificationListPage: React.FC = () => {
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const { openMobileDrawer } = useAdminNav();
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchQueue = (isCancelled?: () => boolean) => {
+    setLoading(true);
+    setLoadError(null);
     achievementService
       .getAll()
       .then((data) => {
-        if (cancelled) return;
+        if (isCancelled?.()) return;
         setAchievements(data);
         setLoading(false);
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
+      .catch((err: any) => {
+        if (isCancelled?.()) return;
+        setLoadError(err?.message || 'Gagal memuat antrean verifikasi.');
+        setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchQueue(() => cancelled);
     return () => {
       cancelled = true;
     };
   }, []);
 
   if (loading) return <PageLoading message="Memuat antrean verifikasi..." />;
+  if (loadError) {
+    return (
+      <div className="p-10 text-center space-y-4 bg-white rounded-2xl border border-rose-200">
+        <p role="alert" className="text-xs font-semibold text-rose-700">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => fetchQueue()}
+          className="px-4 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+        >
+          Muat Ulang Antrean
+        </button>
+      </div>
+    );
+  }
 
   const filtered = achievements.filter((a) => {
     const matchStatus = filterStatus === 'semua' || a.status === filterStatus;

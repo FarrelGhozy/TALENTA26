@@ -4,8 +4,6 @@ import type {
   AchievementProof,
   Competition,
   Consultant,
-  Invite,
-  MatchCandidate,
   Profile,
   RankingResponse,
   Role,
@@ -23,7 +21,6 @@ import {
   ICompetitionService,
   IConsultantService,
   IDashboardService,
-  IMatchingService,
   IRoadmapService,
   IStatsService,
   ISystemService,
@@ -46,12 +43,14 @@ export interface ApiError {
   message: string;
   fieldErrors?: Record<string, string>;
   requestId?: string;
+  retryAfterSeconds?: number;
 }
 
 export class ApiRequestError extends Error {
   public code: string;
   public fieldErrors?: Record<string, string>;
   public status: number;
+  public retryAfterSeconds?: number;
 
   constructor(status: number, error: ApiError) {
     super(error.message || `API Error ${status}`);
@@ -59,29 +58,125 @@ export class ApiRequestError extends Error {
     this.status = status;
     this.code = error.code || 'UNKNOWN_ERROR';
     this.fieldErrors = error.fieldErrors;
+    this.retryAfterSeconds = error.retryAfterSeconds;
   }
 }
 
-// Helper fetcher terpadu dengan standar docs/16
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const headers = new Headers(options.headers || {});
+type UnauthorizedHandler = () => void;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
 
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
+export function registerUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+}
+
+function generateIdempotencyKey(prefix: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}:${crypto.randomUUID()}`;
+  }
+  return `${prefix}:${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function parseRetryAfterSeconds(res: Response, body: any): number | undefined {
+  const fromBody = Number(body?.error?.retryAfterSeconds);
+  if (Number.isFinite(fromBody) && fromBody > 0) return Math.ceil(fromBody);
+  const headerVal = res.headers.get('Retry-After');
+  if (!headerVal) return undefined;
+  const num = Number.parseInt(headerVal, 10);
+  if (Number.isFinite(num) && num > 0) return num;
+  const parsedDate = Date.parse(headerVal);
+  if (Number.isFinite(parsedDate)) {
+    const diff = Math.ceil((parsedDate - Date.now()) / 1000);
+    return diff > 0 ? diff : undefined;
+  }
+  return undefined;
+}
+
+function isAuthBootstrapEndpoint(endpoint: string): boolean {
+  return endpoint.startsWith('/auth/');
+}
+
+// Helper fetcher terpadu dengan standar docs/16, AbortController timeout, & penanganan 429/413/401/offline
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit & { timeoutMs?: number } = {}
+): Promise<T> {
+  const { timeoutMs, ...fetchOptions } = options;
+  const headers = new Headers(fetchOptions.headers || {});
+
+  if (!headers.has('Content-Type') && !(fetchOptions.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  const effectiveTimeout = timeoutMs ?? (fetchOptions.body instanceof FormData ? 60_000 : 20_000);
+  const controller = new AbortController();
+  const externalSignal = fetchOptions.signal;
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  const timer = window.setTimeout(() => controller.abort(), effectiveTimeout);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...fetchOptions,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new ApiRequestError(408, {
+        code: 'REQUEST_TIMEOUT',
+        message: 'Permintaan melebihi batas waktu. Periksa koneksi Anda lalu coba lagi.',
+      });
+    }
+    throw new ApiRequestError(0, {
+      code: 'NETWORK_ERROR',
+      message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.',
+    });
+  } finally {
+    window.clearTimeout(timer);
+  }
 
   const body = await res.json().catch(() => null);
 
   if (!res.ok) {
+    if (res.status === 401 && !isAuthBootstrapEndpoint(endpoint)) {
+      unauthorizedHandler?.();
+    }
+
+    if (res.status === 429) {
+      const retryAfterSeconds = parseRetryAfterSeconds(res, body);
+      const waitMsg = retryAfterSeconds
+        ? `Terlalu banyak permintaan. Coba lagi dalam ${retryAfterSeconds} detik.`
+        : 'Terlalu banyak permintaan. Silakan tunggu sebentar lalu coba lagi.';
+      throw new ApiRequestError(429, {
+        code: body?.error?.code || 'RATE_LIMITED',
+        message: waitMsg,
+        retryAfterSeconds,
+      });
+    }
+
+    if (res.status === 413) {
+      throw new ApiRequestError(413, {
+        code: body?.error?.code || 'PAYLOAD_TOO_LARGE',
+        message: body?.error?.message || 'Ukuran total berkas melebihi batas unggah server.',
+      });
+    }
+
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new ApiRequestError(res.status, {
+        code: body?.error?.code || 'SERVICE_UNAVAILABLE',
+        message:
+          body?.error?.message ||
+          'Layanan sedang sibuk atau dalam pemeliharaan sementara. Silakan coba lagi sebentar.',
+      });
+    }
+
     const apiError: ApiError = body?.error || {
       code: 'HTTP_ERROR',
-      message: body?.message || `API error ${res.status}: ${res.statusText}`,
+      message: body?.message || `Terjadi kesalahan pada server (${res.status}).`,
     };
     throw new ApiRequestError(res.status, apiError);
   }
@@ -109,7 +204,7 @@ function mapBackendUserToFrontend(raw: any): User {
     nama,
     email: raw.email || '',
     nim: profile?.nim ?? undefined,
-    prodi: profile?.studyProgram || (role === 'mahasiswa' ? 'Teknik Informatika' : '-'),
+    prodi: profile?.studyProgram || '',
     fakultas: profile?.faculty ?? undefined,
     angkatan: profile?.enrollmentYear ?? undefined,
     phone: profile?.phone ?? undefined,
@@ -119,8 +214,8 @@ function mapBackendUserToFrontend(raw: any): User {
     role: [role],
     skill: Array.isArray(profile?.skills) ? profile.skills : [],
     minat: Array.isArray(profile?.interests) ? profile.interests : [],
-    ketersediaan: profile?.availability || { hari: ['Senin', 'Rabu'], jam: 4 },
-    peranBisa: Array.isArray(profile?.rolesCapable) ? profile.rolesCapable : ['Anggota'],
+    ketersediaan: profile?.availability || { hari: [], jam: 0 },
+    peranBisa: Array.isArray(profile?.rolesCapable) ? profile.rolesCapable : [],
   };
 }
 
@@ -168,40 +263,6 @@ function mapBackendCompetitionToFrontend(raw: any): Competition {
     competitionCategoryId: raw.competitionCategoryId,
     pointTemplateId: raw.pointTemplateId,
     pointDescription: raw.pointDescription,
-  };
-}
-
-function mapBackendCandidateToFrontend(c: any): MatchCandidate {
-  return {
-    user: {
-      id: c.userId || c.user?.id || '',
-      institutionId: 'unida-gontor',
-      nama: c.nama || c.user?.nama || 'Mahasiswa',
-      email: '', // Zero PII in matching
-      prodi: c.prodi || c.user?.prodi || '',
-      angkatan: c.enrollmentYear || c.user?.angkatan,
-      role: ['mahasiswa'],
-      skill: c.skill || c.user?.skill || [],
-      minat: c.minat || c.user?.minat || [],
-      ketersediaan: c.ketersediaan || c.user?.ketersediaan || { hari: ['Fleksibel'], jam: 4 },
-      peranBisa: c.peranBisa || c.user?.peranBisa || ['Anggota'],
-    },
-    matchScore: c.skorKecocokan ?? c.matchScore ?? 50,
-    labelKesesuaian: c.labelKesesuaian,
-    reasons: c.alasanKecocokan || c.reasons || [],
-    isOverlapTime: true,
-  };
-}
-
-function mapBackendInviteToFrontend(inv: any): Invite {
-  return {
-    id: inv.id,
-    institutionId: 'unida-gontor',
-    dari: inv.senderId || inv.dari,
-    ke: inv.receiverId || inv.ke,
-    teamId: inv.teamId,
-    status: inv.status,
-    createdAt: inv.createdAt ? new Date(inv.createdAt).toISOString().split('T')[0] : '',
   };
 }
 
@@ -323,13 +384,9 @@ export const competitionApiService: ICompetitionService = {
     return Array.isArray(list) ? list.map(mapBackendCompetitionToFrontend) : [];
   },
   getBySlug: async (slug) => {
-    const raw = await apiFetch<any>(`/competitions/${slug}`);
+    const raw = await apiFetch<any>(`/competitions/${encodeURIComponent(slug)}`);
     return raw ? mapBackendCompetitionToFrontend(raw) : null;
   },
-  save: (competition) =>
-    competition.id
-      ? apiFetch(`/admin/competitions/${competition.id}`, { method: 'PATCH', body: JSON.stringify(competition) })
-      : apiFetch('/admin/competitions', { method: 'POST', body: JSON.stringify(competition) }),
 };
 
 export const userApiService: IUserService & {
@@ -397,22 +454,21 @@ export const userApiService: IUserService & {
       body: JSON.stringify({ token, password }),
     }),
   updateProfile: async (_userId, data) => {
-    const payload: Record<string, unknown> = {
-      fullName: data.nama,
-      studyProgram: data.prodi,
-      faculty: data.fakultas || undefined,
-      enrollmentYear:
-        typeof data.angkatan === 'number' && Number.isFinite(data.angkatan)
-          ? data.angkatan
-          : undefined,
-      phone: data.phone ?? '',
-      bio: data.bio ?? '',
-      experience: data.pengalaman ?? '',
-      skills: data.skill,
-      interests: data.minat,
-      availability: data.ketersediaan,
-      rolesCapable: data.peranBisa,
-    };
+    const payload: Record<string, unknown> = {};
+    if (data.nama !== undefined) payload.fullName = data.nama;
+    if (data.prodi !== undefined) payload.studyProgram = data.prodi;
+    if (data.fakultas !== undefined && data.fakultas !== '') payload.faculty = data.fakultas;
+    if (typeof data.angkatan === 'number' && Number.isFinite(data.angkatan)) {
+      payload.enrollmentYear = data.angkatan;
+    }
+    if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.bio !== undefined) payload.bio = data.bio;
+    if (data.pengalaman !== undefined) payload.experience = data.pengalaman;
+    if (data.skill !== undefined) payload.skills = data.skill;
+    if (data.minat !== undefined) payload.interests = data.minat;
+    if (data.ketersediaan !== undefined) payload.availability = data.ketersediaan;
+    if (data.peranBisa !== undefined) payload.rolesCapable = data.peranBisa;
+
     const res = await apiFetch<any>('/me/profile', {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -445,11 +501,24 @@ export const userApiService: IUserService & {
         apiFetch<any>('/me/target').catch(() => null),
       ]);
       if (!raw && !target) return null;
+      const checks = [
+        Boolean(raw?.nim),
+        Boolean(raw?.fullName),
+        Boolean(raw?.studyProgram),
+        Boolean(raw?.faculty),
+        Boolean(raw?.phone),
+        Boolean(raw?.bio),
+        Array.isArray(raw?.skills) && raw.skills.length > 0,
+        Array.isArray(raw?.interests) && raw.interests.length > 0,
+        Boolean(raw?.availability),
+        Boolean(raw?.experience),
+      ];
+      const kelengkapan = raw ? Math.round((checks.filter(Boolean).length / checks.length) * 100) : 0;
       return {
         userId: raw?.userId || userId,
         institutionId: 'unida-gontor',
         targetKompetisiSlug: target?.competition?.slug || target?.competitionSlug || raw?.targetKompetisiSlug || '',
-        kelengkapan: 100,
+        kelengkapan,
       };
     } catch {
       return null;
@@ -461,42 +530,8 @@ export const userApiService: IUserService & {
       userId,
       institutionId: 'unida-gontor',
       targetKompetisiSlug: slug,
-      kelengkapan: 100,
+      kelengkapan: 0,
     };
-  },
-};
-
-export const matchingApiService: IMatchingService = {
-  getMatchCandidates: async (): Promise<MatchCandidate[]> => {
-    const res = await apiFetch<any[]>('/matching/candidates');
-    return Array.isArray(res) ? res.map(mapBackendCandidateToFrontend) : [];
-  },
-  getInvites: async (): Promise<Invite[]> => {
-    const res = await apiFetch<any>('/me/invites');
-    if (Array.isArray(res)) {
-      return res.map(mapBackendInviteToFrontend);
-    }
-    const incoming = Array.isArray(res?.incoming) ? res.incoming : [];
-    const outgoing = Array.isArray(res?.outgoing) ? res.outgoing : [];
-    return [...incoming, ...outgoing].map(mapBackendInviteToFrontend);
-  },
-  sendInvite: async (_dari: string, ke: string, teamId: string): Promise<Invite> => {
-    const res = await apiFetch<any>(`/teams/${teamId}/invites`, {
-      method: 'POST',
-      body: JSON.stringify({ receiverId: ke }),
-    });
-    return mapBackendInviteToFrontend(res);
-  },
-  respondInvite: async (inviteId: string, status: 'diterima' | 'ditolak'): Promise<void> => {
-    await apiFetch(`/invites/${inviteId}/respond`, {
-      method: 'POST',
-      body: JSON.stringify({ action: status }),
-    });
-  },
-  cancelInvite: async (inviteId: string): Promise<void> => {
-    await apiFetch(`/invites/${inviteId}/cancel`, {
-      method: 'POST',
-    });
   },
 };
 
@@ -584,7 +619,7 @@ export const teamApiService: ITeamService = {
 
 export const roadmapApiService: IRoadmapService = {
   getByCompetition: async (slug: string) => {
-    const raw = await apiFetch<any>(`/roadmaps/${slug}`);
+    const raw = await apiFetch<any>(`/roadmaps/${encodeURIComponent(slug)}`);
     if (!raw) return null;
     return {
       competitionSlug: slug,
@@ -592,9 +627,12 @@ export const roadmapApiService: IRoadmapService = {
       fase: raw.fase || [],
     };
   },
-  getChecklist: (_userId, slug) => apiFetch(`/roadmaps/${slug}/checklist`),
+  getChecklist: (_userId, slug) => apiFetch(`/roadmaps/${encodeURIComponent(slug)}/checklist`),
   toggleChecklist: (_userId, slug, taskId) =>
-    apiFetch(`/roadmaps/${slug}/checklist`, { method: 'POST', body: JSON.stringify({ taskId }) }),
+    apiFetch(`/roadmaps/${encodeURIComponent(slug)}/checklist`, {
+      method: 'POST',
+      body: JSON.stringify({ taskId }),
+    }),
 };
 
 function mapBackendAchievementToFrontend(raw: any): Achievement {
@@ -685,27 +723,24 @@ function mapBackendAchievementToFrontend(raw: any): Achievement {
 
 export const achievementApiService: IAchievementService = {
   getAll: async (userId?: string, status?: string): Promise<Achievement[]> => {
+    const statusParam =
+      status && status !== 'semua' ? `?status=${encodeURIComponent(status)}` : '';
     const endpoint = userId
-      ? `/me/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`
-      : `/admin/achievements${status && status !== 'semua' ? `?status=${status}` : ''}`;
+      ? `/me/achievements${statusParam}`
+      : `/admin/achievements${statusParam}`;
     const res = await apiFetch<any[]>(endpoint);
     return Array.isArray(res) ? res.map(mapBackendAchievementToFrontend) : [];
   },
 
-  getById: async (id: string): Promise<Achievement | null> => {
-    try {
-      const res = await apiFetch<any>(`/admin/achievements/${id}`);
-      return mapBackendAchievementToFrontend(res);
-    } catch (err: any) {
-      if (err?.status === 403 || err?.status === 401) {
-        const res = await apiFetch<any>(`/me/achievements/${id}`);
-        return mapBackendAchievementToFrontend(res);
-      }
-      throw err;
-    }
+  getById: async (id: string, scope: 'student' | 'admin' = 'student'): Promise<Achievement | null> => {
+    const encodedId = encodeURIComponent(id);
+    const endpoint = scope === 'admin' ? `/admin/achievements/${encodedId}` : `/me/achievements/${encodedId}`;
+    const res = await apiFetch<any>(endpoint);
+    return mapBackendAchievementToFrontend(res);
   },
 
   create: async (data: any, files?: File[]): Promise<Achievement> => {
+    const idempotencyKey = generateIdempotencyKey('ach-create');
     if (files && files.length > 0) {
       const formData = new FormData();
       formData.append('nama', data.nama || data.name);
@@ -731,6 +766,7 @@ export const achievementApiService: IAchievementService = {
       }
       const res = await apiFetch<any>('/me/achievements', {
         method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
         body: formData,
       });
       return mapBackendAchievementToFrontend(res);
@@ -738,12 +774,15 @@ export const achievementApiService: IAchievementService = {
 
     const res = await apiFetch<any>('/me/achievements', {
       method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
       body: JSON.stringify(data),
     });
     return mapBackendAchievementToFrontend(res);
   },
 
   submitRevision: async (id: string, data: any, files?: File[]): Promise<Achievement> => {
+    const encodedId = encodeURIComponent(id);
+    const idempotencyKey = generateIdempotencyKey(`ach-rev-${id}`);
     if ((files && files.length > 0) || (Array.isArray(data.replaceEvidenceIds) && data.replaceEvidenceIds.length > 0)) {
       const formData = new FormData();
       if (data.nama || data.name) formData.append('nama', data.nama || data.name);
@@ -770,22 +809,24 @@ export const achievementApiService: IAchievementService = {
       for (const f of files || []) {
         formData.append('evidence', f);
       }
-      const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+      const res = await apiFetch<any>(`/me/achievements/${encodedId}/revisions`, {
         method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
         body: formData,
       });
       return mapBackendAchievementToFrontend(res);
     }
 
-    const res = await apiFetch<any>(`/me/achievements/${id}/revisions`, {
+    const res = await apiFetch<any>(`/me/achievements/${encodedId}/revisions`, {
       method: 'POST',
+      headers: { 'Idempotency-Key': idempotencyKey },
       body: JSON.stringify(data),
     });
     return mapBackendAchievementToFrontend(res);
   },
 
   cancel: async (id: string): Promise<Achievement> => {
-    const res = await apiFetch<any>(`/me/achievements/${id}/cancel`, {
+    const res = await apiFetch<any>(`/me/achievements/${encodeURIComponent(id)}/cancel`, {
       method: 'POST',
     });
     return mapBackendAchievementToFrontend(res);
@@ -803,37 +844,44 @@ export const achievementApiService: IAchievementService = {
     else if (statusOrAction === 'perlu_perbaikan') action = 'request_changes';
     else if (statusOrAction === 'ditolak') action = 'reject';
 
-    const res = await apiFetch<any>(`/admin/achievements/${id}/decisions`, {
+    const idemKey = options?.idempotencyKey || generateIdempotencyKey(`ach-dec-${id}`);
+    const res = await apiFetch<any>(`/admin/achievements/${encodeURIComponent(id)}/decisions`, {
       method: 'POST',
+      headers: { 'Idempotency-Key': idemKey },
       body: JSON.stringify({
         action,
         reason: catatan,
         version,
         overridePoints: options?.overridePoints,
         overrideReason: options?.overrideReason,
-        idempotencyKey: options?.idempotencyKey,
+        idempotencyKey: idemKey,
       }),
     });
     return mapBackendAchievementToFrontend(res);
   },
 
   correct: async (id: string, reason: string, version?: number, targetStatus?: string): Promise<Achievement> => {
-    const res = await apiFetch<any>(`/admin/achievements/${id}/corrections`, {
+    const idemKey = generateIdempotencyKey(`ach-cor-${id}`);
+    const res = await apiFetch<any>(`/admin/achievements/${encodeURIComponent(id)}/corrections`, {
       method: 'POST',
+      headers: { 'Idempotency-Key': idemKey },
       body: JSON.stringify({ reason, version, targetStatus }),
     });
     return mapBackendAchievementToFrontend(res);
   },
 
   getEvidenceDownloadUrl: (evidenceId: string): string => {
-    return `${API_BASE_URL}/evidence/${evidenceId}/download`;
+    return `${API_BASE_URL}/evidence/${encodeURIComponent(evidenceId)}/download`;
   },
 
   getCompetitionCategories: () => apiFetch('/competition-categories'),
-  getCompetitionPointConfig: (slug: string) => apiFetch(`/competitions/${slug}/point-rules`),
+  getCompetitionPointConfig: (slug: string) =>
+    apiFetch(`/competitions/${encodeURIComponent(slug)}/point-rules`),
 
   getRanking: async (periodId?: string): Promise<RankingResponse> => {
-    return apiFetch<RankingResponse>(`/ranking${periodId ? `?periodId=${periodId}` : ''}`);
+    return apiFetch<RankingResponse>(
+      `/ranking${periodId ? `?periodId=${encodeURIComponent(periodId)}` : ''}`
+    );
   },
 
   getLifetimeRanking: async (): Promise<RankingResponse> => {
@@ -843,7 +891,7 @@ export const achievementApiService: IAchievementService = {
 
 export const consultantApiService: IConsultantService = {
   getByCompetition: async (slug: string): Promise<Consultant[]> => {
-    const res = await apiFetch<any[]>(`/consultants?slug=${slug}`);
+    const res = await apiFetch<any[]>(`/consultants?slug=${encodeURIComponent(slug)}`);
     return Array.isArray(res) ? res.map(mapBackendConsultantToFrontend) : [];
   },
 };
@@ -1018,13 +1066,49 @@ export const dashboardApiService: IDashboardService = {
     if (filters?.category) params.set('category', filters.category);
 
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetch(`${API_BASE_URL}/admin/export${qs}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 60_000);
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/admin/export${qs}`, {
+        method: 'GET',
+        credentials: 'include',
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new ApiRequestError(408, {
+          code: 'REQUEST_TIMEOUT',
+          message: 'Pengunduhan CSV melebihi batas waktu. Silakan coba lagi.',
+        });
+      }
+      throw new ApiRequestError(0, {
+        code: 'NETWORK_ERROR',
+        message: 'Tidak dapat terhubung ke server saat mengunduh CSV.',
+      });
+    } finally {
+      window.clearTimeout(timer);
+    }
 
     if (!res.ok) {
-      throw new Error(`Gagal mengunduh CSV: status ${res.status}`);
+      if (res.status === 401) {
+        unauthorizedHandler?.();
+      }
+      const errBody = await res.json().catch(() => null);
+      if (res.status === 429) {
+        const retrySec = parseRetryAfterSeconds(res, errBody);
+        throw new ApiRequestError(429, {
+          code: 'RATE_LIMITED',
+          message: retrySec
+            ? `Terlalu banyak permintaan ekspor CSV. Coba lagi dalam ${retrySec} detik.`
+            : 'Terlalu banyak permintaan ekspor CSV. Silakan tunggu sebentar.',
+          retryAfterSeconds: retrySec,
+        });
+      }
+      throw new ApiRequestError(res.status, {
+        code: errBody?.error?.code || 'CSV_EXPORT_ERROR',
+        message: errBody?.error?.message || `Gagal mengunduh CSV (status ${res.status}).`,
+      });
     }
 
     const blob = await res.blob();

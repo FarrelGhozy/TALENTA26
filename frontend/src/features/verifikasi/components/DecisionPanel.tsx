@@ -72,7 +72,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
       }
     }
 
-    if (status === 'ditolak') {
+    if (status === 'ditolak' || status === 'disetujui') {
       setConfirming(status);
       return;
     }
@@ -80,6 +80,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
   };
 
   const handleAction = async (status: 'disetujui' | 'perlu_perbaikan' | 'ditolak') => {
+    if (isLoading) return;
     setConfirming(null);
     const override =
       status === 'disetujui' && isCompetition && enableOverride
@@ -215,7 +216,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
             Konfirmasi Penolakan: Pengajuan yang ditolak tidak akan dihitung sebagai prestasi terverifikasi. Lanjutkan?
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setConfirming(null)}>
+            <Button variant="outline" size="sm" disabled={isLoading} onClick={() => setConfirming(null)}>
               Batal
             </Button>
             <Button
@@ -229,12 +230,37 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
             </Button>
           </div>
         </div>
+      ) : confirming === 'disetujui' ? (
+        <div role="alert" className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950 space-y-3">
+          <p className="font-semibold">
+            Konfirmasi Persetujuan:{' '}
+            {isCompetition
+              ? `Pengajuan ini akan disahkan dan memberikan ${enableOverride ? Number(overridePoints) : (pointRecommendation?.calculatedPoints ?? 0)} poin${isGroup ? ` kepada masing-masing ${participantsCount} anggota kelompok` : ''}.`
+              : 'Pengajuan prestasi non-kompetisi ini akan disahkan (0 poin ranking).'}
+            {' '}Lanjutkan?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" disabled={isLoading} onClick={() => setConfirming(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => handleAction('disetujui')}
+              isLoading={isLoading}
+              leftIcon={<CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />}
+            >
+              Ya, Setujui Prestasi
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
           <Button
             variant="warning-outline"
             size="sm"
             disabled={isLoading}
+            isLoading={isLoading}
             onClick={() => requestAction('perlu_perbaikan')}
             leftIcon={<AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />}
           >
@@ -253,6 +279,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
             size="sm"
             variant="success"
             disabled={isLoading}
+            isLoading={isLoading}
             onClick={() => requestAction('disetujui')}
             leftIcon={<CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />}
           >

@@ -184,15 +184,30 @@ export const CompetitionFormFields: React.FC<CompetitionFormFieldsProps> = ({
                 label="Min. Anggota Tim"
                 type="number"
                 min={1}
+                max={20}
                 value={String(form.minTeamMembers)}
-                onChange={(e) => updateField('minTeamMembers', Number(e.target.value))}
+                onChange={(e) => {
+                  const nextMin = Math.max(1, Math.min(20, Math.floor(Number(e.target.value) || 1)));
+                  onChange({
+                    ...form,
+                    minTeamMembers: nextMin,
+                    maxTeamMembers: Math.max(nextMin, form.maxTeamMembers),
+                  });
+                }}
               />
               <Input
                 label="Maks. Anggota Tim"
                 type="number"
-                min={1}
+                min={Math.max(1, form.minTeamMembers)}
+                max={20}
                 value={String(form.maxTeamMembers)}
-                onChange={(e) => updateField('maxTeamMembers', Number(e.target.value))}
+                onChange={(e) => {
+                  const nextMax = Math.max(
+                    form.minTeamMembers,
+                    Math.min(20, Math.floor(Number(e.target.value) || form.minTeamMembers))
+                  );
+                  updateField('maxTeamMembers', nextMax);
+                }}
               />
             </div>
           )}
@@ -246,17 +261,14 @@ export const CompetitionFormFields: React.FC<CompetitionFormFieldsProps> = ({
                 </span>
               </label>
 
-              <label className="inline-flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-xl bg-white border border-slate-200 cursor-pointer hover:border-blue-300 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={form.singleTeamPerCompetition}
-                  onChange={(e) => updateField('singleTeamPerCompetition', e.target.checked)}
-                  className="accent-blue-700 w-4 h-4"
-                />
-                <span className="font-semibold text-slate-700">
-                  Batas satu tim aktif per cabang
+              <div
+                className="inline-flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-xl bg-slate-50 border border-slate-200 text-slate-600"
+                title="Rilis pertama menerapkan 1 tim aktif per kompetisi per mahasiswa"
+              >
+                <span className="font-semibold">
+                  Batas 1 tim aktif per mahasiswa (aturan tetap rilis pertama)
                 </span>
-              </label>
+              </div>
             </div>
           </div>
         )}

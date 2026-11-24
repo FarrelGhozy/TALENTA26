@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, GraduationCap, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -7,8 +7,15 @@ import { Select } from '../../components/ui/Select';
 import { useAuth } from './AuthContext';
 
 export const RegisterPage: React.FC = () => {
-  const { registerMahasiswa, isLoading } = useAuth();
+  const { currentUser, currentRole, registerMahasiswa, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && currentUser) {
+      const target = currentRole === 'mahasiswa' ? '/app/beranda' : '/admin';
+      navigate(target, { replace: true });
+    }
+  }, [isLoading, currentUser, currentRole, navigate]);
 
   const [formData, setFormData] = useState({
     nim: '',
@@ -61,14 +68,25 @@ export const RegisterPage: React.FC = () => {
     setGeneralError('');
     setFieldErrors({});
 
-    // Validasi lokal
+    // Validasi lokal selaras dengan aturan backend
     const errors: Record<string, string> = {};
-    if (!formData.nim.trim()) errors.nim = 'NIM wajib diisi';
-    if (!formData.fullName.trim()) errors.fullName = 'Nama lengkap wajib diisi';
-    if (!formData.email.trim()) errors.email = 'Email wajib diisi';
-    if (formData.password.length < 8) errors.password = 'Password minimal 8 karakter';
+    const trimmedNim = formData.nim.trim();
+    const trimmedName = formData.fullName.trim();
+    const trimmedEmail = formData.email.trim();
+    if (trimmedNim.length < 5 || trimmedNim.length > 32) {
+      errors.nim = 'NIM harus terdiri dari 5–32 karakter';
+    }
+    if (trimmedName.length < 2 || trimmedName.length > 150) {
+      errors.fullName = 'Nama lengkap minimal 2 karakter';
+    }
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = 'Format email tidak valid';
+    }
+    if (formData.password.length < 8 || formData.password.length > 128) {
+      errors.password = 'Kata sandi harus 8–128 karakter';
+    }
     if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Konfirmasi password tidak cocok';
+      errors.confirmPassword = 'Konfirmasi kata sandi tidak cocok';
     }
 
     if (Object.keys(errors).length > 0) {

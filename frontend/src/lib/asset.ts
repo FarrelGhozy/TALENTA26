@@ -6,6 +6,7 @@
 export const assetUrl = (path?: string): string => {
   if (!path) return '';
   if (/^(https?:|data:|blob:)/.test(path)) return path;
+  if (path.startsWith('/api/')) return path;
   const base = import.meta.env.BASE_URL || '/';
   const clean = path.replace(/^\/+/, '');
   return `${base}${clean}`;

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Competition } from '../../types';
 import { competitionService } from '@talenta/services';
+import { useAuth } from '../auth/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -48,12 +49,29 @@ const heroSlides = [
 ];
 
 export const LandingPage: React.FC = () => {
+  const { currentUser, currentRole } = useAuth();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  const loadCompetitions = React.useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const list = await competitionService.getAll();
+      setCompetitions([...list].sort((a, b) => a.namaResmi.localeCompare(b.namaResmi)).slice(0, 3));
+    } catch (err: any) {
+      setLoadError(err?.message || 'Gagal memuat daftar kompetisi.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
     competitionService
       .getAll()
       .then((list) => {
@@ -61,13 +79,28 @@ export const LandingPage: React.FC = () => {
         setCompetitions([...list].sort((a, b) => a.namaResmi.localeCompare(b.namaResmi)).slice(0, 3));
         setLoading(false);
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
+      .catch((err: any) => {
+        if (!cancelled) {
+          setLoadError(err?.message || 'Gagal memuat daftar kompetisi.');
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const portalTarget = currentUser
+    ? currentRole === 'mahasiswa'
+      ? '/app/beranda'
+      : '/admin'
+    : '/masuk';
+  const teamDirectoryTarget =
+    currentUser && currentRole === 'mahasiswa'
+      ? '/app/tim?tab=cari'
+      : currentUser
+        ? '/admin/konten'
+        : '/masuk?redirect=%2Fapp%2Ftim%3Ftab%3Dcari';
 
   // Subtle auto-advance for the aesthetic hero slider
   useEffect(() => {
@@ -155,13 +188,13 @@ export const LandingPage: React.FC = () => {
 
                 {/* Secondary Button */}
                 <Link
-                  to="/masuk"
+                  to={portalTarget}
                   className="inline-flex items-center justify-center gap-2 px-3 py-2 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur-md border border-white/25 hover:border-white/40 active:scale-[0.98] transition-all group/demo"
                 >
                   <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border border-white/40 flex items-center justify-center bg-white/10 group-hover/demo:bg-white/25 transition-colors shrink-0">
-                    <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" />
+                    <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" aria-hidden="true" />
                   </span>
-                  <span className="truncate">Masuk Portal</span>
+                  <span className="truncate">{currentUser ? 'Buka Portal' : 'Masuk Portal'}</span>
                 </Link>
               </div>
             </div>
@@ -210,7 +243,7 @@ export const LandingPage: React.FC = () => {
                 href="#alur-section"
                 className="hidden sm:flex items-center gap-2 text-[10px] font-bold tracking-[0.22em] text-white/60 hover:text-white uppercase border-l border-white/25 pl-4 transition-colors"
               >
-                <span>Scroll to explore</span>
+                <span>Gulir ke bawah</span>
               </a>
             </div>
 
@@ -373,9 +406,9 @@ export const LandingPage: React.FC = () => {
               </span>
             </div>
             <div className="pt-4">
-              <Link to="/app/tim?tab=cari">
+              <Link to={teamDirectoryTarget}>
                 <Button size="md" variant="white" rightIcon={<ArrowRight className="w-4 h-4" aria-hidden="true" />}>
-                  Jelajahi Direktori Tim
+                  {currentUser && currentRole !== 'mahasiswa' ? 'Kelola Lomba & Tim' : 'Jelajahi Direktori Tim'}
                 </Button>
               </Link>
             </div>
@@ -457,7 +490,18 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <PageLoading message="Memuat preview kompetisi..." />
+          <PageLoading message="Memuat pratinjau kompetisi..." />
+        ) : loadError ? (
+          <div role="alert" className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-3">
+            <p className="text-xs font-semibold text-rose-800">{loadError}</p>
+            <Button size="sm" variant="outline" onClick={loadCompetitions}>
+              Coba Muat Ulang
+            </Button>
+          </div>
+        ) : competitions.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+            Belum ada kompetisi terbit saat ini.
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {competitions.map((comp) => (
@@ -526,9 +570,9 @@ export const LandingPage: React.FC = () => {
           Buktikan kemampuan dan bawa nama harum kampus di ajang kompetisi nasional. Gabung ke TALENTA, bentuk tim juara, dan raih prestasi gemilang.
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-3">
-          <Link to="/masuk">
+          <Link to={portalTarget}>
             <Button size="lg" variant="white">
-              Masuk ke Portal TALENTA
+              {currentUser ? 'Buka Portal TALENTA' : 'Masuk ke Portal TALENTA'}
             </Button>
           </Link>
           <Link to="/kompetisi">

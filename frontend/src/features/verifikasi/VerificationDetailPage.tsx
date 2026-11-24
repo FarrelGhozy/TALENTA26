@@ -26,6 +26,21 @@ import { PageLoading } from '../../components/ui/Skeleton';
 import { UserAvatar } from '../../components/ui/UserAvatar';
 import { useAdminNav } from '../admin/AdminNavContext';
 
+function formatDecisionAction(action?: string): string {
+  switch ((action || '').toLowerCase()) {
+    case 'approve':
+      return 'Disetujui';
+    case 'request_changes':
+      return 'Diminta Perbaikan';
+    case 'reject':
+      return 'Ditolak';
+    case 'correct':
+      return 'Koreksi Keputusan';
+    default:
+      return action || 'Keputusan';
+  }
+}
+
 export const VerificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -33,27 +48,36 @@ export const VerificationDetailPage: React.FC = () => {
   const { refreshNavCounts } = useAdminNav();
   const [achievement, setAchievement] = useState<Achievement | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [correctionReason, setCorrectionReason] = useState('');
   const [correctionTarget, setCorrectionTarget] = useState<'ditolak' | 'perlu_perbaikan'>('ditolak');
 
-  const loadData = () => {
+  const loadData = (isCancelled?: () => boolean) => {
     if (!id) return;
     setLoading(true);
+    setLoadError(null);
     achievementService
-      .getById(id)
+      .getById(id, 'admin')
       .then((data) => {
+        if (isCancelled?.()) return;
         setAchievement(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err: any) => {
+        if (isCancelled?.()) return;
+        setLoadError(err?.message || 'Gagal memuat berkas pengajuan prestasi.');
         setLoading(false);
       });
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    loadData(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -115,13 +139,20 @@ export const VerificationDetailPage: React.FC = () => {
   };
 
   if (loading) return <PageLoading message="Memuat berkas pengajuan..." />;
-  if (!achievement) {
+  if (loadError || !achievement) {
     return (
       <div className="p-12 text-center space-y-4">
-        <p role="alert" className="text-rose-500 text-xs font-semibold">Data pengajuan tidak ditemukan.</p>
-        <Link to="/admin/prestasi" className="text-sm font-bold text-blue-700 underline">
-          Kembali ke antrean verifikasi
-        </Link>
+        <p role="alert" className="text-rose-500 text-xs font-semibold">
+          {loadError || 'Data pengajuan tidak ditemukan.'}
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button size="sm" variant="primary" onClick={() => loadData()}>
+            Muat Ulang
+          </Button>
+          <Link to="/admin/prestasi">
+            <Button size="sm" variant="outline">Kembali ke Antrean</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -457,7 +488,7 @@ export const VerificationDetailPage: React.FC = () => {
               <div key={d.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                 <div className="flex flex-wrap justify-between gap-2">
                   <strong className="text-slate-900">
-                    {d.action.toUpperCase()} • {d.decidedBy?.fullName || 'Validator'}
+                    {formatDecisionAction(d.action)} • {d.decidedBy?.fullName || 'Validator'}
                   </strong>
                   <span className="text-[11px] text-slate-400">{formatDate(d.createdAt)}</span>
                 </div>

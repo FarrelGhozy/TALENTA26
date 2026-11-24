@@ -55,31 +55,75 @@ export const PreparationHubPage: React.FC = () => {
   const [switchCandidate, setSwitchCandidate] = useState<Competition | null>(null);
   const [switchingSlug, setSwitchingSlug] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    if (!currentUser) return;
-    try {
-      setLoadError('');
-      const [dash, prof, hist, team, comps] = await Promise.all([
-        dashboardService.getStudentDashboard().catch(() => null),
-        userService.getProfile(currentUser.id).catch(() => null),
-        userService.getTargetHistory ? userService.getTargetHistory().catch(() => []) : Promise.resolve([]),
-        teamService.getTeamByUserId(currentUser.id).catch(() => null),
-        competitionService.getAll(),
-      ]);
-      setDashboard(dash);
-      setActiveTargetSlug(dash?.targetCompetition?.slug || prof?.targetKompetisiSlug || '');
-      setHistoryRows(Array.isArray(hist) ? hist : []);
-      setActiveTeam(team && team.status !== 'arsip' ? team : null);
-      setCompetitions(comps);
-    } catch (err: any) {
-      setLoadError(err?.message || 'Gagal memuat daftar ruang persiapan.');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser]);
+  const loadData = useCallback(
+    async (isCancelled?: () => boolean) => {
+      if (!currentUser) return;
+      try {
+        setLoadError('');
+        // Hemat waterfall: gunakan getStudentDashboard() sebagai sumber target & tim aktif (fallback bila mode mock)
+        const [dash, hist, comps] = await Promise.all([
+          dashboardService.getStudentDashboard().catch(() => null),
+          userService.getTargetHistory ? userService.getTargetHistory().catch(() => []) : Promise.resolve([]),
+          competitionService.getAll(),
+        ]);
+        if (isCancelled?.()) return;
+
+        let resolvedTargetSlug = dash?.targetCompetition?.slug || '';
+        let resolvedTeam: Team | null = null;
+
+        if (dash?.activeTeam && dash.activeTeam.status !== 'arsip') {
+          const rawT = dash.activeTeam;
+          resolvedTeam = {
+            id: rawT.id,
+            institutionId: 'unida-gontor',
+            competitionSlug: rawT.competition?.slug || '',
+            nama: rawT.name || '',
+            leaderId: rawT.leaderId,
+            isLeader: rawT.isLeader,
+            status: rawT.status,
+            isFormed: rawT.status === 'terbentuk' || rawT.status === 'terkunci_seleksi',
+            readiness: rawT.readiness || null,
+            anggota: Array.isArray(rawT.members)
+              ? rawT.members.map((m: any) => ({
+                  userId: m.userId,
+                  status: 'diterima' as const,
+                  roleInTeam: m.roleInTeam || 'Anggota',
+                  nama: m.user?.studentProfile?.fullName || 'Mahasiswa',
+                  prodi: m.user?.studentProfile?.studyProgram || '',
+                }))
+              : [],
+          };
+        } else if (!dash) {
+          const [prof, team] = await Promise.all([
+            userService.getProfile(currentUser.id).catch(() => null),
+            teamService.getTeamByUserId(currentUser.id).catch(() => null),
+          ]);
+          if (isCancelled?.()) return;
+          resolvedTargetSlug = prof?.targetKompetisiSlug || '';
+          resolvedTeam = team && team.status !== 'arsip' ? team : null;
+        }
+
+        setDashboard(dash);
+        setActiveTargetSlug(resolvedTargetSlug);
+        setHistoryRows(Array.isArray(hist) ? hist : []);
+        setActiveTeam(resolvedTeam);
+        setCompetitions(comps);
+      } catch (err: any) {
+        if (isCancelled?.()) return;
+        setLoadError(err?.message || 'Gagal memuat daftar ruang persiapan.');
+      } finally {
+        if (!isCancelled?.()) setLoading(false);
+      }
+    },
+    [currentUser]
+  );
 
   useEffect(() => {
-    void loadData();
+    let cancelled = false;
+    void loadData(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   const activeCompetition = useMemo(
@@ -126,6 +170,7 @@ export const PreparationHubPage: React.FC = () => {
   };
 
   const handleChooseCompetition = (comp: Competition) => {
+    if (switchingSlug) return;
     if (comp.slug === activeTargetSlug) {
       navigate(`/app/kompetisi/${comp.slug}/persiapan`);
       return;
@@ -393,6 +438,7 @@ export const PreparationHubPage: React.FC = () => {
                       size="sm"
                       variant="outline"
                       isLoading={switchingSlug === competition.slug}
+                      disabled={Boolean(switchingSlug)}
                       onClick={() => handleChooseCompetition(competition)}
                       rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}
                     >
@@ -455,6 +501,7 @@ export const PreparationHubPage: React.FC = () => {
                       size="sm"
                       variant="outline"
                       isLoading={switchingSlug === comp.slug}
+                      disabled={Boolean(switchingSlug)}
                       onClick={() => handleChooseCompetition(comp)}
                       rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}
                     >

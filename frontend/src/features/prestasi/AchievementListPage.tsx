@@ -28,6 +28,7 @@ export const AchievementListPage: React.FC = () => {
   const { notify } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const rawStatus = searchParams.get('status') as StatusFilter | null;
   const initialStatus: StatusFilter =
@@ -57,26 +58,35 @@ export const AchievementListPage: React.FC = () => {
   const [cancelTarget, setCancelTarget] = useState<Achievement | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const fetchAchievements = () => {
+  const fetchAchievements = (isCancelled?: () => boolean) => {
     if (!currentUser) return;
+    setLoading(true);
+    setLoadError(null);
     achievementService
       .getAll(currentUser.id)
       .then((data) => {
+        if (isCancelled?.()) return;
         setAchievements(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err: any) => {
+        if (isCancelled?.()) return;
+        setLoadError(err?.message || 'Gagal memuat daftar prestasi.');
         setLoading(false);
       });
   };
 
   useEffect(() => {
-    fetchAchievements();
+    let cancelled = false;
+    fetchAchievements(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   const handleConfirmCancel = async () => {
-    if (!cancelTarget || !achievementService.cancel) return;
+    if (cancelling || !cancelTarget || !achievementService.cancel) return;
     setCancelling(true);
     try {
       await achievementService.cancel(cancelTarget.id);
@@ -91,6 +101,16 @@ export const AchievementListPage: React.FC = () => {
   };
 
   if (loading) return <PageLoading message="Memuat rekap data prestasi..." />;
+  if (loadError) {
+    return (
+      <div className="p-10 text-center space-y-4 bg-white rounded-2xl border border-rose-200">
+        <p role="alert" className="text-xs font-semibold text-rose-700">{loadError}</p>
+        <Button size="sm" variant="outline" onClick={() => fetchAchievements()}>
+          Muat Ulang
+        </Button>
+      </div>
+    );
+  }
 
   const verifiedCount = achievements.filter((a) => a.status === 'disetujui').length;
   const pendingCount = achievements.filter((a) => a.status === 'menunggu').length;

@@ -27,7 +27,7 @@ export const DeleteCompetitionModal: React.FC<DeleteCompetitionModalProps> = ({
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  const loadPreview = async (item: ValidatorCompetitionItem) => {
+  const loadPreview = async (item: ValidatorCompetitionItem, isCancelled?: () => boolean) => {
     setPreview(null);
     setError('');
     setConfirmText('');
@@ -35,23 +35,29 @@ export const DeleteCompetitionModal: React.FC<DeleteCompetitionModalProps> = ({
     setLoading(true);
     try {
       const res = await validatorContentService.getCompetitionDeletePreview(item.id);
+      if (isCancelled?.()) return;
       setPreview(res);
     } catch (err: any) {
+      if (isCancelled?.()) return;
       setError(err?.message || 'Gagal memuat pratinjau dampak penghapusan lomba.');
     } finally {
-      setLoading(false);
+      if (!isCancelled?.()) setLoading(false);
     }
   };
 
   useEffect(() => {
+    let cancelled = false;
     if (target) {
-      void loadPreview(target);
+      void loadPreview(target, () => cancelled);
     } else {
       setPreview(null);
       setError('');
       setConfirmText('');
       setLoading(false);
     }
+    return () => {
+      cancelled = true;
+    };
   }, [target?.id]);
 
   const handleClose = () => {
@@ -60,7 +66,7 @@ export const DeleteCompetitionModal: React.FC<DeleteCompetitionModalProps> = ({
   };
 
   const handleConfirm = async () => {
-    if (!target || !validatorContentService.deleteCompetition) return;
+    if (deleting || !target || !validatorContentService.deleteCompetition) return;
     if (preview?.requiresTypedConfirmation && confirmText.trim().toUpperCase() !== 'HAPUS') {
       return;
     }

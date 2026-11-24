@@ -61,7 +61,9 @@ export const ProfilePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [currentUser]);
+    // Sengaja bergantung pada currentUser?.id agar refreshUser() pasca unggah avatar tidak menimpa isian form yang belum disimpan
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   const handleUserChange = (field: keyof User, val: unknown) => {
     setUserData((prev) => ({ ...prev, [field]: val }));
@@ -142,6 +144,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleSaveProfileOnly = async () => {
+    if (saving) return;
     const err = validateStep(step);
     if (err) {
       setFormError(err);
@@ -164,7 +167,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   const executeSaveAll = async () => {
-    if (!currentUser) return;
+    if (saving || !currentUser) return;
     setSaving(true);
     setConfirmSwitchOpen(false);
     setFormError('');

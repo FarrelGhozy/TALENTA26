@@ -97,7 +97,11 @@ export const CompetitionPointsTab: React.FC<CompetitionPointsTabProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validatorContentService.saveCompetitionPointConfig) return;
+    if (saving || !validatorContentService.saveCompetitionPointConfig) return;
+    if (customRules.some((r) => !Number.isInteger(Number(r.points)) || Number(r.points) < 0)) {
+      notify('Nilai poin pada aturan khusus harus berupa bilangan bulat >= 0.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       await validatorContentService.saveCompetitionPointConfig(competition.id, {
@@ -180,7 +184,11 @@ export const CompetitionPointsTab: React.FC<CompetitionPointsTabProps> = ({
           <Select
             label="Jenis / Rumpun Lomba"
             value={competitionCategoryId}
-            onChange={(e) => setCompetitionCategoryId(e.target.value)}
+            onChange={(e) => {
+              const nextCat = e.target.value;
+              setCompetitionCategoryId(nextCat);
+              setCustomRules((prev) => prev.map((r) => ({ ...r, subCategoryId: '' })));
+            }}
             options={[
               { value: '', label: 'Pilih Jenis Lomba...' },
               ...categories.map((c) => ({

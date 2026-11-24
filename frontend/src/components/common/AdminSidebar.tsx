@@ -166,16 +166,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   showCloseButton = false,
   onClose,
 }) => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, currentRole, logout } = useAuth();
   const { counts } = useAdminNav();
   const location = useLocation();
   const navigate = useNavigate();
+  const isSuperAdmin = currentRole === 'super_admin';
 
   const cleanPath = stripBasePath(location.pathname);
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   const groups: SidebarGroup[] = useMemo(
-    () => [
+    () => {
+      const baseGroups: SidebarGroup[] = [
       {
         id: 'prestasi',
         label: 'Validasi Prestasi',
@@ -283,8 +285,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           },
         ],
       },
-    ],
-    [counts]
+    ];
+      return isSuperAdmin ? baseGroups : baseGroups.filter((g) => g.id !== 'sistem');
+    },
+    [counts, isSuperAdmin]
   );
 
   // Grup yang aktif pada rute saat ini otomatis terbuka

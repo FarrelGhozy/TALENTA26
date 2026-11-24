@@ -78,6 +78,15 @@ export const CompetitionRoadmapTab: React.FC<CompetitionRoadmapTabProps> = ({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+    if (phases.some((p) => !p.title.trim())) {
+      notify('Semua fase roadmap wajib memiliki judul.', 'error');
+      return;
+    }
+    if (phases.some((p) => (p.tasks || []).some((t) => !t.title.trim()))) {
+      notify('Semua butir tugas roadmap wajib memiliki judul.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const normalized = phases.map((p, pIdx) => ({

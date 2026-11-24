@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Role, User } from '../../types';
 import { getItem, setItem } from '../../lib/storage';
-import { userService } from '@talenta/services';
+import { registerUnauthorizedHandler, userService } from '@talenta/services';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -42,6 +42,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     loadUser();
+  }, []);
+
+  // Tangani sesi kedaluwarsa (401) secara global agar user terproteksi diarahkan kembali ke /masuk
+  useEffect(() => {
+    registerUnauthorizedHandler(() => {
+      localStorage.removeItem('talenta-user-id');
+      localStorage.removeItem('talenta-role');
+      setCurrentUser(null);
+      setCurrentRole('mahasiswa');
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      const isProtected =
+        window.location.pathname.startsWith('/app') ||
+        window.location.pathname.startsWith('/admin');
+      if (isProtected && !window.location.pathname.startsWith('/masuk')) {
+        window.location.assign(
+          `/masuk?redirect=${encodeURIComponent(currentPath)}&reason=session_expired`
+        );
+      }
+    });
+    return () => registerUnauthorizedHandler(null);
   }, []);
 
   const loginAsRole = async (role: Role, userId?: string) => {

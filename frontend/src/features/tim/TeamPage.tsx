@@ -85,60 +85,78 @@ export const TeamPage: React.FC = () => {
     });
   };
 
-  const loadData = useCallback(async () => {
-    if (!currentUser) return;
-    try {
-      setLoadError('');
-      const [t, prof, dirRes, reqsRes] = await Promise.all([
-        teamService.getTeamByUserId(currentUser.id),
-        userService.getProfile(currentUser.id).catch(() => null),
-        teamService.getDirectory
-          ? teamService
-              .getDirectory({ competitionSlug: competitionSlugParam })
-              .catch(() => ({ competition: null, teams: [], myActiveTeamId: null }))
-          : Promise.resolve({ competition: null, teams: [], myActiveTeamId: null }),
-        teamService.getMyJoinRequests
-          ? teamService.getMyJoinRequests().catch(() => [])
-          : Promise.resolve([]),
-      ]);
+  const loadData = useCallback(
+    async (isCancelled?: () => boolean) => {
+      if (!currentUser) return;
+      try {
+        setLoadError('');
+        const [t, prof, dirRes, reqsRes] = await Promise.all([
+          teamService.getTeamByUserId(currentUser.id),
+          userService.getProfile(currentUser.id).catch(() => null),
+          teamService.getDirectory
+            ? teamService
+                .getDirectory({ competitionSlug: competitionSlugParam })
+                .catch(() => ({ competition: null, teams: [], myActiveTeamId: null }))
+            : Promise.resolve({ competition: null, teams: [], myActiveTeamId: null }),
+          teamService.getMyJoinRequests
+            ? teamService.getMyJoinRequests().catch(() => [])
+            : Promise.resolve([]),
+        ]);
+        if (isCancelled?.()) return;
 
-      setTeam(t);
-      setDirectoryCompetition(dirRes.competition);
-      setDirectoryTeams(dirRes.teams);
-      setMyActiveTeamId(dirRes.myActiveTeamId ?? t?.id ?? null);
-      setMyRequests(reqsRes);
+        setTeam(t);
+        setDirectoryCompetition(dirRes.competition);
+        setDirectoryTeams(dirRes.teams);
+        setMyActiveTeamId(dirRes.myActiveTeamId ?? t?.id ?? null);
+        setMyRequests(reqsRes);
 
-      if (t) {
-        const comp = await competitionService
-          .getBySlug(t.competitionSlug)
-          .catch(() => t.competitionDetail ?? null);
-        setCompetition(comp || t.competitionDetail || null);
-      } else {
-        setCompetition(null);
+        // Manfaatkan competitionDetail dari /teams/my & /teams/directory sebelum melakukan fetch tambahan
+        let resolvedTeamComp: Competition | null = null;
+        if (t) {
+          resolvedTeamComp =
+            t.competitionDetail ||
+            (dirRes.competition?.slug === t.competitionSlug ? dirRes.competition : null) ||
+            (await competitionService.getBySlug(t.competitionSlug).catch(() => null));
+        }
+        if (isCancelled?.()) return;
+        setCompetition(resolvedTeamComp);
+
+        let resolvedTargetComp: Competition | null = null;
+        if (prof?.targetKompetisiSlug) {
+          if (dirRes.competition?.slug === prof.targetKompetisiSlug) {
+            resolvedTargetComp = dirRes.competition;
+          } else if (resolvedTeamComp?.slug === prof.targetKompetisiSlug) {
+            resolvedTargetComp = resolvedTeamComp;
+          } else {
+            resolvedTargetComp = await competitionService
+              .getBySlug(prof.targetKompetisiSlug)
+              .catch(() => null);
+          }
+        }
+        if (isCancelled?.()) return;
+        setTargetCompetition(resolvedTargetComp);
+      } catch (err: unknown) {
+        if (isCancelled?.()) return;
+        setLoadError(
+          err instanceof Error ? err.message : 'Gagal memuat data tim. Coba muat ulang.',
+        );
+      } finally {
+        if (!isCancelled?.()) setLoading(false);
       }
-
-      if (prof?.targetKompetisiSlug) {
-        const targetComp = await competitionService
-          .getBySlug(prof.targetKompetisiSlug)
-          .catch(() => null);
-        setTargetCompetition(targetComp);
-      } else {
-        setTargetCompetition(null);
-      }
-    } catch (err: unknown) {
-      setLoadError(
-        err instanceof Error ? err.message : 'Gagal memuat data tim. Coba muat ulang.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser, competitionSlugParam]);
+    },
+    [currentUser, competitionSlugParam],
+  );
 
   useEffect(() => {
-    void loadData();
+    let cancelled = false;
+    void loadData(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   const handleCreateTeam = async (teamName: string, options: CreateTeamOptions) => {
+    if (creatingTeam) return;
     const activeComp = targetCompetition || directoryCompetition;
     if (!currentUser || !activeComp) return;
     setCreatingTeam(true);

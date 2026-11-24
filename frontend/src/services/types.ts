@@ -4,8 +4,6 @@ import {
   CompetitionCategoryItem,
   CompetitionPointRuleItem,
   Consultant,
-  Invite,
-  MatchCandidate,
   Profile,
   RankingResponse,
   Roadmap,
@@ -19,7 +17,6 @@ import {
 export interface ICompetitionService {
   getAll(): Promise<Competition[]>;
   getBySlug(slug: string): Promise<Competition | null>;
-  save(competition: Competition): Promise<void>;
 }
 
 export interface IUserService {
@@ -38,14 +35,6 @@ export interface IUserService {
   logout?(): Promise<void>;
   forgotPassword?(email: string): Promise<{ message: string }>;
   resetPassword?(token: string, pass: string): Promise<{ message: string }>;
-}
-
-export interface IMatchingService {
-  getMatchCandidates(userId: string): Promise<MatchCandidate[]>;
-  getInvites(userId: string): Promise<Invite[]>;
-  sendInvite(dari: string, ke: string, teamId: string): Promise<Invite>;
-  respondInvite(inviteId: string, status: 'diterima' | 'ditolak'): Promise<void>;
-  cancelInvite?(inviteId: string): Promise<void>;
 }
 
 export interface CreateTeamOptions {
@@ -100,7 +89,7 @@ export interface IRoadmapService {
 
 export interface IAchievementService {
   getAll(userId?: string, status?: string): Promise<Achievement[]>;
-  getById(id: string): Promise<Achievement | null>;
+  getById(id: string, scope?: 'student' | 'admin'): Promise<Achievement | null>;
   create(data: any, files?: File[]): Promise<Achievement>;
   submitRevision?(id: string, data: any, files?: File[]): Promise<Achievement>;
   cancel?(id: string): Promise<Achievement>;

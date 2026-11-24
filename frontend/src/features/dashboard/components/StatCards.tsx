@@ -22,9 +22,9 @@ export const StatCards: React.FC<{ stats: AdminStats }> = ({ stats }) => {
       icon: ShieldCheck,
     },
     {
-      label: 'Prestasi Sah & Masuk SK',
+      label: 'Prestasi Disetujui',
       value: stats.pengajuanPrestasi.disetujui,
-      sub: `Dari total ${stats.pengajuanPrestasi.total} berkas`,
+      sub: `Dari total ${stats.pengajuanPrestasi.total} pengajuan`,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50 border-emerald-100 text-emerald-600',
       icon: Award,

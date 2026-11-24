@@ -8,12 +8,14 @@ interface RoadmapChecklistProps {
   fase: RoadmapPhase[];
   checklist: Record<string, boolean>;
   onToggle: (taskId: string) => void;
+  busyTaskId?: string | null;
 }
 
 export const RoadmapChecklist: React.FC<RoadmapChecklistProps> = ({
   fase,
   checklist,
   onToggle,
+  busyTaskId = null,
 }) => {
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
 
@@ -104,9 +106,10 @@ export const RoadmapChecklist: React.FC<RoadmapChecklistProps> = ({
                           <input
                             type="checkbox"
                             checked={isChecked}
+                            disabled={Boolean(busyTaskId)}
                             onChange={() => onToggle(taskId)}
                             aria-label={`Tandai selesai: ${lat}`}
-                            className="mt-0.5 rounded text-blue-700 focus:ring-blue-600 w-4 h-4 cursor-pointer shrink-0"
+                            className="mt-0.5 rounded text-blue-700 focus:ring-blue-600 w-4 h-4 cursor-pointer disabled:opacity-50 shrink-0"
                           />
                           <span className={`leading-relaxed ${isChecked ? 'line-through text-slate-400 font-normal' : 'font-medium'}`}>
                             {lat}

@@ -11,6 +11,8 @@ import {
 import { AdminStats } from '../../services/types';
 import { statsService, competitionService, dashboardService } from '@talenta/services';
 import { Competition } from '../../types';
+import { useAuth } from '../auth/AuthContext';
+import { useAdminNav } from '../admin/AdminNavContext';
 import { ScopeBanner } from './components/ScopeBanner';
 import { StatCards } from './components/StatCards';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
@@ -20,6 +22,8 @@ import { PageLoading } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
 
 export const AdminDashboardPage: React.FC = () => {
+  const { currentRole } = useAuth();
+  const { rawDashboard: sharedRawDashboard, loadingCounts } = useAdminNav();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [rawDashboard, setRawDashboard] = useState<any>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -29,30 +33,68 @@ export const AdminDashboardPage: React.FC = () => {
   const [exportCategory, setExportCategory] = useState('');
   const [exporting, setExporting] = useState(false);
   const { notify } = useToast();
+  const isSuperAdmin = currentRole === 'super_admin';
 
   useEffect(() => {
+    if (loadingCounts) return;
     let cancelled = false;
-    Promise.all([
-      statsService.getAdminStats(),
-      competitionService.getAll(),
-      dashboardService.getAdminDashboard().catch(() => null),
-    ])
-      .then(([s, comps, rawDash]) => {
+
+    const mapRawToStats = (raw: any): AdminStats => {
+      const queue = raw?.queue || {};
+      const teams = raw?.teams || {};
+      const users = raw?.users || {};
+      const totalPengajuan =
+        (queue.pendingVerifications || 0) +
+        (queue.revisionNeededCount || 0) +
+        (queue.approvedCount || 0) +
+        (queue.rejectedCount || 0);
+      return {
+        totalMahasiswa: users.totalStudents || 0,
+        pesertaPerKompetisi: raw?.distribution?.participantsByCompetition || {},
+        totalTimTerbentuk: teams.terbentuk || 0,
+        pengajuanPrestasi: {
+          total: totalPengajuan,
+          menunggu: queue.pendingVerifications || 0,
+          perluPerbaikan: queue.revisionNeededCount || 0,
+          disetujui: queue.approvedCount || 0,
+          ditolak: queue.rejectedCount || 0,
+        },
+        delegasiTerkonfirmasi: raw?.selections?.confirmedPassed ?? 0,
+      };
+    };
+
+    const loadData = async () => {
+      try {
+        const compsPromise = competitionService.getAll();
+        if (sharedRawDashboard) {
+          const comps = await compsPromise;
+          if (cancelled) return;
+          setRawDashboard(sharedRawDashboard);
+          setStats(mapRawToStats(sharedRawDashboard));
+          setCompetitions(comps);
+          setLoading(false);
+          return;
+        }
+        const [s, comps] = await Promise.all([
+          statsService.getAdminStats(),
+          compsPromise,
+        ]);
         if (cancelled) return;
         setStats(s);
         setCompetitions(comps);
-        setRawDashboard(rawDash);
         setLoading(false);
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) return;
         setError('Gagal memuat statistik admin.');
         setLoading(false);
-      });
+      }
+    };
+
+    void loadData();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadingCounts, sharedRawDashboard]);
 
   const handleExportData = async () => {
     setExporting(true);
@@ -109,14 +151,18 @@ export const AdminDashboardPage: React.FC = () => {
       to: '/admin/prestasi?status=menunggu',
       status: `${pendingCount} menunggu`,
     },
-    {
-      title: 'Pengaturan Sistem & Periode',
-      description:
-        'Kelola akun admin & mahasiswa, pergantian periode akademik, template bobot poin kampus, jejak audit, dan kesehatan layanan.',
-      icon: Settings2,
-      to: '/admin/sistem',
-      status: 'Tata Kelola',
-    },
+    ...(isSuperAdmin
+      ? [
+          {
+            title: 'Pengaturan Sistem & Periode',
+            description:
+              'Kelola akun admin & mahasiswa, pergantian periode akademik, template bobot poin kampus, jejak audit, dan kesehatan layanan.',
+            icon: Settings2,
+            to: '/admin/sistem',
+            status: 'Tata Kelola',
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -192,12 +238,14 @@ export const AdminDashboardPage: React.FC = () => {
           <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
             Pintasan Modul Pengelolaan
           </h2>
-          <Link
-            to="/admin/sistem"
-            className="text-xs font-bold text-blue-700 hover:underline inline-flex items-center gap-1"
-          >
-            Pengaturan Sistem &amp; Akun <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-          </Link>
+          {isSuperAdmin && (
+            <Link
+              to="/admin/sistem"
+              className="text-xs font-bold text-blue-700 hover:underline inline-flex items-center gap-1"
+            >
+              Pengaturan Sistem &amp; Akun <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+          )}
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {modules.map((module) => (

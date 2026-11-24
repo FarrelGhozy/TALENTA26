@@ -31,6 +31,7 @@ const DEFAULT_COUNTS: AdminNavCounts = {
 
 interface AdminNavContextValue {
   counts: AdminNavCounts;
+  rawDashboard: any | null;
   loadingCounts: boolean;
   refreshNavCounts: () => Promise<void>;
   openMobileDrawer: () => void;
@@ -40,6 +41,7 @@ interface AdminNavContextValue {
 
 const AdminNavContext = createContext<AdminNavContextValue>({
   counts: DEFAULT_COUNTS,
+  rawDashboard: null,
   loadingCounts: false,
   refreshNavCounts: async () => undefined,
   openMobileDrawer: () => undefined,
@@ -52,6 +54,7 @@ export const AdminNavProvider: React.FC<{
   onOpenMobileDrawer: () => void;
 }> = ({ children, onOpenMobileDrawer }) => {
   const [counts, setCounts] = useState<AdminNavCounts>(DEFAULT_COUNTS);
+  const [rawDashboard, setRawDashboard] = useState<any | null>(null);
   const [loadingCounts, setLoadingCounts] = useState(true);
   const [activeCompetitionName, setActiveCompetitionName] = useState<string | null>(null);
 
@@ -59,6 +62,7 @@ export const AdminNavProvider: React.FC<{
     try {
       const raw = await dashboardService.getAdminDashboard();
       if (raw && raw.queue) {
+        setRawDashboard(raw);
         const menunggu = Number(raw.queue.pendingVerifications ?? 0);
         const perluPerbaikan = Number(raw.queue.revisionNeededCount ?? 0);
         const disetujui = Number(raw.queue.approvedCount ?? 0);
@@ -143,6 +147,7 @@ export const AdminNavProvider: React.FC<{
     <AdminNavContext.Provider
       value={{
         counts,
+        rawDashboard,
         loadingCounts,
         refreshNavCounts,
         openMobileDrawer: onOpenMobileDrawer,

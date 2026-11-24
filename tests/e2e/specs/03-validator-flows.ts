@@ -65,14 +65,23 @@ export async function runValidatorFlows(
   const approveButton = page.locator('button:has-text("Setujui Prestasi")');
   await approveButton.waitFor({ state: 'visible', timeout: 8000 });
 
-  // 4. Eksekusi Persetujuan Prestasi
+  // 4. Eksekusi Persetujuan Prestasi (termasuk langkah konfirmasi eksplisit)
   log.step('Mengeksekusi persetujuan prestasi (Approve)');
   await approveButton.click();
+  const confirmApproveButton = page.locator('button:has-text("Ya, Setujui Prestasi")');
+  await confirmApproveButton.waitFor({ state: 'visible', timeout: 5000 });
+  await confirmApproveButton.click();
 
   await page.waitForURL((url) => url.pathname === '/admin/prestasi', {
     timeout: 10000,
   });
   log.pass('Prestasi berhasil disetujui oleh Admin');
+
+  // 4B. Verifikasi RBAC: validator ditolak pada /admin/sistem (dialihkan ke /403)
+  log.step('Memverifikasi validator ditolak saat membuka /admin/sistem langsung');
+  await page.goto(`${CONFIG.baseUrl}/admin/sistem`);
+  await page.waitForURL((url) => url.pathname === '/403', { timeout: 8000 });
+  log.pass('Validator diarahkan ke /403 saat membuka /admin/sistem (RBAC K-02/K-03 terjaga)');
 
   // 5. Verifikasi Pembaruan di Ranking Publik (/ranking)
   log.step('Memverifikasi poin prestasi bertambah di Leaderboard (/ranking)');

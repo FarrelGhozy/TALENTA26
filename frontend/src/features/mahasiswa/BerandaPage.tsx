@@ -26,8 +26,8 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { AchievementStatusBadge } from '../prestasi/components/StatusBadge';
-import { assetUrl } from '../../lib/asset';
 
 const PROFILE_COMPLETE_THRESHOLD = 80;
 
@@ -47,22 +47,31 @@ export const BerandaPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadDashboard = useCallback(async () => {
-    if (!currentUser) return;
-    setLoading(true);
-    setError('');
-    try {
-      const dash = await dashboardService.getStudentDashboard();
-      setDashboardData(dash);
-    } catch (err: any) {
-      setError(err?.message || 'Gagal memuat data beranda mahasiswa. Silakan coba lagi.');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser]);
+  const loadDashboard = useCallback(
+    async (isCancelled?: () => boolean) => {
+      if (!currentUser) return;
+      setLoading(true);
+      setError('');
+      try {
+        const dash = await dashboardService.getStudentDashboard();
+        if (isCancelled?.()) return;
+        setDashboardData(dash);
+      } catch (err: any) {
+        if (isCancelled?.()) return;
+        setError(err?.message || 'Gagal memuat data beranda mahasiswa. Silakan coba lagi.');
+      } finally {
+        if (!isCancelled?.()) setLoading(false);
+      }
+    },
+    [currentUser]
+  );
 
   useEffect(() => {
-    void loadDashboard();
+    let cancelled = false;
+    void loadDashboard(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
   }, [loadDashboard]);
 
   if (loading) return <PageLoading message="Memuat beranda mahasiswa..." />;
@@ -98,20 +107,17 @@ export const BerandaPage: React.FC = () => {
   }
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = Number(
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        hour12: false,
+      }).format(new Date())
+    );
     if (hour < 11) return 'Selamat Pagi';
     if (hour < 15) return 'Selamat Siang';
     if (hour < 18) return 'Selamat Sore';
     return 'Selamat Malam';
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return 'M';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
   };
 
   const profileCompletion = dashboardData.profile?.completionPercentage ?? 0;
@@ -393,20 +399,13 @@ export const BerandaPage: React.FC = () => {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
-            {currentUser?.avatar ? (
-              <img
-                src={assetUrl(currentUser.avatar)}
-                alt={currentUser?.nama || 'Foto Profil'}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-blue-600/30 shadow-md shrink-0"
-              />
-            ) : (
-              <div
-                aria-hidden="true"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-black text-xl sm:text-2xl flex items-center justify-center border-2 border-blue-500/30 shadow-md shrink-0"
-              >
-                {getInitials(currentUser?.nama)}
-              </div>
-            )}
+            <UserAvatar
+              src={currentUser?.avatar}
+              name={currentUser?.nama || 'Mahasiswa'}
+              size="xl"
+              shape="rounded"
+              className="w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl border-2 border-blue-600/30 shadow-md"
+            />
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-black text-blue-700 uppercase tracking-wider">

@@ -73,7 +73,7 @@ export const Footer: React.FC = () => {
               Nilai & Prinsip
             </h4>
             <ul className="space-y-2 text-xs text-slate-300/80 leading-relaxed">
-              <li>• Menjunjung tinggi nilai keislaman, keikhlasan, dan kesungguhan (*Mujahadah*).</li>
+              <li>• Menjunjung tinggi nilai keislaman, keikhlasan, dan kesungguhan (<em>Mujahadah</em>).</li>
               <li>• Rekomendasi tim membantu menemukan keahlian yang saling melengkapi.</li>
               <li>• Pengesahan prestasi diverifikasi secara transparan oleh validator kampus.</li>
             </ul>

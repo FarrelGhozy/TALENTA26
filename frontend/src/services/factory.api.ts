@@ -3,7 +3,7 @@ export {
   competitionApiService as competitionService,
   consultantApiService as consultantService,
   dashboardApiService as dashboardService,
-  matchingApiService as matchingService,
+  registerUnauthorizedHandler,
   roadmapApiService as roadmapService,
   statsApiService as statsService,
   systemApiService as systemService,

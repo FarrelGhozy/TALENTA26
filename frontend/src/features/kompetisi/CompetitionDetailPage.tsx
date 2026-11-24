@@ -35,6 +35,7 @@ export const CompetitionDetailPage: React.FC = () => {
   const [activeTeam, setActiveTeam] = useState<Team | null>(null);
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const activeTab = (searchParams.get('tab') as string) || 'ringkasan';
 
@@ -46,10 +47,10 @@ export const CompetitionDetailPage: React.FC = () => {
     });
   };
 
-  useEffect(() => {
+  const fetchDetail = (isCancelled?: () => boolean) => {
     if (!slug) return;
-    let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     const isMahasiswa = Boolean(currentUser && currentUser.role.includes('mahasiswa'));
     Promise.all([
       competitionService.getBySlug(slug),
@@ -58,23 +59,35 @@ export const CompetitionDetailPage: React.FC = () => {
       achievementService.getCompetitionPointConfig ? achievementService.getCompetitionPointConfig(slug).catch(() => null) : Promise.resolve(null),
     ])
       .then(([comp, prof, team, pConf]) => {
-        if (cancelled) return;
+        if (isCancelled?.()) return;
         setCompetition(comp);
         setProfile(prof);
         setActiveTeam(team && team.status !== 'arsip' ? team : null);
         setPointConfig(pConf);
         setLoading(false);
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
+      .catch((err: any) => {
+        if (isCancelled?.()) return;
+        if (err?.status === 404) {
+          setCompetition(null);
+        } else {
+          setLoadError(err?.message || 'Gagal memuat detail kompetisi. Periksa koneksi Anda.');
+        }
+        setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDetail(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [slug, currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, currentUser?.id]);
 
   const executeSelectTarget = async () => {
-    if (!currentUser || !slug) return;
+    if (saving || !currentUser || !slug) return;
     setSaving(true);
     setConfirmSwitchOpen(false);
     try {
@@ -110,6 +123,21 @@ export const CompetitionDetailPage: React.FC = () => {
   };
 
   if (loading) return <PageLoading message="Memuat detail kompetisi..." />;
+  if (loadError) {
+    return (
+      <div className="p-12 text-center space-y-4">
+        <p role="alert" className="text-rose-600 text-sm font-semibold">{loadError}</p>
+        <div className="flex justify-center gap-2">
+          <Button size="sm" variant="primary" onClick={() => fetchDetail()}>
+            Muat Ulang
+          </Button>
+          <Link to="/kompetisi">
+            <Button size="sm" variant="outline">Kembali ke Katalog</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
   if (!competition) {
     return (
       <div className="p-12 text-center space-y-4">

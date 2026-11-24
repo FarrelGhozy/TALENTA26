@@ -102,7 +102,7 @@ export const ResetPasswordPage: React.FC = () => {
               required
               value={customToken}
               onChange={(e) => setCustomToken(e.target.value)}
-              placeholder="Masukkan token dari email/konsol"
+              placeholder="Masukkan token reset dari email Anda"
             />
           )}
 

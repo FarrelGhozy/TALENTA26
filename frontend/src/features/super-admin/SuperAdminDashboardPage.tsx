@@ -82,6 +82,14 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const activeTab = normalizeTab(searchParams.get('tab'));
 
   const [loading, setLoading] = useState(false);
+  const [tabError, setTabError] = useState<string | null>(null);
+  const [savingStaff, setSavingStaff] = useState(false);
+  const [savingUserName, setSavingUserName] = useState(false);
+  const [updatingUserStatus, setUpdatingUserStatus] = useState(false);
+  const [savingPeriod, setSavingPeriod] = useState(false);
+  const [loadingPeriodPreviewId, setLoadingPeriodPreviewId] = useState<string | null>(null);
+  const [savingPointRules, setSavingPointRules] = useState(false);
+  const [activatingTemplateId, setActivatingTemplateId] = useState<string | null>(null);
   const { notify } = useToast();
   const { refreshNavCounts } = useAdminNav();
 
@@ -97,6 +105,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
     fullName: '',
     email: '',
     password: '',
+    role: 'validator' as 'validator' | 'super_admin',
   });
   const [editNameTarget, setEditNameTarget] = useState<{ id: string; fullName: string } | null>(null);
   const [confirmUserAction, setConfirmUserAction] = useState<{
@@ -128,7 +137,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [activateTemplateImmediately, setActivateTemplateImmediately] = useState(true);
-  const [newRulesMatrix, setNewRulesMatrix] = useState<PointRuleItem[]>(DEFAULT_RULES_MATRIX);
+  const [newRulesMatrix, setNewRulesMatrix] = useState<PointRuleItem[]>(() =>
+    DEFAULT_RULES_MATRIX.map((r) => ({ ...r }))
+  );
 
   // Tab 4: Jejak Audit
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -148,6 +159,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
     const effectiveSearch = overrides?.search ?? userSearch;
     try {
       setLoading(true);
+      setTabError(null);
       const res = await systemService.getUsers({
         role: effectiveRole === 'semua' ? undefined : effectiveRole,
         status: effectiveStatus === 'semua' ? undefined : effectiveStatus,
@@ -159,7 +171,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
       setUsersPage(res.page);
       setUsersTotalPages(res.totalPages || 1);
     } catch (err: any) {
-      notify(err.message || 'Gagal memuat pengguna', 'error');
+      const msg = err.message || 'Gagal memuat pengguna';
+      setTabError(msg);
+      notify(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -168,10 +182,13 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const loadPeriods = async () => {
     try {
       setLoading(true);
+      setTabError(null);
       const res = await systemService.getAcademicPeriods();
       setPeriods(res);
     } catch (err: any) {
-      notify(err.message || 'Gagal memuat periode akademik', 'error');
+      const msg = err.message || 'Gagal memuat periode akademik';
+      setTabError(msg);
+      notify(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -180,6 +197,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const loadPointRules = async () => {
     try {
       setLoading(true);
+      setTabError(null);
       const [res, tpls] = await Promise.all([
         systemService.getPointRules(),
         systemService.getPointTemplates?.().catch(() => []) ?? Promise.resolve([]),
@@ -187,12 +205,14 @@ export const SuperAdminDashboardPage: React.FC = () => {
       setPointRulesData(res);
       setPointTemplates(tpls);
       if (res.activeRules && res.activeRules.length > 0) {
-        setNewRulesMatrix([...res.activeRules]);
+        setNewRulesMatrix(res.activeRules.map((r) => ({ ...r })));
       } else {
-        setNewRulesMatrix([...DEFAULT_RULES_MATRIX]);
+        setNewRulesMatrix(DEFAULT_RULES_MATRIX.map((r) => ({ ...r })));
       }
     } catch (err: any) {
-      notify(err.message || 'Gagal memuat aturan poin', 'error');
+      const msg = err.message || 'Gagal memuat aturan poin';
+      setTabError(msg);
+      notify(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -201,6 +221,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const loadAuditLogs = async (page = auditPage) => {
     try {
       setLoading(true);
+      setTabError(null);
       const res = await systemService.getAuditLogs({
         action: auditActionFilter.trim() || undefined,
         page,
@@ -210,7 +231,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
       setAuditPage(res.page);
       setAuditTotalPages(res.totalPages || 1);
     } catch (err: any) {
-      notify(err.message || 'Gagal memuat jejak audit', 'error');
+      const msg = err.message || 'Gagal memuat jejak audit';
+      setTabError(msg);
+      notify(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -219,16 +242,21 @@ export const SuperAdminDashboardPage: React.FC = () => {
   const loadHealth = async () => {
     try {
       setLoading(true);
+      setTabError(null);
       const res = await systemService.getHealth();
       setHealth(res);
     } catch (err: any) {
-      notify(err.message || 'Gagal memuat status kesehatan sistem', 'error');
+      const msg = err.message || 'Gagal memuat status kesehatan sistem';
+      setTabError(msg);
+      setHealth(null);
+      notify(msg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    setTabError(null);
     if (activeTab === 'users') void loadUsers(1);
     else if (activeTab === 'periods') void loadPeriods();
     else if (activeTab === 'points') void loadPointRules();
@@ -240,47 +268,62 @@ export const SuperAdminDashboardPage: React.FC = () => {
   // Actions: Akun Admin & Pengguna
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingStaff) return;
     if (staffForm.fullName.trim().length < 2) {
-      notify('Nama lengkap admin minimal 2 karakter wajib diisi', 'error');
+      notify('Nama lengkap staf minimal 2 karakter wajib diisi', 'error');
       return;
     }
     if (!staffForm.email || staffForm.password.length < 8) {
-      notify('Email dan password minimal 8 karakter wajib diisi', 'error');
+      notify('Email dan kata sandi minimal 8 karakter wajib diisi', 'error');
       return;
     }
+    setSavingStaff(true);
     try {
       await systemService.createStaff({
         email: staffForm.email.trim(),
         fullName: staffForm.fullName.trim(),
         password: staffForm.password,
-        role: 'super_admin',
+        role: staffForm.role,
       });
-      notify('Akun admin berhasil dibuat', 'success');
+      notify(
+        `Akun ${staffForm.role === 'super_admin' ? 'Super Admin' : 'Validator'} berhasil dibuat`,
+        'success'
+      );
       setIsCreateStaffOpen(false);
-      setStaffForm({ fullName: '', email: '', password: '' });
+      setStaffForm({ fullName: '', email: '', password: '', role: 'validator' });
       await loadUsers(1);
       void refreshNavCounts();
     } catch (err: any) {
-      notify(err.message || 'Gagal membuat akun admin', 'error');
+      notify(err.message || 'Gagal membuat akun staf', 'error');
+    } finally {
+      setSavingStaff(false);
     }
   };
 
   const handleSaveUserName = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editNameTarget || !systemService.updateUserName) return;
+    if (savingUserName || !editNameTarget || !systemService.updateUserName) return;
+    if (editNameTarget.fullName.trim().length < 2) {
+      notify('Nama lengkap minimal 2 karakter', 'error');
+      return;
+    }
+    setSavingUserName(true);
     try {
-      await systemService.updateUserName(editNameTarget.id, editNameTarget.fullName);
+      await systemService.updateUserName(editNameTarget.id, editNameTarget.fullName.trim());
       notify('Nama pengguna berhasil diperbarui.');
       setEditNameTarget(null);
       await loadUsers();
     } catch (err: any) {
       notify(err.message || 'Gagal memperbarui nama pengguna', 'error');
+    } finally {
+      setSavingUserName(false);
     }
   };
 
   const executeConfirmUserAction = async () => {
-    if (!confirmUserAction) return;
+    if (updatingUserStatus || !confirmUserAction) return;
     const { user } = confirmUserAction;
+    setUpdatingUserStatus(true);
     try {
       const newStatus = user.status === 'active' ? 'suspended' : 'active';
       await systemService.updateUserStatus(user.id, newStatus);
@@ -294,16 +337,24 @@ export const SuperAdminDashboardPage: React.FC = () => {
       await loadUsers();
     } catch (err: any) {
       notify(err.message || 'Gagal memperbarui akun pengguna', 'error');
+    } finally {
+      setUpdatingUserStatus(false);
     }
   };
 
   // Actions: Periode Akademik
   const handleCreatePeriod = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingPeriod) return;
     if (!periodForm.name.trim()) {
       notify('Nama periode wajib diisi', 'error');
       return;
     }
+    if (periodForm.startDate && periodForm.endDate && periodForm.startDate > periodForm.endDate) {
+      notify('Tanggal mulai periode tidak boleh melewati tanggal selesai', 'error');
+      return;
+    }
+    setSavingPeriod(true);
     try {
       await systemService.createAcademicPeriod({
         name: periodForm.name.trim(),
@@ -324,19 +375,28 @@ export const SuperAdminDashboardPage: React.FC = () => {
       await loadPeriods();
     } catch (err: any) {
       notify(err.message || 'Gagal membuat periode akademik', 'error');
+    } finally {
+      setSavingPeriod(false);
     }
   };
 
   const openPeriodSwitchConfirm = async (period: AcademicPeriodItem) => {
+    if (loadingPeriodPreviewId) return;
     if (systemService.getAcademicPeriodPreview) {
+      setLoadingPeriodPreviewId(period.id);
       try {
         const preview = await systemService.getAcademicPeriodPreview(period.id);
         setArchiveOldTargets(true);
         setSwitchPreview(preview);
-        return;
       } catch (err: any) {
-        notify(err.message || 'Gagal memuat pratinjau pergantian periode', 'error');
+        notify(
+          err.message || 'Gagal memuat pratinjau dampak pergantian periode. Silakan coba lagi.',
+          'error'
+        );
+      } finally {
+        setLoadingPeriodPreviewId(null);
       }
+      return;
     }
     setSwitchPreview({
       targetPeriod: period,
@@ -347,7 +407,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
   };
 
   const confirmActivatePeriod = async () => {
-    if (!switchPreview) return;
+    if (switchingPeriod || !switchPreview) return;
     setSwitchingPeriod(true);
     try {
       await systemService.activateAcademicPeriod(switchPreview.targetPeriod.id, archiveOldTargets);
@@ -364,6 +424,12 @@ export const SuperAdminDashboardPage: React.FC = () => {
   // Actions: Template & Aturan Poin
   const handlePublishPointRules = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingPointRules) return;
+    if (newRulesMatrix.some((r) => !Number.isInteger(r.points) || r.points < 0)) {
+      notify('Semua nilai poin harus berupa bilangan bulat >= 0', 'error');
+      return;
+    }
+    setSavingPointRules(true);
     try {
       if (systemService.createPointTemplate && templateName.trim().length >= 3) {
         await systemService.createPointTemplate({
@@ -383,6 +449,22 @@ export const SuperAdminDashboardPage: React.FC = () => {
       await loadPointRules();
     } catch (err: any) {
       notify(err.message || 'Gagal menerbitkan aturan poin', 'error');
+    } finally {
+      setSavingPointRules(false);
+    }
+  };
+
+  const handleActivatePointTemplate = async (tpl: PointTemplateItem) => {
+    if (activatingTemplateId || !systemService.activatePointTemplate) return;
+    setActivatingTemplateId(tpl.id);
+    try {
+      await systemService.activatePointTemplate(tpl.id);
+      notify(`Template "${tpl.name}" diaktifkan sebagai default kampus.`, 'success');
+      await loadPointRules();
+    } catch (err: any) {
+      notify(err.message || 'Gagal mengaktifkan template poin', 'error');
+    } finally {
+      setActivatingTemplateId(null);
     }
   };
 
@@ -439,6 +521,29 @@ export const SuperAdminDashboardPage: React.FC = () => {
 
       <div id={`panel-${activeTab}`} className="space-y-4">
         {loading && <PageLoading message="Memuat data pengaturan sistem..." />}
+
+        {!loading && tabError && (
+          <Card className="bg-rose-50 border-rose-200">
+            <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-rose-900 font-semibold" role="alert">
+                {tabError}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (activeTab === 'users') void loadUsers();
+                  if (activeTab === 'periods') void loadPeriods();
+                  if (activeTab === 'points') void loadPointRules();
+                  if (activeTab === 'audit') void loadAuditLogs();
+                  if (activeTab === 'health') void loadHealth();
+                }}
+              >
+                Muat Ulang
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* TAB 1: PENGGUNA & STAF */}
         {!loading && activeTab === 'users' && (
@@ -543,8 +648,12 @@ export const SuperAdminDashboardPage: React.FC = () => {
                               </div>
                             </td>
                             <td className="p-3.5">
-                              <Badge color={isAdminUser ? 'blue' : 'slate'} size="sm">
-                                {isAdminUser ? 'Admin' : 'Mahasiswa'}
+                              <Badge color={u.role === 'super_admin' ? 'blue' : u.role === 'validator' ? 'indigo' : 'slate'} size="sm">
+                                {u.role === 'super_admin'
+                                  ? 'Super Admin'
+                                  : u.role === 'validator'
+                                    ? 'Validator'
+                                    : 'Mahasiswa'}
                               </Badge>
                             </td>
                             <td className="p-3.5">
@@ -554,6 +663,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
                             </td>
                             <td className="p-3.5 text-slate-500">
                               {new Date(u.createdAt).toLocaleDateString('id-ID', {
+                                timeZone: 'Asia/Jakarta',
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
@@ -641,8 +751,8 @@ export const SuperAdminDashboardPage: React.FC = () => {
                     <h4 className="text-sm font-bold text-slate-900">{p.name}</h4>
                     {(p.startDate || p.endDate) && (
                       <p className="text-[11px] text-slate-500">
-                        {p.startDate ? new Date(p.startDate).toLocaleDateString('id-ID') : '?'} —{' '}
-                        {p.endDate ? new Date(p.endDate).toLocaleDateString('id-ID') : '?'}
+                        {p.startDate ? new Date(p.startDate).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) : '?'} —{' '}
+                        {p.endDate ? new Date(p.endDate).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) : '?'}
                       </p>
                     )}
                     <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-slate-100">
@@ -656,8 +766,15 @@ export const SuperAdminDashboardPage: React.FC = () => {
                       </div>
                     </div>
                     {!p.isActive ? (
-                      <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => openPeriodSwitchConfirm(p)}>
-                        Aktifkan & Ganti Periode
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        isLoading={loadingPeriodPreviewId === p.id}
+                        disabled={Boolean(loadingPeriodPreviewId)}
+                        onClick={() => openPeriodSwitchConfirm(p)}
+                      >
+                        Aktifkan &amp; Ganti Periode
                       </Button>
                     ) : (
                       <div className="text-center text-[11px] font-bold text-emerald-700 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -704,11 +821,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={async () => {
-                              await systemService.activatePointTemplate?.(tpl.id);
-                              notify(`Template "${tpl.name}" diaktifkan sebagai default kampus.`);
-                              await loadPointRules();
-                            }}
+                            isLoading={activatingTemplateId === tpl.id}
+                            disabled={Boolean(activatingTemplateId)}
+                            onClick={() => handleActivatePointTemplate(tpl)}
                           >
                             Aktifkan Default
                           </Button>
@@ -940,36 +1055,47 @@ export const SuperAdminDashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* MODAL: TAMBAH ADMIN */}
+      {/* MODAL: TAMBAH STAF / ADMIN */}
       <Modal
         isOpen={isCreateStaffOpen}
-        onClose={() => setIsCreateStaffOpen(false)}
-        title="Tambah Akun Admin Baru"
+        onClose={() => !savingStaff && setIsCreateStaffOpen(false)}
+        title="Tambah Akun Staf Baru"
         footer={
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateStaffOpen(false)}>Batal</Button>
-            <Button type="submit" form="create-staff-form" size="sm">Buat Akun Admin</Button>
+            <Button type="button" variant="outline" size="sm" disabled={savingStaff} onClick={() => setIsCreateStaffOpen(false)}>Batal</Button>
+            <Button type="submit" form="create-staff-form" size="sm" isLoading={savingStaff}>Buat Akun Staf</Button>
           </div>
         }
       >
         <form id="create-staff-form" onSubmit={handleCreateStaff} className="space-y-4">
           <Input
-            label="Nama Lengkap Admin"
+            label="Nama Lengkap Staf"
             required
             placeholder="contoh: Ustadz Ahmad Pembina, M.Kom."
             value={staffForm.fullName}
             onChange={(e) => setStaffForm({ ...staffForm, fullName: e.target.value })}
           />
+          <Select
+            label="Peran Akun Staf"
+            value={staffForm.role}
+            onChange={(e) =>
+              setStaffForm({ ...staffForm, role: e.target.value as 'validator' | 'super_admin' })
+            }
+            options={[
+              { value: 'validator', label: 'Validator (Kelola Lomba & Verifikasi Prestasi)' },
+              { value: 'super_admin', label: 'Super Admin (Akses Penuh Pengaturan Sistem)' },
+            ]}
+          />
           <Input
-            label="Email Admin"
+            label="Email Staf"
             type="email"
             required
-            placeholder="admin@unida.gontor.ac.id"
+            placeholder="validator@unida.gontor.ac.id"
             value={staffForm.email}
             onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
           />
           <Input
-            label="Password (Minimal 8 Karakter)"
+            label="Kata Sandi (Minimal 8 Karakter)"
             type="password"
             required
             minLength={8}
@@ -983,12 +1109,12 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* MODAL: UBAH NAMA PENGGUNA */}
       <Modal
         isOpen={Boolean(editNameTarget)}
-        onClose={() => setEditNameTarget(null)}
+        onClose={() => !savingUserName && setEditNameTarget(null)}
         title="Perbarui Nama Lengkap Pengguna"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditNameTarget(null)}>Batal</Button>
-            <Button type="submit" form="edit-name-form" size="sm">Simpan Nama</Button>
+            <Button variant="outline" size="sm" disabled={savingUserName} onClick={() => setEditNameTarget(null)}>Batal</Button>
+            <Button type="submit" form="edit-name-form" size="sm" isLoading={savingUserName}>Simpan Nama</Button>
           </div>
         }
       >
@@ -1005,14 +1131,15 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* MODAL: KONFIRMASI SUSPEND / AKTIFKAN */}
       <Modal
         isOpen={Boolean(confirmUserAction)}
-        onClose={() => setConfirmUserAction(null)}
+        onClose={() => !updatingUserStatus && setConfirmUserAction(null)}
         title="Konfirmasi Status Akun"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setConfirmUserAction(null)}>Batal</Button>
+            <Button variant="outline" size="sm" disabled={updatingUserStatus} onClick={() => setConfirmUserAction(null)}>Batal</Button>
             <Button
               variant={confirmUserAction?.user.status === 'active' ? 'danger' : 'primary'}
               size="sm"
+              isLoading={updatingUserStatus}
               onClick={executeConfirmUserAction}
             >
               {confirmUserAction?.user.status === 'active' ? 'Ya, Tangguhkan' : 'Ya, Aktifkan'}
@@ -1030,12 +1157,12 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* MODAL: TAMBAH PERIODE AKADEMIK */}
       <Modal
         isOpen={isCreatePeriodOpen}
-        onClose={() => setIsCreatePeriodOpen(false)}
+        onClose={() => !savingPeriod && setIsCreatePeriodOpen(false)}
         title="Tambah Periode Akademik Baru"
         footer={
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreatePeriodOpen(false)}>Batal</Button>
-            <Button type="submit" form="create-period-form" size="sm">Simpan Periode</Button>
+            <Button type="button" variant="outline" size="sm" disabled={savingPeriod} onClick={() => setIsCreatePeriodOpen(false)}>Batal</Button>
+            <Button type="submit" form="create-period-form" size="sm" isLoading={savingPeriod}>Simpan Periode</Button>
           </div>
         }
       >
@@ -1129,12 +1256,12 @@ export const SuperAdminDashboardPage: React.FC = () => {
       {/* MODAL: BUAT TEMPLATE & MATRIKS POIN BARU */}
       <Modal
         isOpen={isNewRuleVersionOpen}
-        onClose={() => setIsNewRuleVersionOpen(false)}
+        onClose={() => !savingPointRules && setIsNewRuleVersionOpen(false)}
         title="Buat Template & Versi Aturan Poin Baru"
         footer={
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsNewRuleVersionOpen(false)}>Batal</Button>
-            <Button type="submit" form="publish-point-template-form" size="sm">Simpan & Terbitkan</Button>
+            <Button type="button" variant="outline" size="sm" disabled={savingPointRules} onClick={() => setIsNewRuleVersionOpen(false)}>Batal</Button>
+            <Button type="submit" form="publish-point-template-form" size="sm" isLoading={savingPointRules}>Simpan &amp; Terbitkan</Button>
           </div>
         }
       >
@@ -1163,7 +1290,7 @@ export const SuperAdminDashboardPage: React.FC = () => {
           <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
             {newRulesMatrix.map((rule, idx) => (
               <div
-                key={idx}
+                key={`${rule.level}-${rule.result}`}
                 className="flex items-center justify-between gap-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs"
               >
                 <div>
@@ -1174,11 +1301,13 @@ export const SuperAdminDashboardPage: React.FC = () => {
                   <Input
                     type="number"
                     min={0}
+                    step={1}
                     value={rule.points}
                     onChange={(e) => {
-                      const updated = [...newRulesMatrix];
-                      updated[idx].points = Number(e.target.value) || 0;
-                      setNewRulesMatrix(updated);
+                      const nextVal = Math.max(0, Math.floor(Number(e.target.value) || 0));
+                      setNewRulesMatrix((prev) =>
+                        prev.map((item, i) => (i === idx ? { ...item, points: nextVal } : item))
+                      );
                     }}
                     className="text-xs text-right font-bold"
                   />

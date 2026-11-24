@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap, KeyRound, Info, ShieldCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthContext';
@@ -13,10 +13,11 @@ const LazyRoleCardLogin =
     : null;
 
 export const LoginPage: React.FC = () => {
-  const { loginAsRole, loginWithCredentials, isLoading } = useAuth();
+  const { currentUser, currentRole, loginAsRole, loginWithCredentials, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get('redirect') || '';
+  const reason = searchParams.get('reason') || '';
 
   const isDevelopment =
     import.meta.env.MODE !== 'production' && (APP_ENV === 'DEPLOYMENT' || USE_MOCK);
@@ -35,15 +36,23 @@ export const LoginPage: React.FC = () => {
         ? redirect.slice(basePath.length) || '/'
         : redirect;
       const isStudentRoute = normalizedRedirect === '/app' || normalizedRedirect.startsWith('/app/');
+      const isSystemRoute =
+        normalizedRedirect === '/admin/sistem' ||
+        normalizedRedirect.startsWith('/admin/sistem?') ||
+        normalizedRedirect === '/super-admin' ||
+        normalizedRedirect.startsWith('/super-admin/');
       const isAdminRoute =
         normalizedRedirect === '/admin' ||
         normalizedRedirect.startsWith('/admin/') ||
         normalizedRedirect === '/validator' ||
         normalizedRedirect.startsWith('/validator/') ||
+        normalizedRedirect === '/verifikasi' ||
+        normalizedRedirect.startsWith('/verifikasi/') ||
         normalizedRedirect === '/super-admin' ||
         normalizedRedirect.startsWith('/super-admin/');
 
       if (isStudentRoute && role !== 'mahasiswa') return roleHome;
+      if (isSystemRoute && role !== 'super_admin') return roleHome;
       if (isAdminRoute && !isAdminRole) return roleHome;
       if (normalizedRedirect === '/masuk' || normalizedRedirect.startsWith('/masuk?')) {
         return roleHome;
@@ -52,6 +61,14 @@ export const LoginPage: React.FC = () => {
     }
     return roleHome;
   };
+
+  // Arahkan otomatis bila pengguna sudah memiliki sesi aktif (bukan mode demo switch)
+  useEffect(() => {
+    if (!isLoading && currentUser && !isDevelopment) {
+      navigate(getSafeRedirect(currentRole), { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, currentUser, currentRole, isDevelopment]);
 
   const handleSelectRole = async (
     role: Role,
@@ -101,12 +118,17 @@ export const LoginPage: React.FC = () => {
         </h1>
       </div>
 
-      {redirect && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
-          <Info className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Kamu perlu masuk terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
+      {reason === 'session_expired' ? (
+        <div role="alert" className="p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
+          <Info className="w-4 h-4 text-amber-700 shrink-0" aria-hidden="true" />
+          <span>Sesi login Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.</span>
         </div>
-      )}
+      ) : redirect ? (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-950 rounded-2xl text-xs font-semibold flex items-center gap-2.5 shadow-2xs">
+          <Info className="w-4 h-4 text-amber-700 shrink-0" aria-hidden="true" />
+          <span>Anda perlu masuk terlebih dahulu untuk melanjutkan ke halaman tujuan.</span>
+        </div>
+      ) : null}
 
       {loginError && isDevelopment && authMode === 'demo' && (
         <div role="alert" className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold">

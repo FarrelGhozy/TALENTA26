@@ -18,8 +18,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
-import { assetUrl } from '../../lib/asset';
 import { TalentaMark } from './TalentaMark';
+import { UserAvatar } from '../ui/UserAvatar';
 
 interface NavItem {
   to: string;
@@ -97,12 +97,15 @@ export const Navbar: React.FC = () => {
       ];
     }
     if (currentRole === 'super_admin' || currentRole === 'validator') {
-      return [
+      const adminLinks: NavItem[] = [
         { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/admin/konten', label: 'Kelola Lomba', icon: Trophy },
         { to: '/admin/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
-        { to: '/admin/sistem', label: 'Pengaturan Sistem', icon: Settings2 },
       ];
+      if (currentRole === 'super_admin') {
+        adminLinks.push({ to: '/admin/sistem', label: 'Pengaturan Sistem', icon: Settings2 });
+      }
+      return adminLinks;
     }
     return [{ to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy }];
   };
@@ -135,17 +138,9 @@ export const Navbar: React.FC = () => {
 
   const formatRole = (role?: string) => {
     if (role === 'mahasiswa') return 'Mahasiswa';
-    if (role === 'super_admin' || role === 'validator') return 'Admin';
+    if (role === 'super_admin') return 'Super Admin';
+    if (role === 'validator') return 'Validator';
     return role || 'Pengguna';
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase();
   };
 
   return (
@@ -238,20 +233,12 @@ export const Navbar: React.FC = () => {
                       : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
-                {currentUser.avatar ? (
-                  <img
-                    src={assetUrl(currentUser.avatar)}
-                    alt={currentUser.nama}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-                  />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
-                  >
-                    {getInitials(currentUser.nama)}
-                  </div>
-                )}
+                <UserAvatar
+                  name={currentUser.nama}
+                  src={currentUser.avatar}
+                  size="sm"
+                  className="border-2 border-blue-500/50 shadow-xs"
+                />
                 <div className="text-right hidden md:block">
                   <span
                     className={`text-xs font-bold block leading-tight truncate max-w-[140px] ${
@@ -387,20 +374,12 @@ export const Navbar: React.FC = () => {
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
-              {currentUser.avatar ? (
-                <img
-                  src={assetUrl(currentUser.avatar)}
-                  alt={currentUser.nama}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 shadow-xs shrink-0"
-                />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-700 via-blue-800 to-indigo-900 text-white font-bold text-xs flex items-center justify-center border-2 border-blue-400/40 shadow-xs shrink-0"
-                >
-                  {getInitials(currentUser.nama)}
-                </div>
-              )}
+              <UserAvatar
+                name={currentUser.nama}
+                src={currentUser.avatar}
+                size="md"
+                className="border-2 border-blue-500/50 shadow-xs"
+              />
               <div className="min-w-0 flex-1">
                 <span
                   className={`text-xs font-bold block truncate ${

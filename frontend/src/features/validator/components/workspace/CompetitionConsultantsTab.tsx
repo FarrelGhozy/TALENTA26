@@ -71,6 +71,13 @@ export const CompetitionConsultantsTab: React.FC<CompetitionConsultantsTabProps>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+    const rawDigits = form.whatsappNumber.replace(/\D/g, '');
+    const normalizedWa = rawDigits.startsWith('0') ? `62${rawDigits.slice(1)}` : rawDigits;
+    if (!/^62\d{8,13}$/.test(normalizedWa)) {
+      notify('Nomor WhatsApp tidak valid. Gunakan format 08... atau 628... (10–15 digit).', 'error');
+      return;
+    }
     setSaving(true);
     try {
       if (editingId && validatorContentService.updateConsultant) {

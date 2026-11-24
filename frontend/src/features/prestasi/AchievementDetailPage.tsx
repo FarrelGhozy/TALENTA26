@@ -32,6 +32,34 @@ import { UserAvatar } from '../../components/ui/UserAvatar';
 import { AchievementStatusBadge, AchievementTypeBadge } from './components/StatusBadge';
 import { formatAchievementCategory, formatAchievementLevel, formatDate } from '../../lib/format';
 
+const MAX_FILE_SIZE = 8 * 1024 * 1024;
+const ALLOWED_MIME = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const ALLOWED_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+
+function getTodayJakarta(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+function formatDecisionAction(action?: string): string {
+  switch ((action || '').toLowerCase()) {
+    case 'approve':
+      return 'Disetujui';
+    case 'request_changes':
+      return 'Diminta Perbaikan';
+    case 'reject':
+      return 'Ditolak';
+    case 'correct':
+      return 'Koreksi Keputusan';
+    default:
+      return action || 'Keputusan';
+  }
+}
+
 export const AchievementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -60,17 +88,19 @@ export const AchievementDetailPage: React.FC = () => {
   const [note, setNote] = useState('');
   const [replaceEvidenceIds, setReplaceEvidenceIds] = useState<string[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [revisionError, setRevisionError] = useState('');
   const [submittingRevision, setSubmittingRevision] = useState(false);
 
-  const loadDetail = async () => {
+  const loadDetail = async (isCancelled?: () => boolean) => {
     if (!id) return;
     setLoading(true);
     setLoadError('');
     try {
       const [detail, cats] = await Promise.all([
-        achievementService.getById(id),
+        achievementService.getById(id, 'student'),
         achievementService.getCompetitionCategories?.().catch(() => []) ?? Promise.resolve([]),
       ]);
+      if (isCancelled?.()) return;
       if (!detail) {
         setLoadError('Data prestasi tidak ditemukan.');
         setLoading(false);
@@ -90,21 +120,27 @@ export const AchievementDetailPage: React.FC = () => {
       setSubCompetitionName(detail.subCompetitionName || '');
       setReplaceEvidenceIds([]);
       setNewFiles([]);
+      setRevisionError('');
       setNote('');
       setLoading(false);
     } catch (err: any) {
+      if (isCancelled?.()) return;
       setLoadError(err?.message || 'Gagal memuat detail prestasi.');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDetail();
+    let cancelled = false;
+    void loadDetail(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleConfirmCancel = async () => {
-    if (!item || !achievementService.cancel) return;
+    if (cancelling || !item || !achievementService.cancel) return;
     setCancelling(true);
     try {
       await achievementService.cancel(item.id);
@@ -122,11 +158,57 @@ export const AchievementDetailPage: React.FC = () => {
     setReplaceEvidenceIds((prev) =>
       prev.includes(evId) ? prev.filter((x) => x !== evId) : [...prev, evId]
     );
+    setRevisionError('');
+  };
+
+  const handleRevisionFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRevisionError('');
+    const picked = Array.from(e.target.files || []);
+    for (const f of picked) {
+      if (f.size <= 0 || f.size > MAX_FILE_SIZE) {
+        setRevisionError(`Ukuran berkas '${f.name}' harus antara 1 byte hingga 8 MB.`);
+        return;
+      }
+      const ext = f.name.toLowerCase().split('.').pop() || '';
+      if (!ALLOWED_EXT.has(ext) || (f.type && !ALLOWED_MIME.has(f.type))) {
+        setRevisionError(`Format berkas '${f.name}' harus PDF, JPG, atau PNG.`);
+        return;
+      }
+    }
+    setNewFiles(picked);
   };
 
   const handleSubmitRevision = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!item || !achievementService.submitRevision) return;
+    if (submittingRevision || !item || !achievementService.submitRevision) return;
+    setRevisionError('');
+
+    if (name.trim().length < 3 || name.trim().length > 200) {
+      setRevisionError('Nama kegiatan harus terdiri dari 3–200 karakter.');
+      return;
+    }
+    if (organizer.trim().length < 2 || organizer.trim().length > 150) {
+      setRevisionError('Nama penyelenggara harus terdiri dari 2–150 karakter.');
+      return;
+    }
+    const todayJakarta = getTodayJakarta();
+    if (!eventDate || eventDate > todayJakarta) {
+      setRevisionError('Tanggal capaian tidak boleh berada di masa depan.');
+      return;
+    }
+
+    const currentActiveCount = item.bukti.filter((b) => b.isActive !== false).length;
+    const remainingActive = currentActiveCount - replaceEvidenceIds.length;
+    const finalActive = remainingActive + newFiles.length;
+    if (finalActive < 1) {
+      setRevisionError('Pengajuan wajib memiliki minimal 1 berkas bukti aktif. Unggah berkas pengganti atau batal tandai penghapusan.');
+      return;
+    }
+    if (finalActive > 3) {
+      setRevisionError(`Total berkas bukti aktif (${finalActive}) melebihi batas maksimal 3 berkas.`);
+      return;
+    }
+
     setSubmittingRevision(true);
     try {
       await achievementService.submitRevision(
@@ -150,7 +232,9 @@ export const AchievementDetailPage: React.FC = () => {
       notify('Revisi lengkap berhasil dikirim! Status kembali Menunggu verifikasi.');
       await loadDetail();
     } catch (err: any) {
-      notify(err?.message || 'Gagal mengirim revisi.', 'error');
+      const msg = err?.message || 'Gagal mengirim revisi.';
+      setRevisionError(msg);
+      notify(msg, 'error');
     } finally {
       setSubmittingRevision(false);
     }
@@ -161,11 +245,16 @@ export const AchievementDetailPage: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto p-10 text-center space-y-4">
         <p role="alert" className="text-sm font-semibold text-rose-600">{loadError || 'Data tidak ditemukan.'}</p>
-        <Link to="/app/prestasi">
-          <Button size="sm" variant="outline" leftIcon={<ArrowLeft className="w-4 h-4" aria-hidden="true" />}>
-            Kembali ke Daftar Prestasi
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button size="sm" variant="primary" onClick={() => void loadDetail()}>
+            Muat Ulang
           </Button>
-        </Link>
+          <Link to="/app/prestasi">
+            <Button size="sm" variant="outline" leftIcon={<ArrowLeft className="w-4 h-4" aria-hidden="true" />}>
+              Kembali ke Daftar Prestasi
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -403,7 +492,14 @@ export const AchievementDetailPage: React.FC = () => {
                 { value: 'partisipasi', label: 'Partisipasi' },
               ]}
             />
-            <Input label="Tanggal" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required />
+            <Input
+              label="Tanggal"
+              type="date"
+              max={getTodayJakarta()}
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              required
+            />
           </div>
 
           {categories.length > 0 && (
@@ -471,17 +567,44 @@ export const AchievementDetailPage: React.FC = () => {
             </div>
           )}
 
+          {revisionError && (
+            <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
+              {revisionError}
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Unggah Berkas Baru / Tambahan (PDF/JPG/PNG, maks. 8 MB)
+              Unggah Berkas Baru / Tambahan (PDF/JPG/PNG, maks. 8 MB per berkas, total aktif 1–3 berkas)
             </label>
             <input
               type="file"
               multiple
               accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => setNewFiles(Array.from(e.target.files || []))}
+              onChange={handleRevisionFileChange}
               className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700"
             />
+            {newFiles.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {newFiles.map((f, idx) => (
+                  <li
+                    key={`${f.name}-${idx}`}
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-blue-50/70 border border-blue-200 text-[11px] text-slate-700"
+                  >
+                    <span className="truncate font-medium">
+                      {f.name} ({Math.max(1, Math.round(f.size / 1024))} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNewFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-rose-600 font-bold hover:underline shrink-0 cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div>
@@ -519,7 +642,7 @@ export const AchievementDetailPage: React.FC = () => {
               <div key={d.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <strong className="text-slate-900">
-                    {d.action.toUpperCase()} • Oleh {d.decidedBy?.fullName || 'Validator'}
+                    {formatDecisionAction(d.action)} • Oleh {d.decidedBy?.fullName || 'Validator'}
                   </strong>
                   <span className="text-[11px] text-slate-400">{formatDate(d.createdAt)}</span>
                 </div>

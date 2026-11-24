@@ -18,7 +18,7 @@ export const achievementMockService: IAchievementService = {
     return list;
   },
 
-  async getById(id: string): Promise<Achievement | null> {
+  async getById(id: string, _scope?: 'student' | 'admin'): Promise<Achievement | null> {
     return getAchievements().find((a) => a.id === id) || null;
   },
 
@@ -27,12 +27,21 @@ export const achievementMockService: IAchievementService = {
     const newAchievement: Achievement = {
       ...data,
       id: `a-${Date.now()}`,
-      institutionId: 'inst-01',
+      institutionId: 'unida-gontor',
       status: 'menunggu', // Aturan wajib: pengajuan baru selalu berstatus menunggu verifikasi
     };
     list.unshift(newAchievement);
     setItem(ACHIEVEMENTS_KEY, list);
     return newAchievement;
+  },
+
+  async cancel(id: string): Promise<Achievement> {
+    const list = getAchievements();
+    const idx = list.findIndex((a) => a.id === id);
+    if (idx === -1) throw new Error('Data prestasi tidak ditemukan');
+    list[idx] = { ...list[idx], status: 'dibatalkan', version: (list[idx].version || 1) + 1 };
+    setItem(ACHIEVEMENTS_KEY, list);
+    return list[idx];
   },
 
   async verify(id: string, status: Achievement['status'], catatan?: string): Promise<Achievement> {

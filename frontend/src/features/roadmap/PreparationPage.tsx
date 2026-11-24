@@ -26,6 +26,7 @@ export const PreparationPage: React.FC = () => {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -57,13 +58,16 @@ export const PreparationPage: React.FC = () => {
   }, [slug, currentUser]);
 
   const handleToggleChecklist = async (taskId: string) => {
-    if (!slug || !currentUser) return;
+    if (!slug || !currentUser || togglingTaskId) return;
+    setTogglingTaskId(taskId);
     try {
       const updated = await roadmapService.toggleChecklist(currentUser.id, slug, taskId);
       setChecklist({ ...updated });
       if (updated[taskId]) notify('Tugas ditandai selesai! Pertahankan progresmu.', 'info');
     } catch {
       notify('Gagal menyimpan progres. Coba lagi.', 'error');
+    } finally {
+      setTogglingTaskId(null);
     }
   };
 
@@ -231,6 +235,7 @@ export const PreparationPage: React.FC = () => {
               fase={roadmap.fase}
               checklist={checklist}
               onToggle={handleToggleChecklist}
+              busyTaskId={togglingTaskId}
             />
           )}
         </div>

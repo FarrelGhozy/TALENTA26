@@ -4,8 +4,8 @@ import { Input } from '../../../components/ui/Input';
 import { Select, SelectOption } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 import { User } from '../../../types';
-import { assetUrl } from '../../../lib/asset';
 
 interface StepIdentitasProps {
   user: Partial<User>;
@@ -13,15 +13,6 @@ interface StepIdentitasProps {
   onUploadAvatar?: (file: File) => Promise<void>;
   onDeleteAvatar?: () => Promise<void>;
   uploadingAvatar?: boolean;
-}
-
-function getInitials(name?: string): string {
-  if (!name || !name.trim()) return 'M';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
 }
 
 export const StepIdentitas: React.FC<StepIdentitasProps> = ({
@@ -38,7 +29,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
-    if (!file) return;
+    if (!file || uploadingAvatar) return;
     setAvatarError('');
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -46,8 +37,8 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setAvatarError('Ukuran foto profil maksimal 2 MB.');
+    if (file.size <= 0 || file.size > 2 * 1024 * 1024) {
+      setAvatarError('Ukuran foto profil harus antara 1 byte hingga 2 MB.');
       return;
     }
 
@@ -71,6 +62,7 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({
   };
 
   const handleRemoveAvatar = async () => {
+    if (uploadingAvatar) return;
     setAvatarError('');
     if (onDeleteAvatar) {
       try {
@@ -109,29 +101,23 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({
       {/* Photo Avatar Section */}
       <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-5">
         <div className="relative shrink-0">
-          {currentAvatar ? (
-            <img
-              src={assetUrl(currentAvatar)}
-              alt={user.nama || 'Foto Profil'}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-slate-200 shadow-sm"
-            />
-          ) : (
-            <div
-              aria-label={`Inisial foto ${user.nama || 'Mahasiswa'}`}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-blue-600 text-white font-bold text-2xl sm:text-3xl flex items-center justify-center border-2 border-blue-500/30 shadow-sm"
-            >
-              {getInitials(user.nama)}
-            </div>
-          )}
+          <UserAvatar
+            src={currentAvatar}
+            name={user.nama || 'Mahasiswa'}
+            size="xl"
+            shape="rounded"
+            className="w-24 h-24 sm:w-28 sm:h-28 text-2xl sm:text-3xl border-2 border-slate-200 shadow-sm"
+          />
 
           <button
             type="button"
+            disabled={uploadingAvatar}
             onClick={() => fileInputRef.current?.click()}
             title="Ubah foto profil"
             aria-label="Ubah foto profil"
-            className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-xl shadow-md border-2 border-white flex items-center justify-center hover:bg-blue-700 transition-colors cursor-pointer"
+            className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-xl shadow-md border-2 border-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 transition-colors cursor-pointer"
           >
-            <Camera className="w-4 h-4" />
+            <Camera className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 

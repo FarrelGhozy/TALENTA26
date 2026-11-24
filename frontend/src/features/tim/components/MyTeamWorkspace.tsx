@@ -65,6 +65,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
   const alreadyRegisteredSelection = Boolean(team.latestSelection);
 
   const handleLeaveConfirm = async () => {
+    if (leaving) return;
     setLeaving(true);
     try {
       await teamService.leaveTeam(currentUser.id, team.id);
@@ -79,7 +80,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
   };
 
   const handleDecideRequest = async (requestId: string, action: 'disetujui' | 'ditolak') => {
-    if (!teamService.decideJoinRequest) return;
+    if (decidingId || !teamService.decideJoinRequest) return;
     setDecidingId(requestId);
     try {
       const res = await teamService.decideJoinRequest(requestId, action);
@@ -104,7 +105,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
   };
 
   const handleRotateCode = async () => {
-    if (!teamService.rotateInviteCode) return;
+    if (rotatingCode || !teamService.rotateInviteCode) return;
     setRotatingCode(true);
     try {
       const res = await teamService.rotateInviteCode(team.id);
@@ -125,7 +126,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
   };
 
   const handleConfirmRemoveMember = async () => {
-    if (!removeConfirm || !teamService.removeMember) return;
+    if (removingUserId || !removeConfirm || !teamService.removeMember) return;
     setRemovingUserId(removeConfirm.userId);
     try {
       await teamService.removeMember(team.id, removeConfirm.userId);
@@ -140,7 +141,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
   };
 
   const handleRegisterSelection = async () => {
-    if (!teamService.registerSelection) return;
+    if (registeringSelection || !teamService.registerSelection) return;
     setRegisteringSelection(true);
     try {
       await teamService.registerSelection(team.id);
@@ -277,7 +278,13 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
           </span>
           <div className="text-lg font-black text-slate-900 leading-tight pt-0.5">
             {alreadyRegisteredSelection
-              ? `Terdaftar (${team.latestSelection?.result || 'menunggu'})`
+              ? `Terdaftar (${
+                  team.latestSelection?.result === 'lolos'
+                    ? 'Lolos'
+                    : team.latestSelection?.result === 'tidak'
+                      ? 'Belum Lolos'
+                      : 'Menunggu'
+                })`
               : validation.selectionStatusLabel}
           </div>
           <p className="text-xs text-slate-500">Roadmap boleh dibuka lebih awal</p>

@@ -35,18 +35,18 @@ export const ForbiddenPage: React.FC = () => {
   return (
     <div className="max-w-md mx-auto py-16 text-center space-y-5 bg-white p-8 rounded-3xl border border-slate-200/90 shadow-xs my-8">
       <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
-        <ShieldAlert className="w-8 h-8" />
+        <ShieldAlert className="w-8 h-8" aria-hidden="true" />
       </div>
       <div>
         <h1 className="text-xl font-black text-slate-900 tracking-tight">Akses Terbatas (403)</h1>
         <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-          Peran akun yang aktif saat ini tidak memiliki hak akses ke halaman ini. Silakan ganti peran di login demo atau hubungi pengelola.
+          Peran akun yang sedang aktif tidak memiliki hak akses ke halaman ini. Silakan kembali ke portal sesuai peran Anda atau hubungi pengelola kampus.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2.5 pt-2">
         <Link to="/masuk">
-          <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-            Pilih Peran Lain
+          <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
+            Masuk Akun Lain
           </Button>
         </Link>
         <Link to="/">

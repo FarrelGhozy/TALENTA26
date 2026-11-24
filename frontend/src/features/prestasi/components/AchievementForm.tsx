@@ -58,7 +58,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
   onSubmit,
   isLoading,
 }) => {
-  const allowDemoPresets = APP_ENV === 'DEPLOYMENT' || USE_MOCK;
+  const allowDemoPresets = import.meta.env.MODE !== 'production' && (APP_ENV === 'DEPLOYMENT' || USE_MOCK);
   const [nama, setNama] = useState('');
   const [penyelenggara, setPenyelenggara] = useState('');
   const [kategori, setKategori] = useState<AchievementCategory>('kompetisi');
@@ -118,6 +118,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
     const chosen = competitions.find((c) => c.slug === competitionSlug);
     if (chosen?.competitionCategoryId) {
       setCompetitionCategoryId(chosen.competitionCategoryId);
+      setSubCategoryId('');
     }
     if (chosen?.penyelenggara && !penyelenggara) {
       setPenyelenggara(chosen.penyelenggara);
@@ -153,13 +154,14 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
       setFormError('Maksimal berkas bukti yang diizinkan adalah 3 berkas.');
       return;
     }
+    const allowedMimes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
     for (const f of fileList) {
-      if (f.size > MAX_FILE_SIZE) {
-        setFormError(`Ukuran berkas '${f.name}' melebihi batas maksimal 8 MB.`);
+      if (f.size <= 0 || f.size > MAX_FILE_SIZE) {
+        setFormError(`Ukuran berkas '${f.name}' harus antara 1 byte hingga 8 MB.`);
         return;
       }
       const ext = f.name.toLowerCase().split('.').pop();
-      if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+      if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '') || (f.type && !allowedMimes.has(f.type))) {
         setFormError(`Berkas '${f.name}' harus berformat PDF, JPG, atau PNG.`);
         return;
       }
@@ -180,6 +182,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setFormError('');
     if (nama.trim().length < 3) {
       setFormError('Nama kegiatan minimal 3 karakter.');
