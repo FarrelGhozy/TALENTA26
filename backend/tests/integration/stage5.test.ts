@@ -520,12 +520,20 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
       expect(data.profile.fullName).toContain('Mahasiswa Stage 5');
       expect(data.profile.completionPercentage).toBeGreaterThanOrEqual(80);
 
-      // 2. Target kompetisi
+      // 2. Target kompetisi (termasuk detail komposisi untuk single-fetch Beranda)
       expect(data.targetCompetition).toBeDefined();
       expect(data.targetCompetition.name).toContain('GEMASTIK');
+      expect(typeof data.targetCompetition.minTeamMembers).toBe('number');
+      expect(typeof data.targetCompetition.maxTeamMembers).toBe('number');
 
-      // 3. Submissions breakdown
+      // 3. Submissions breakdown, recentAchievements & pengajuan gabung tim
       expect(data.submissions.disetujui).toBeGreaterThanOrEqual(1);
+      expect(typeof data.submissions.dibatalkan).toBe('number');
+      expect(Array.isArray(data.recentAchievements)).toBe(true);
+      expect(data.recentAchievements.length).toBeGreaterThanOrEqual(1);
+      expect(data.recentAchievements[0].id).toBeTruthy();
+      expect(Array.isArray(data.myPendingJoinRequests)).toBe(true);
+      expect('firstRevisionAchievementId' in data).toBe(true);
 
       // 4. Points
       expect(data.points).toBeDefined();

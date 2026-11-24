@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Trophy,
@@ -14,18 +14,13 @@ import {
   AlertCircle,
   ChevronRight,
   Check,
+  BookOpenCheck,
+  Info,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
-import { Achievement, Competition, Team } from '../../types';
 import type { StudentDashboardData } from '../../services/types';
-import {
-  achievementService,
-  competitionService,
-  dashboardService,
-  teamService,
-  userService,
-} from '@talenta/services';
-import { validateTeamFormation } from '../../lib/teamRules';
+import { dashboardService } from '@talenta/services';
 import { formatDate, parseFlexibleDate } from '../../lib/format';
 import { Button } from '../../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
@@ -34,59 +29,73 @@ import { PageLoading } from '../../components/ui/Skeleton';
 import { AchievementStatusBadge } from '../prestasi/components/StatusBadge';
 import { assetUrl } from '../../lib/asset';
 
+const PROFILE_COMPLETE_THRESHOLD = 80;
+
+interface ReadinessStep {
+  id: 'profile' | 'target' | 'join-team' | 'team-ready' | 'roadmap';
+  label: string;
+  done: boolean;
+  inProgress?: boolean;
+  unavailable?: boolean;
+  subLabel?: string;
+  to: string;
+}
+
 export const BerandaPage: React.FC = () => {
   const { currentUser } = useAuth();
   const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
-  const [targetComp, setTargetComp] = useState<Competition | null>(null);
-  const [team, setTeam] = useState<Team | null>(null);
-  const [isTeamFormed, setIsTeamFormed] = useState(false);
-  const [isSelectionReady, setIsSelectionReady] = useState(false);
-  const [missingRoles, setMissingRoles] = useState<string[]>([]);
-  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadDashboard = useCallback(async () => {
     if (!currentUser) return;
-    let cancelled = false;
-    Promise.all([
-      dashboardService.getStudentDashboard().catch(() => null),
-      userService.getProfile(currentUser.id),
-      teamService.getTeamByUserId(currentUser.id),
-      achievementService.getAll(currentUser.id),
-    ])
-      .then(async ([dash, prof, t, achs]) => {
-        if (cancelled) return;
-        setDashboardData(dash);
-        setTeam(t);
-        setAllAchievements(achs);
-        setAchievements(achs.slice(0, 4));
-        const slug = dash?.targetCompetition?.slug || prof?.targetKompetisiSlug;
-        if (slug) {
-          const comp = await competitionService.getBySlug(slug);
-          if (cancelled) return;
-          setTargetComp(comp);
-          if (t && comp && t.competitionSlug === comp.slug) {
-            const validation = validateTeamFormation(t, [], comp);
-            setIsTeamFormed(validation.isFormed);
-            setIsSelectionReady(validation.isSelectionReady);
-            setMissingRoles(validation.missingRoles);
-          } else {
-            setIsTeamFormed(false);
-            setIsSelectionReady(false);
-          }
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    setLoading(true);
+    setError('');
+    try {
+      const dash = await dashboardService.getStudentDashboard();
+      setDashboardData(dash);
+    } catch (err: any) {
+      setError(err?.message || 'Gagal memuat data beranda mahasiswa. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
   }, [currentUser]);
 
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
   if (loading) return <PageLoading message="Memuat beranda mahasiswa..." />;
+
+  if (error || !dashboardData) {
+    return (
+      <div className="max-w-2xl mx-auto py-12">
+        <div
+          role="alert"
+          className="rounded-2xl border border-rose-200 bg-rose-50/90 p-6 text-center space-y-4 shadow-2xs"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 mx-auto flex items-center justify-center">
+            <AlertCircle className="w-6 h-6" aria-hidden="true" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-base font-extrabold text-rose-950">Beranda Gagal Dimuat</h1>
+            <p className="text-xs text-rose-800">
+              {error || 'Terjadi kendala saat mengambil ringkasan aktivitas Anda.'}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void loadDashboard()}
+            leftIcon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
+          >
+            Muat Ulang Beranda
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -105,72 +114,238 @@ export const BerandaPage: React.FC = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const profileCompletion = dashboardData.profile?.completionPercentage ?? 0;
+  const targetComp = dashboardData.targetCompetition;
+  const activeTeam = dashboardData.activeTeam;
+  const pendingJoinReqsSent = (dashboardData.myPendingJoinRequests || []).filter(
+    (req) => !targetComp || req.competitionSlug === targetComp.slug
+  );
+  const roadmap = dashboardData.roadmapProgress;
+  const hasRoadmap = Boolean(roadmap && roadmap.totalTasks > 0);
+  const isRoadmapCompleted = Boolean(hasRoadmap && roadmap && roadmap.completedTasks >= roadmap.totalTasks);
+
   const isIndividualTarget =
     targetComp?.format === 'individu' ||
-    (Boolean(targetComp) && targetComp!.komposisi.min === 1 && targetComp!.komposisi.max === 1);
+    (Boolean(targetComp) && targetComp!.minTeamMembers === 1 && targetComp!.maxTeamMembers === 1);
 
-  const verifiedCount = dashboardData?.submissions?.disetujui ?? allAchievements.filter((a) => a.status === 'disetujui').length;
-  const pendingCount = dashboardData?.submissions?.menunggu ?? allAchievements.filter((a) => a.status === 'menunggu').length;
-  const revisionCount = dashboardData?.submissions?.perlu_perbaikan ?? allAchievements.filter((a) => a.status === 'perlu_perbaikan').length;
-  const totalAchievementCount = dashboardData?.submissions?.total ?? allAchievements.length;
+  const teamReadiness = activeTeam?.readiness || null;
+  const teamStatus: string | null = activeTeam?.status ?? null;
+  const teamMemberCount: number =
+    teamReadiness?.activeMemberCount ??
+    (Array.isArray(activeTeam?.members) ? activeTeam.members.length : 0);
+  const minTeamMembers = teamReadiness?.minRequired ?? targetComp?.minTeamMembers ?? 1;
+  const maxTeamMembers = teamReadiness?.maxAllowed ?? targetComp?.maxTeamMembers ?? minTeamMembers;
 
-  const steps = isIndividualTarget
-    ? [
-        { label: 'Identitas & Skill', done: (dashboardData?.profile?.completionPercentage ?? 100) >= 60, to: '/app/profil' },
-        { label: 'Target Kompetisi', done: !!targetComp, to: '/app/profil?need=target' },
-        {
+  const isTeamFormed = Boolean(
+    activeTeam &&
+      (teamReadiness?.hasEnoughMembers ||
+        teamStatus === 'terbentuk' ||
+        teamStatus === 'terkunci_seleksi')
+  );
+  const isSelectionReady = Boolean(activeTeam && teamReadiness?.isSelectionReady);
+  const isLockedSelection = teamStatus === 'terkunci_seleksi';
+  const unmetCriteria: string[] = Array.isArray(teamReadiness?.unmetCriteria)
+    ? teamReadiness.unmetCriteria
+    : [];
+  const advisoryNotes: string[] = Array.isArray(teamReadiness?.advisoryNotes)
+    ? teamReadiness.advisoryNotes
+    : [];
+
+  const incomingJoinRequests = activeTeam?.isLeader
+    ? (activeTeam.pendingJoinRequestsCount ?? 0)
+    : 0;
+
+  const verifiedCount = dashboardData.submissions?.disetujui ?? 0;
+  const pendingCount = dashboardData.submissions?.menunggu ?? 0;
+  const revisionCount = dashboardData.submissions?.perlu_perbaikan ?? 0;
+  const rejectedCount = dashboardData.submissions?.ditolak ?? 0;
+  const cancelledCount = dashboardData.submissions?.dibatalkan ?? 0;
+  const totalAchievementCount = dashboardData.submissions?.total ?? 0;
+  const recentAchievements = dashboardData.recentAchievements || [];
+
+  const revisionActionUrl =
+    revisionCount === 1 && dashboardData.firstRevisionAchievementId
+      ? `/app/prestasi/${dashboardData.firstRevisionAchievementId}`
+      : '/app/prestasi?status=perlu_perbaikan';
+
+  // Stepper fokus murni pada alur kesiapan target kompetisi aktif (tanpa mencampur prestasi historis)
+  const roadmapStep: ReadinessStep = !targetComp
+    ? {
+        id: 'roadmap',
+        label: 'Roadmap & Pembinaan',
+        done: false,
+        to: '/kompetisi',
+      }
+    : !hasRoadmap
+      ? {
+          id: 'roadmap',
           label: 'Roadmap & Pembinaan',
-          done: Boolean(dashboardData?.roadmapProgress && dashboardData.roadmapProgress.percentage > 0),
-          to: targetComp ? `/app/kompetisi/${targetComp.slug}/persiapan` : '/kompetisi',
+          done: false,
+          unavailable: true,
+          subLabel: 'Belum Tersedia',
+          to: `/app/kompetisi/${targetComp.slug}/persiapan`,
+        }
+      : {
+          id: 'roadmap',
+          label: 'Roadmap & Pembinaan',
+          done: isRoadmapCompleted,
+          inProgress: Boolean(roadmap && roadmap.completedTasks > 0 && !isRoadmapCompleted),
+          subLabel: isRoadmapCompleted
+            ? `Selesai (${roadmap!.completedTasks}/${roadmap!.totalTasks})`
+            : roadmap && roadmap.completedTasks > 0
+              ? `${roadmap.completedTasks}/${roadmap.totalTasks} Tugas (${roadmap.percentage}%)`
+              : undefined,
+          to: `/app/kompetisi/${targetComp.slug}/persiapan`,
+        };
+
+  const steps: ReadinessStep[] = isIndividualTarget
+    ? [
+        {
+          id: 'profile',
+          label: 'Identitas & Skill',
+          done: profileCompletion >= PROFILE_COMPLETE_THRESHOLD,
+          subLabel:
+            profileCompletion >= PROFILE_COMPLETE_THRESHOLD
+              ? 'Lengkap'
+              : `Terisi ${profileCompletion}%`,
+          to: '/app/profil',
         },
-        { label: 'Validasi Prestasi', done: verifiedCount > 0, to: '/app/prestasi' },
+        {
+          id: 'target',
+          label: 'Target Kompetisi',
+          done: Boolean(targetComp),
+          to: targetComp ? '/app/profil?need=target' : '/kompetisi',
+        },
+        roadmapStep,
       ]
     : [
-        { label: 'Identitas & Skill', done: (dashboardData?.profile?.completionPercentage ?? 100) >= 60, to: '/app/profil' },
-        { label: 'Target Kompetisi', done: !!targetComp, to: '/app/profil?need=target' },
-        { label: 'Cara Bergabung', done: !!team, to: '/app/tim' },
-        { label: 'Kesiapan Tim', done: isTeamFormed, to: '/app/tim' },
         {
-          label: 'Roadmap & Pembinaan',
-          done: Boolean(dashboardData?.roadmapProgress && dashboardData.roadmapProgress.percentage > 0),
-          to: targetComp ? `/app/kompetisi/${targetComp.slug}/persiapan` : '/kompetisi',
+          id: 'profile',
+          label: 'Identitas & Skill',
+          done: profileCompletion >= PROFILE_COMPLETE_THRESHOLD,
+          subLabel:
+            profileCompletion >= PROFILE_COMPLETE_THRESHOLD
+              ? 'Lengkap'
+              : `Terisi ${profileCompletion}%`,
+          to: '/app/profil',
         },
-        { label: 'Validasi Prestasi', done: verifiedCount > 0, to: '/app/prestasi' },
+        {
+          id: 'target',
+          label: 'Target Kompetisi',
+          done: Boolean(targetComp),
+          to: targetComp ? '/app/profil?need=target' : '/kompetisi',
+        },
+        {
+          id: 'join-team',
+          label: 'Bergabung Tim',
+          done: Boolean(activeTeam),
+          inProgress: !activeTeam && pendingJoinReqsSent.length > 0,
+          subLabel: activeTeam
+            ? 'Tergabung'
+            : pendingJoinReqsSent.length > 0
+              ? 'Menunggu Ketua'
+              : undefined,
+          to: !activeTeam && pendingJoinReqsSent.length > 0 ? '/app/tim?tab=pengajuan' : '/app/tim',
+        },
+        {
+          id: 'team-ready',
+          label: 'Kesiapan Tim',
+          done: isSelectionReady || isLockedSelection,
+          inProgress: Boolean(activeTeam && isTeamFormed && !isSelectionReady && !isLockedSelection),
+          subLabel: isLockedSelection
+            ? 'Terkunci Seleksi'
+            : isSelectionReady
+              ? 'Siap Seleksi'
+              : isTeamFormed
+                ? 'Cek Syarat Wajib'
+                : undefined,
+          to: '/app/tim',
+        },
+        roadmapStep,
       ];
 
-  const completedStepsCount = steps.filter((s) => s.done).length;
-  const progressPercent = Math.round((completedStepsCount / steps.length) * 100);
+  const activeSteps = steps.filter((s) => !s.unavailable);
+  const completedStepsCount = activeSteps.filter((s) => s.done).length;
+  const progressPercent =
+    activeSteps.length > 0 ? Math.round((completedStepsCount / activeSteps.length) * 100) : 0;
 
-  // Next recommended action
-  const nextStepIndex = steps.findIndex((s) => !s.done);
-  const nextStep = nextStepIndex !== -1 ? steps[nextStepIndex] : null;
+  const nextStep = activeSteps.find((s) => !s.done) || null;
 
-  // Next agenda item (mendukung format tanggal Indonesia maupun ISO)
-  const nextAgenda =
-    targetComp?.jadwal
-      .filter((j) => {
-        const d = parseFlexibleDate(j.tanggal);
-        return d ? d.getTime() >= Date.now() - 86400000 : true;
-      })
-      .sort((a, b) => {
-        const da = parseFlexibleDate(a.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        const db = parseFlexibleDate(b.tanggal)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-        return da - db;
-      })[0] || targetComp?.jadwal[0];
+  // Resolusi jadwal jujur: pisahkan agenda mendatang vs jadwal yang seluruhnya sudah berlalu
+  const rawSchedule = Array.isArray(targetComp?.scheduleTimeline) ? targetComp.scheduleTimeline : [];
+  const parsedSchedule = rawSchedule.map((item) => ({
+    ...item,
+    parsedTime: parseFlexibleDate(item.tanggal)?.getTime() ?? null,
+  }));
+  const nowThreshold = Date.now() - 86400000;
+  const upcomingAgenda = parsedSchedule
+    .filter((item) => item.parsedTime === null || item.parsedTime >= nowThreshold)
+    .sort((a, b) => (a.parsedTime ?? Number.MAX_SAFE_INTEGER) - (b.parsedTime ?? Number.MAX_SAFE_INTEGER))[0];
+  const latestPastAgenda =
+    !upcomingAgenda && parsedSchedule.length > 0
+      ? [...parsedSchedule].sort((a, b) => (b.parsedTime ?? 0) - (a.parsedTime ?? 0))[0]
+      : null;
 
-  const pendingJoinRequests =
-    team?.isLeader ? (team.pendingJoinRequestsCount ?? team.joinRequests?.length ?? 0) : 0;
+  const capacityText =
+    minTeamMembers === maxTeamMembers
+      ? `${teamMemberCount} dari ${minTeamMembers} Anggota`
+      : `${teamMemberCount} dari ${minTeamMembers}–${maxTeamMembers} Anggota`;
+
+  const secondaryHeroAction = isIndividualTarget && targetComp
+    ? {
+        label: 'Ruang Persiapan',
+        to: `/app/kompetisi/${targetComp.slug}/persiapan`,
+        icon: BookOpenCheck,
+      }
+    : !isIndividualTarget
+      ? activeTeam
+        ? { label: 'Ruang Tim Saya', to: '/app/tim', icon: Users }
+        : pendingJoinReqsSent.length > 0
+          ? { label: 'Pantau Pengajuan Tim', to: '/app/tim?tab=pengajuan', icon: Clock }
+          : { label: 'Atur Tim', to: '/app/tim', icon: Users }
+      : null;
+
+  const extraStatusParts: string[] = [];
+  if (rejectedCount > 0) extraStatusParts.push(`${rejectedCount} ditolak`);
+  if (cancelledCount > 0) extraStatusParts.push(`${cancelledCount} dibatalkan`);
+
+  const stepperGridClass =
+    steps.length === 3
+      ? 'grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1'
+      : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1';
 
   return (
     <div className="space-y-6">
-      {/* Banner Perhatian Jika Ada Permintaan Bergabung Tim (Khusus Ketua) */}
-      {pendingJoinRequests > 0 && team && (
+      {/* Banner 1: Prioritas Tertinggi — Revisi Prestasi */}
+      {revisionCount > 0 && (
+        <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <div className="text-xs font-bold text-orange-900">
+                Perhatian: {revisionCount} Pengajuan Prestasi Memerlukan Perbaikan
+              </div>
+              <div className="text-xs text-orange-800/90 mt-0.5">
+                Validator meminta revisi kelengkapan berkas atau data pendukung. Periksa catatan review dan kirim perbaikan agar pengajuan segera diproses ulang.
+              </div>
+            </div>
+          </div>
+          <Link to={revisionActionUrl} className="shrink-0">
+            <Button size="sm" variant="warning-outline">
+              Periksa &amp; Perbaiki
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Banner 2: Permintaan Bergabung Masuk (Khusus Ketua Tim) */}
+      {incomingJoinRequests > 0 && activeTeam && (
         <div className="p-4 rounded-2xl bg-blue-50/90 border border-blue-200 text-blue-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-start gap-3">
             <Users className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
               <div className="text-xs font-bold text-blue-900">
-                {pendingJoinRequests} Permintaan Bergabung ke {team.nama} Menunggu Persetujuan
+                {incomingJoinRequests} Permintaan Bergabung ke {activeTeam.name} Menunggu Persetujuan
               </div>
               <div className="text-xs text-blue-700 mt-0.5">
                 Tinjau profil ringkas pelamar di Ruang Tim Saya untuk menerima atau menolak pengajuan anggota baru.
@@ -185,23 +360,25 @@ export const BerandaPage: React.FC = () => {
         </div>
       )}
 
-      {/* Banner Perhatian Jika Ada Revisi Prestasi */}
-      {revisionCount > 0 && (
-        <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+      {/* Banner 3: Pengajuan Gabung Terkirim Menunggu Ketua (Khusus Pelamar Tanpa Tim) */}
+      {!activeTeam && pendingJoinReqsSent.length > 0 && (
+        <div className="p-4 rounded-2xl bg-indigo-50/90 border border-indigo-200 text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+            <Clock className="w-5 h-5 text-indigo-700 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <div className="text-xs font-bold text-orange-900">
-                Perhatian: {revisionCount} Pengajuan Prestasi Memerlukan Perbaikan
+              <div className="text-xs font-bold text-indigo-950">
+                {pendingJoinReqsSent.length === 1
+                  ? `Pengajuan Bergabung ke ${pendingJoinReqsSent[0].teamName} Menunggu Persetujuan Ketua`
+                  : `${pendingJoinReqsSent.length} Pengajuan Bergabung Tim Menunggu Persetujuan Ketua`}
               </div>
-              <div className="text-xs text-orange-700 mt-0.5">
-                Validator meminta revisi kelengkapan berkas/bukti pendukung. Silakan periksa catatan review dan unggah dokumen perbaikan.
+              <div className="text-xs text-indigo-800/90 mt-0.5">
+                Anda dapat memantau status pengajuan, membatalkan, atau memilih tim lain melalui tab Pengajuan Saya.
               </div>
             </div>
           </div>
-          <Link to="/app/prestasi" className="shrink-0">
-            <Button size="sm" variant="warning-outline">
-              Periksa Berkas Sekarang
+          <Link to="/app/tim?tab=pengajuan" className="shrink-0">
+            <Button size="sm" variant="outline">
+              Lihat Status Pengajuan
             </Button>
           </Link>
         </div>
@@ -209,7 +386,10 @@ export const BerandaPage: React.FC = () => {
 
       {/* Top Welcome Card */}
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-48 bg-gradient-to-l from-blue-100/60 via-sky-50/40 to-transparent pointer-events-none -z-0" />
+        <div
+          aria-hidden="true"
+          className="absolute top-0 right-0 w-96 h-48 bg-gradient-to-l from-blue-100/60 via-sky-50/40 to-transparent pointer-events-none -z-0"
+        />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4 sm:gap-5">
@@ -235,7 +415,7 @@ export const BerandaPage: React.FC = () => {
                 <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200/60">
                   Mahasiswa
                 </span>
-                {dashboardData?.points && (
+                {dashboardData.points && (
                   <span className="text-[11px] bg-emerald-50 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
                     {dashboardData.points.totalPoints} Poin ({dashboardData.points.currentPeriod})
                   </span>
@@ -245,21 +425,26 @@ export const BerandaPage: React.FC = () => {
                 {currentUser?.nama}
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                {currentUser?.prodi}{currentUser?.angkatan ? ` • Angkatan ${currentUser.angkatan}` : ''} • Universitas Darussalam Gontor
+                {currentUser?.prodi}
+                {currentUser?.angkatan ? ` • Angkatan ${currentUser.angkatan}` : ''} • Universitas Darussalam Gontor
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {!isIndividualTarget && (
-              <Link to={team ? '/app/tim' : '/app/tim?tab=cari'}>
-                <Button size="sm" variant="outline" leftIcon={<Users className="w-3.5 h-3.5" aria-hidden="true" />}>
-                  {team ? 'Ruang Tim Saya' : 'Cari Tim'}
+            {secondaryHeroAction && (
+              <Link to={secondaryHeroAction.to}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<secondaryHeroAction.icon className="w-3.5 h-3.5" aria-hidden="true" />}
+                >
+                  {secondaryHeroAction.label}
                 </Button>
               </Link>
             )}
             <Link to="/app/prestasi/baru">
-              <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" />}>
+              <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}>
                 Catat Prestasi Baru
               </Button>
             </Link>
@@ -270,56 +455,74 @@ export const BerandaPage: React.FC = () => {
         <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <Compass className="w-3.5 h-3.5 text-blue-700" />
+              <Compass className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
               <span>Alur Perjalanan Kesiapan Kompetisi</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
               <span className="text-slate-400">Progres Kesiapan:</span>
               <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
-                {completedStepsCount} dari {steps.length} Langkah ({progressPercent}%)
+                {completedStepsCount} dari {activeSteps.length} Langkah ({progressPercent}%)
               </span>
             </div>
           </div>
 
           {/* Progress bar visual */}
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden" aria-hidden="true">
             <div
               className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-2 rounded-full transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
-          {/* Stepper Pipeline Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 pt-1">
+          {/* Stepper Pipeline Grid (simetris 3 kolom untuk individu, 5 kolom untuk beregu) */}
+          <div className={stepperGridClass}>
             {steps.map((st, idx) => {
-              const isNext = nextStep?.label === st.label;
+              const isNext = nextStep?.id === st.id;
               return (
                 <Link
-                  key={st.label}
+                  key={st.id}
                   to={st.to}
                   className={`p-2.5 rounded-xl border transition-all text-left flex items-start gap-2 relative group ${
                     st.done
                       ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 hover:bg-emerald-100/60'
-                      : isNext
-                      ? 'bg-blue-50/90 border-blue-300 text-blue-950 ring-2 ring-blue-500/20 shadow-xs'
-                      : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100'
+                      : st.unavailable
+                        ? 'bg-slate-50/70 border-dashed border-slate-200 text-slate-500 hover:bg-slate-100/80'
+                        : isNext
+                          ? 'bg-blue-50/90 border-blue-300 text-blue-950 ring-2 ring-blue-500/20 shadow-xs'
+                          : st.inProgress
+                            ? 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/60'
+                            : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${
                       st.done
                         ? 'bg-emerald-600 text-white'
-                        : isNext
-                        ? 'bg-blue-700 text-white animate-pulse'
-                        : 'bg-slate-200 text-slate-600'
+                        : st.unavailable
+                          ? 'bg-slate-200 text-slate-500'
+                          : isNext
+                            ? 'bg-blue-700 text-white'
+                            : st.inProgress
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-slate-200 text-slate-600'
                     }`}
                   >
                     {st.done ? <Check className="w-3 h-3" aria-hidden="true" /> : idx + 1}
                   </div>
                   <div className="min-w-0">
                     <div className="text-[11px] font-bold leading-tight truncate">{st.label}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
-                      {st.done ? 'Selesai' : isNext ? 'Perlu Dikerjakan' : `Langkah ${idx + 1}`}
+                    <div
+                      className={`text-[10px] mt-0.5 leading-tight truncate ${
+                        st.done
+                          ? 'text-emerald-700 font-semibold'
+                          : isNext
+                            ? 'text-blue-700 font-semibold'
+                            : st.inProgress
+                              ? 'text-amber-700 font-semibold'
+                              : 'text-slate-400'
+                      }`}
+                    >
+                      {st.subLabel || (st.done ? 'Selesai' : isNext ? 'Perlu Dikerjakan' : `Langkah ${idx + 1}`)}
                     </div>
                   </div>
                 </Link>
@@ -327,37 +530,83 @@ export const BerandaPage: React.FC = () => {
             })}
           </div>
 
-          {nextStep && (
-            <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs">
+          {/* Callout Langkah Berikutnya atau Status Tuntas */}
+          {nextStep ? (
+            <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <span className="text-blue-900 font-semibold">
-                Langkah berikutnya yang disarankan: <strong>{nextStep.label}</strong>
+                {nextStep.id === 'join-team' && pendingJoinReqsSent.length > 0 ? (
+                  <>
+                    Pengajuan bergabung ke <strong>{pendingJoinReqsSent[0].teamName}</strong> sedang menunggu persetujuan ketua tim.
+                  </>
+                ) : nextStep.id === 'team-ready' && activeTeam && !activeTeam.isLeader ? (
+                  <>
+                    Tim <strong>{activeTeam.name}</strong> sedang melengkapi syarat kesiapan — koordinasi dengan ketua atau lanjutkan persiapan roadmap.
+                  </>
+                ) : (
+                  <>
+                    Langkah berikutnya yang disarankan: <strong>{nextStep.label}</strong>
+                    {nextStep.id === 'roadmap' && roadmap && roadmap.completedTasks > 0
+                      ? ` (${roadmap.completedTasks}/${roadmap.totalTasks} tugas selesai)`
+                      : ''}
+                  </>
+                )}
               </span>
-              <Link to={nextStep.to} className="font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0">
-                Selesaikan Sekarang <ArrowRight className="w-3 h-3" />
+              <Link
+                to={nextStep.to}
+                className="font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0"
+              >
+                {nextStep.id === 'join-team' && pendingJoinReqsSent.length > 0
+                  ? 'Pantau Pengajuan'
+                  : 'Selesaikan Sekarang'}{' '}
+                <ArrowRight className="w-3 h-3" aria-hidden="true" />
               </Link>
             </div>
-          )}
+          ) : targetComp ? (
+            <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <span className="text-emerald-900 font-semibold inline-flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+                <span>
+                  {isIndividualTarget
+                    ? 'Seluruh langkah kesiapan lomba individu telah terpenuhi.'
+                    : isLockedSelection
+                      ? 'Tim Anda sudah terkunci sebagai peserta seleksi internal. Fokus pada persiapan pelaksanaan!'
+                      : 'Seluruh langkah kesiapan aktif terpenuhi — tim Anda siap mendaftar seleksi internal.'}
+                </span>
+              </span>
+              <Link
+                to={
+                  isIndividualTarget || isLockedSelection
+                    ? `/app/kompetisi/${targetComp.slug}/persiapan`
+                    : '/app/tim'
+                }
+                className="font-bold text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1 shrink-0"
+              >
+                {isIndividualTarget || isLockedSelection ? 'Buka Ruang Persiapan' : 'Daftar Seleksi di Ruang Tim'}{' '}
+                <ArrowRight className="w-3 h-3" aria-hidden="true" />
+              </Link>
+            </div>
+          ) : null}
         </div>
       </div>
 
       {/* Main Grid: Target & Recent Achievements */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left Column: Target Pembinaan Aktif */}
+        {/* Left Column: Target Kompetisi Aktif */}
         <div className="lg:col-span-7">
           <Card className="h-full bg-white flex flex-col justify-between border-slate-200/90 shadow-2xs">
             <div>
               <CardHeader className="py-3.5">
                 <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-blue-700" />
+                  <Target className="w-4 h-4 text-blue-700" aria-hidden="true" />
                   <CardTitle level={2} className="text-sm font-bold">
-                    Target Pembinaan Belmawa Aktif
+                    Target Kompetisi Aktif
                   </CardTitle>
                 </div>
                 <Link
-                  to="/app/profil?need=target"
+                  to={targetComp ? '/app/profil?need=target' : '/kompetisi'}
                   className="text-xs font-semibold text-blue-700 hover:text-blue-900 hover:underline min-h-[32px] inline-flex items-center"
                 >
-                  Ganti Target
+                  {targetComp ? 'Ganti Target' : 'Jelajahi Lomba'}
                 </Link>
               </CardHeader>
 
@@ -366,25 +615,30 @@ export const BerandaPage: React.FC = () => {
                   <div className="space-y-3.5">
                     <div className="flex items-center justify-between gap-2">
                       <Badge color="blue" dot>
-                        {targetComp.kategori}
+                        {targetComp.category}
                       </Badge>
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Tingkat {targetComp.tingkat}
+                        Tingkat {targetComp.level}
                       </span>
                     </div>
 
                     <div>
                       <h3 className="font-black text-slate-900 text-base leading-snug">
-                        {targetComp.namaResmi}
+                        {targetComp.name}
                       </h3>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2" title={targetComp.deskripsi}>
-                        {targetComp.deskripsi}
-                      </p>
+                      {targetComp.description && (
+                        <p
+                          className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2"
+                          title={targetComp.description}
+                        >
+                          {targetComp.description}
+                        </p>
+                      )}
                     </div>
 
                     {/* Team Health Meter & Status Box */}
                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-3">
-                      <div className="flex items-center justify-between text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                         <span className="text-slate-600 font-semibold">
                           {isIndividualTarget ? 'Format Kepesertaan:' : 'Status Formasi Tim:'}
                         </span>
@@ -392,11 +646,13 @@ export const BerandaPage: React.FC = () => {
                           className={`font-black px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1 ${
                             isIndividualTarget || isSelectionReady
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              : team?.status === 'terkunci_seleksi'
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                              : team
-                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                              : 'bg-slate-200 text-slate-700'
+                              : isLockedSelection
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : activeTeam
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : pendingJoinReqsSent.length > 0
+                                    ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                    : 'bg-slate-200 text-slate-700'
                           }`}
                         >
                           {isIndividualTarget ? (
@@ -404,7 +660,7 @@ export const BerandaPage: React.FC = () => {
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" />
                               Kompetisi Individu (Perseorangan)
                             </>
-                          ) : team?.status === 'terkunci_seleksi' ? (
+                          ) : isLockedSelection ? (
                             <>
                               <CheckCircle2 className="w-3 h-3 text-blue-700" aria-hidden="true" />
                               Terkunci Seleksi Internal
@@ -419,10 +675,15 @@ export const BerandaPage: React.FC = () => {
                               <Clock className="w-3 h-3 text-amber-600" aria-hidden="true" />
                               Anggota Cukup &middot; Cek Syarat
                             </>
-                          ) : team ? (
+                          ) : activeTeam ? (
                             <>
                               <Clock className="w-3 h-3 text-amber-600" aria-hidden="true" />
                               Masih Mencari Anggota
+                            </>
+                          ) : pendingJoinReqsSent.length > 0 ? (
+                            <>
+                              <Clock className="w-3 h-3 text-indigo-700" aria-hidden="true" />
+                              Menunggu Persetujuan Ketua
                             </>
                           ) : (
                             'Belum Memiliki Tim'
@@ -432,24 +693,61 @@ export const BerandaPage: React.FC = () => {
 
                       {isIndividualTarget ? (
                         <p className="text-[11px] text-slate-600 pt-1">
-                          Kompetisi target Anda bersifat individu. Anda dapat langsung membuka Ruang Persiapan untuk melengkapi roadmap dan berkonsultasi dengan dosen pembimbing.
+                          Kompetisi target Anda bersifat individu. Buka Ruang Persiapan untuk melengkapi roadmap dan berkonsultasi dengan dosen pembimbing.
                         </p>
-                      ) : team ? (
+                      ) : activeTeam ? (
                         <div className="space-y-2 pt-2 border-t border-slate-200/60 text-xs">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <span className="text-slate-500">Nama Tim:</span>
-                            <span className="font-extrabold text-slate-900">{team.nama}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500">Kapasitas Anggota:</span>
-                            <span className="font-bold text-slate-800">
-                              {team.anggota.length} dari {targetComp.komposisi.min}–{targetComp.komposisi.max} Anggota
+                            <span className="font-extrabold text-slate-900 text-right">
+                              {activeTeam.name}
                             </span>
                           </div>
-                          {missingRoles.length > 0 && (
-                            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200/70 text-[11px] text-amber-900 flex items-center gap-1.5">
-                              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                              <span>Butuh peran pelengkap: <strong>{missingRoles.join(', ')}</strong></span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500">Kapasitas Anggota:</span>
+                            <span className="font-bold text-slate-800">{capacityText}</span>
+                          </div>
+
+                          {/* Syarat wajib yang belum terpenuhi (K-23) */}
+                          {unmetCriteria.length > 0 && (
+                            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-[11px] text-amber-950 space-y-1">
+                              <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                                <span>Syarat wajib belum terpenuhi:</span>
+                              </div>
+                              <ul className="list-disc pl-5 space-y-0.5 text-amber-900">
+                                {unmetCriteria.map((reason, idx) => (
+                                  <li key={idx}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Saran opsional (tidak menyesatkan sebagai wajib) */}
+                          {advisoryNotes.length > 0 && (
+                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-600 flex items-start gap-1.5">
+                              <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+                              <span>
+                                <strong className="text-slate-700">Saran opsional:</strong>{' '}
+                                {advisoryNotes.join(' · ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : pendingJoinReqsSent.length > 0 ? (
+                        <div className="space-y-1.5 pt-2 border-t border-slate-200/60 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500">Tim Tujuan:</span>
+                            <span className="font-extrabold text-indigo-950">
+                              {pendingJoinReqsSent[0].teamName}
+                            </span>
+                          </div>
+                          {pendingJoinReqsSent[0].preferredRole && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-500">Peran Diajukan:</span>
+                              <span className="font-semibold text-slate-700">
+                                {pendingJoinReqsSent[0].preferredRole}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -459,24 +757,47 @@ export const BerandaPage: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Next Agenda Countdown */}
-                      {nextAgenda && (
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                      {/* Ringkasan Progres Roadmap */}
+                      {hasRoadmap && roadmap && (
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
                           <span className="text-slate-500 flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-blue-700" />
-                            Agenda Terdekat:
+                            <BookOpenCheck className="w-3 h-3 text-blue-700" aria-hidden="true" />
+                            Progres Roadmap:
                           </span>
-                          <span className="font-bold text-blue-800">
-                            {nextAgenda.label} ({formatDate(nextAgenda.tanggal)})
+                          <span className="font-bold text-slate-800">
+                            {roadmap.completedTasks}/{roadmap.totalTasks} tugas ({roadmap.percentage}%)
                           </span>
                         </div>
                       )}
+
+                      {/* Agenda Terdekat / Jadwal Terakhir (jujur terhadap tanggal lewat) */}
+                      {upcomingAgenda ? (
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
+                          <span className="text-slate-500 flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3 text-blue-700" aria-hidden="true" />
+                            Agenda Terdekat:
+                          </span>
+                          <span className="font-bold text-blue-800 text-right">
+                            {upcomingAgenda.label} ({formatDate(upcomingAgenda.tanggal)})
+                          </span>
+                        </div>
+                      ) : latestPastAgenda ? (
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
+                          <span className="text-slate-500 flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3 text-slate-400" aria-hidden="true" />
+                            Jadwal Terakhir (Berlalu):
+                          </span>
+                          <span className="font-semibold text-slate-600 text-right">
+                            {latestPastAgenda.label} ({formatDate(latestPastAgenda.tanggal)})
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-700 mx-auto flex items-center justify-center">
-                      <Trophy className="w-6 h-6" />
+                      <Trophy className="w-6 h-6" aria-hidden="true" />
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-800">Belum Ada Target Kompetisi</h4>
@@ -485,7 +806,7 @@ export const BerandaPage: React.FC = () => {
                       </p>
                     </div>
                     <Link to="/kompetisi">
-                      <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                      <Button size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />}>
                         Pilih Kompetisi Sekarang
                       </Button>
                     </Link>
@@ -495,19 +816,23 @@ export const BerandaPage: React.FC = () => {
             </div>
 
             {targetComp && (
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                 <Link
                   to={`/kompetisi/${targetComp.slug}`}
                   className="text-xs text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center gap-1"
                 >
-                  Panduan Lomba <ChevronRight className="w-3.5 h-3.5" />
+                  Panduan Lomba <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
 
                 <div className="flex flex-wrap items-center gap-2">
                   {!isIndividualTarget && (
-                    <Link to="/app/tim">
+                    <Link to={!activeTeam && pendingJoinReqsSent.length > 0 ? '/app/tim?tab=pengajuan' : '/app/tim'}>
                       <Button size="sm" variant="outline" rightIcon={<Users className="w-3.5 h-3.5" aria-hidden="true" />}>
-                        {team ? `Ruang Tim (${team.anggota.length} Org)` : 'Atur Tim'}
+                        {activeTeam
+                          ? `Ruang Tim (${teamMemberCount} Org)`
+                          : pendingJoinReqsSent.length > 0
+                            ? 'Pantau Pengajuan'
+                            : 'Atur Tim'}
                       </Button>
                     </Link>
                   )}
@@ -522,15 +847,15 @@ export const BerandaPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right Column: Pengajuan Prestasi Terbaru */}
+        {/* Right Column: Portofolio & Prestasi Terbaru */}
         <div className="lg:col-span-5">
           <Card className="h-full bg-white flex flex-col justify-between border-slate-200/90 shadow-2xs">
             <div>
               <CardHeader className="py-3.5">
                 <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-emerald-600" />
+                  <Award className="w-4 h-4 text-emerald-600" aria-hidden="true" />
                   <CardTitle level={2} className="text-sm font-bold">
-                    Portofolio & Prestasi
+                    Portofolio &amp; Prestasi
                   </CardTitle>
                 </div>
                 <Link
@@ -542,26 +867,51 @@ export const BerandaPage: React.FC = () => {
               </CardHeader>
 
               <CardContent className="p-4 space-y-3.5">
-                {/* Metric Summary Counters */}
+                {/* Metric Summary Counters (klik langsung filter daftar prestasi) */}
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/70 text-center">
+                  <Link
+                    to="/app/prestasi?status=disetujui"
+                    className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/70 text-center transition-colors"
+                  >
                     <div className="text-lg font-black text-emerald-700 leading-tight">{verifiedCount}</div>
                     <div className="text-[10px] font-semibold text-emerald-800 leading-tight">Disetujui</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/70 text-center">
+                  </Link>
+                  <Link
+                    to="/app/prestasi?status=menunggu"
+                    className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100/70 border border-amber-200/70 text-center transition-colors"
+                  >
                     <div className="text-lg font-black text-amber-700 leading-tight">{pendingCount}</div>
                     <div className="text-[10px] font-semibold text-amber-800 leading-tight">Verifikasi</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                    <div className="text-lg font-black text-slate-700 leading-tight">{revisionCount}</div>
-                    <div className="text-[10px] font-semibold text-slate-600 leading-tight">Revisi</div>
-                  </div>
+                  </Link>
+                  <Link
+                    to="/app/prestasi?status=perlu_perbaikan"
+                    className={`p-2.5 rounded-xl border text-center transition-colors ${
+                      revisionCount > 0
+                        ? 'bg-orange-50 hover:bg-orange-100/70 border-orange-300 text-orange-800'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <div
+                      className={`text-lg font-black leading-tight ${
+                        revisionCount > 0 ? 'text-orange-700' : 'text-slate-700'
+                      }`}
+                    >
+                      {revisionCount}
+                    </div>
+                    <div
+                      className={`text-[10px] font-semibold leading-tight ${
+                        revisionCount > 0 ? 'text-orange-800' : 'text-slate-600'
+                      }`}
+                    >
+                      Revisi
+                    </div>
+                  </Link>
                 </div>
 
-                {achievements.length === 0 ? (
+                {recentAchievements.length === 0 ? (
                   <div className="text-center py-6 space-y-3">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
-                      <Award className="w-6 h-6" />
+                      <Award className="w-6 h-6" aria-hidden="true" />
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-800">Belum Ada Capaian Tercatat</h4>
@@ -570,27 +920,38 @@ export const BerandaPage: React.FC = () => {
                       </p>
                     </div>
                     <Link to="/app/prestasi/baru">
-                      <Button size="sm" variant="outline" rightIcon={<Plus className="w-3.5 h-3.5" />}>
+                      <Button size="sm" variant="outline" leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}>
                         Ajukan Prestasi Sekarang
                       </Button>
                     </Link>
                   </div>
                 ) : (
                   <ul className="space-y-2">
-                    {achievements.map((item) => (
-                      <li
-                        key={item.id}
-                        className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition-colors flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-slate-800 truncate" title={item.nama}>
-                            {item.nama}
-                          </h4>
-                          <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                            {item.penyelenggara} • {formatDate(item.tanggal)}
-                          </p>
-                        </div>
-                        <AchievementStatusBadge status={item.status} />
+                    {recentAchievements.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          to={`/app/prestasi/${item.id}`}
+                          className="p-3 rounded-xl bg-slate-50 hover:bg-blue-50/50 border border-slate-200/80 hover:border-blue-300 transition-colors flex items-center justify-between gap-3 group"
+                        >
+                          <div className="min-w-0">
+                            <h4
+                              className="font-bold text-xs text-slate-800 group-hover:text-blue-800 truncate transition-colors"
+                              title={item.name}
+                            >
+                              {item.name}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                              {item.organizer} • {formatDate(item.eventDate)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <AchievementStatusBadge status={item.status} />
+                            <ChevronRight
+                              className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all"
+                              aria-hidden="true"
+                            />
+                          </div>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -598,14 +959,16 @@ export const BerandaPage: React.FC = () => {
               </CardContent>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-500 font-medium">
                 {totalAchievementCount} pengajuan tercatat
+                {extraStatusParts.length > 0 ? ` (${extraStatusParts.join(', ')})` : ''}
               </span>
-              <Link to="/app/prestasi/baru">
-                <Button size="sm" variant="outline" leftIcon={<Plus className="w-3.5 h-3.5" />}>
-                  Catat Prestasi Baru
-                </Button>
+              <Link
+                to="/app/prestasi"
+                className="text-xs font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0"
+              >
+                Kelola Prestasi <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
               </Link>
             </div>
           </Card>

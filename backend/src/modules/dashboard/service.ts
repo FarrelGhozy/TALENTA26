@@ -35,8 +35,49 @@ export async function getStudentDashboard(userId: string, institutionId: string)
           category: true,
           level: true,
           format: true,
+          description: true,
+          minTeamMembers: true,
+          maxTeamMembers: true,
+          requiredRoles: true,
+          registrationStatus: true,
+          internalSelectionDeadline: true,
+          requireRoles: true,
+          requireCrossStudyProgram: true,
+          scheduleTimeline: true,
           registrationDeadline: true,
           competitionDate: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // 2B. Pengajuan bergabung tim yang dikirim mahasiswa (status menunggu)
+  const myPendingJoinRequests = await prisma.teamJoinRequest.findMany({
+    where: {
+      userId,
+      status: 'menunggu',
+      team: {
+        status: { in: ['mencari', 'terbentuk'] },
+      },
+    },
+    select: {
+      id: true,
+      teamId: true,
+      preferredRole: true,
+      createdAt: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          competition: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -161,14 +202,37 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     revisionCount,
     approvedCount,
     rejectedCount,
+    cancelledCount,
     draftCount,
+    recentAchievementsRaw,
+    firstRevisionRow,
   ] = await Promise.all([
     prisma.achievement.count({ where: achOwnerFilter }),
     prisma.achievement.count({ where: { ...achOwnerFilter, status: 'menunggu' } }),
     prisma.achievement.count({ where: { ...achOwnerFilter, status: 'perlu_perbaikan' } }),
     prisma.achievement.count({ where: { ...achOwnerFilter, status: 'disetujui' } }),
     prisma.achievement.count({ where: { ...achOwnerFilter, status: 'ditolak' } }),
+    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'dibatalkan' } }),
     prisma.achievement.count({ where: { ...achOwnerFilter, status: 'draft' } }),
+    prisma.achievement.findMany({
+      where: achOwnerFilter,
+      select: {
+        id: true,
+        name: true,
+        organizer: true,
+        eventDate: true,
+        status: true,
+        level: true,
+        result: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 4,
+    }),
+    prisma.achievement.findFirst({
+      where: { ...achOwnerFilter, status: 'perlu_perbaikan' },
+      select: { id: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
   ]);
 
   // 6. Poin periode aktif
@@ -255,14 +319,26 @@ export async function getStudentDashboard(userId: string, institutionId: string)
   // Langkah 4: Pembentukan Tim
   if (target && target.competition.format === 'beregu') {
     if (!teamMember) {
-      actionableSteps.push({
-        id: 'form-team',
-        title: 'Pilih Cara Bergabung atau Buat Tim',
-        description: 'Buat tim baru, cari tim yang membuka rekrutmen, atau gabung memakai kode undangan ketua.',
-        actionUrl: '/app/tim',
-        isCompleted: false,
-        priority: 'medium',
-      });
+      if (myPendingJoinRequests.length > 0) {
+        const firstReq = myPendingJoinRequests[0];
+        actionableSteps.push({
+          id: 'form-team',
+          title: 'Pengajuan Bergabung Menunggu Persetujuan Ketua',
+          description: `Pengajuan Anda ke ${firstReq.team.name} sedang menunggu keputusan ketua tim.`,
+          actionUrl: '/app/tim?tab=pengajuan',
+          isCompleted: false,
+          priority: 'medium',
+        });
+      } else {
+        actionableSteps.push({
+          id: 'form-team',
+          title: 'Pilih Cara Bergabung atau Buat Tim',
+          description: 'Buat tim baru, cari tim yang membuka rekrutmen, atau gabung memakai kode undangan ketua.',
+          actionUrl: '/app/tim',
+          isCompleted: false,
+          priority: 'medium',
+        });
+      }
     } else {
       const pendingReqs =
         teamMember.team.leaderId === userId ? teamMember.team.joinRequests.length : 0;
@@ -271,12 +347,14 @@ export async function getStudentDashboard(userId: string, institutionId: string)
         title:
           pendingReqs > 0
             ? `${pendingReqs} Permintaan Bergabung Menunggu Persetujuan`
-            : activeTeamReadiness?.isSelectionReady
+            : activeTeamReadiness?.isSelectionReady || teamMember.team.status === 'terkunci_seleksi'
             ? 'Tim Siap Mengikuti Seleksi Internal'
             : 'Kelola Ruang Tim & Anggota',
         description: `${teamMember.team.name} (${activeTeamReadiness?.statusLabel || teamMember.team.status})`,
         actionUrl: '/app/tim',
-        isCompleted: Boolean(activeTeamReadiness?.hasEnoughMembers),
+        isCompleted: Boolean(
+          activeTeamReadiness?.isSelectionReady || teamMember.team.status === 'terkunci_seleksi'
+        ),
         priority: pendingReqs > 0 ? 'high' : 'low',
       });
     }
@@ -335,6 +413,15 @@ export async function getStudentDashboard(userId: string, institutionId: string)
           readiness: activeTeamReadiness,
         }
       : null,
+    myPendingJoinRequests: myPendingJoinRequests.map((req) => ({
+      id: req.id,
+      teamId: req.teamId,
+      teamName: req.team.name,
+      preferredRole: req.preferredRole,
+      competitionSlug: req.team.competition.slug,
+      competitionName: req.team.competition.name,
+      createdAt: req.createdAt.toISOString(),
+    })),
     roadmapProgress: roadmapSummary,
     submissions: {
       total: totalAchievements,
@@ -342,8 +429,19 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       perlu_perbaikan: revisionCount,
       disetujui: approvedCount,
       ditolak: rejectedCount,
+      dibatalkan: cancelledCount,
       draft: draftCount,
     },
+    recentAchievements: recentAchievementsRaw.map((ach) => ({
+      id: ach.id,
+      name: ach.name,
+      organizer: ach.organizer,
+      eventDate: ach.eventDate ? ach.eventDate.toISOString().split('T')[0] : '',
+      status: ach.status,
+      level: ach.level,
+      result: ach.result,
+    })),
+    firstRevisionAchievementId: firstRevisionRow?.id ?? null,
     points: {
       currentPeriod: currentPeriod ? currentPeriod.name : 'Belum ada periode aktif',
       totalPoints: currentPeriodPoints,

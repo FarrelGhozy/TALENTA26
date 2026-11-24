@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Award, CheckCircle2, Clock, Plus, Search, Filter } from 'lucide-react';
 import { Achievement } from '../../types';
 import { achievementService } from '@talenta/services';
@@ -12,13 +12,46 @@ import { AchievementTable } from './components/AchievementTable';
 
 type StatusFilter = 'semua' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak' | 'dibatalkan';
 
+const VALID_STATUS_FILTERS: readonly StatusFilter[] = [
+  'semua',
+  'menunggu',
+  'perlu_perbaikan',
+  'disetujui',
+  'ditolak',
+  'dibatalkan',
+] as const;
+
 export const AchievementListPage: React.FC = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { notify } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
+
+  const rawStatus = searchParams.get('status') as StatusFilter | null;
+  const initialStatus: StatusFilter =
+    rawStatus && VALID_STATUS_FILTERS.includes(rawStatus) ? rawStatus : 'semua';
+  const [statusFilter, setStatusFilterState] = useState<StatusFilter>(initialStatus);
+
+  useEffect(() => {
+    if (rawStatus && VALID_STATUS_FILTERS.includes(rawStatus) && rawStatus !== statusFilter) {
+      setStatusFilterState(rawStatus);
+    }
+  }, [rawStatus, statusFilter]);
+
+  const setStatusFilter = (nextStatus: StatusFilter) => {
+    setStatusFilterState(nextStatus);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (nextStatus === 'semua') next.delete('status');
+        else next.set('status', nextStatus);
+        return next;
+      },
+      { replace: true }
+    );
+  };
   const [query, setQuery] = useState('');
 
   const [cancelTarget, setCancelTarget] = useState<Achievement | null>(null);

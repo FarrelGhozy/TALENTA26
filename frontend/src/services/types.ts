@@ -443,8 +443,34 @@ export interface StudentDashboardData {
     studyProgram: string | null;
     faculty: string | null;
   };
-  targetCompetition: any;
+  targetCompetition: {
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    level: string;
+    format: 'individu' | 'beregu';
+    description?: string;
+    minTeamMembers?: number;
+    maxTeamMembers?: number;
+    requiredRoles?: string[];
+    registrationStatus?: 'buka' | 'tutup';
+    internalSelectionDeadline?: string | null;
+    requireRoles?: boolean;
+    requireCrossStudyProgram?: boolean;
+    scheduleTimeline?: Array<{ label: string; tanggal: string }>;
+    status?: string;
+  } | null;
   activeTeam: any;
+  myPendingJoinRequests?: Array<{
+    id: string;
+    teamId: string;
+    teamName: string;
+    preferredRole?: string | null;
+    competitionSlug: string;
+    competitionName: string;
+    createdAt: string;
+  }>;
   roadmapProgress: {
     roadmapId: string;
     version: number;
@@ -458,8 +484,19 @@ export interface StudentDashboardData {
     perlu_perbaikan: number;
     disetujui: number;
     ditolak: number;
+    dibatalkan?: number;
     draft: number;
   };
+  recentAchievements?: Array<{
+    id: string;
+    name: string;
+    organizer: string;
+    eventDate: string;
+    status: Achievement['status'];
+    level: string;
+    result: string;
+  }>;
+  firstRevisionAchievementId?: string | null;
   points: {
     currentPeriod: string;
     totalPoints: number;
