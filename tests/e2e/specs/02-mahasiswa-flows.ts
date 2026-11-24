@@ -142,6 +142,10 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
       // Uji jalur lomba individu (ONMIPA) dengan Mahasiswa 2 setelah keluar/ganti target
       await page2.goto(`${CONFIG.baseUrl}/kompetisi/onmipa-2026`);
       await page2.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+      const confirmSwitchBtn = page2.locator('button:has-text("Ya, Pindah Target")');
+      if (await confirmSwitchBtn.isVisible({ timeout: 2500 }).catch(() => false)) {
+        await confirmSwitchBtn.click();
+      }
       await page2.waitForURL((url) => url.pathname.includes('/app/kompetisi/onmipa-2026/persiapan'), { timeout: 8000 });
       await page2.locator('text=Alur otomatis untuk lomba individu').waitFor({ state: 'visible', timeout: 6000 });
       log.pass('Lomba individu ONMIPA langsung diarahkan ke Ruang Persiapan tanpa langkah tim');
@@ -172,6 +176,10 @@ export async function runMahasiswaFlows(page: Page): Promise<MahasiswaTestResult
   log.step('Memeriksa Roadmap & Checklist Lomba (/app/kompetisi/gemastik-2026/persiapan)');
   await page.goto(`${CONFIG.baseUrl}/kompetisi/gemastik-2026`);
   await page.locator('button:has-text("Pilih sebagai Target Kompetisi Saya")').click();
+  const confirmGemastikSwitchBtn = page.locator('button:has-text("Ya, Pindah Target")');
+  if (await confirmGemastikSwitchBtn.isVisible({ timeout: 2500 }).catch(() => false)) {
+    await confirmGemastikSwitchBtn.click();
+  }
   await page.waitForURL((url) => url.pathname.includes('/app/tim'), { timeout: 8000 });
   await page.goto(`${CONFIG.baseUrl}/app/kompetisi/gemastik-2026/persiapan`);
   await page.waitForLoadState('domcontentloaded');

@@ -74,12 +74,43 @@ export async function runSuperAdminFlows(page: Page): Promise<void> {
   }
   log.pass('Seluruh sub-menu pengaturan sistem di sidebar responsif');
 
-  // 4. Halaman Kelola Lomba (/admin/konten)
-  log.step('Memeriksa halaman Kelola Lomba (/admin/konten)');
+  // 4. Halaman Kelola Lomba Terpadu (/admin/konten -> Card Lomba -> Ruang Kelola /admin/konten/:id)
+  log.step('Memeriksa halaman Kelola Lomba terpadu berbasis kartu (/admin/konten)');
   await page.goto(`${CONFIG.baseUrl}/admin/konten`);
   await page.waitForLoadState('domcontentloaded');
   await page.locator('text=Kelola Lomba & Konten Pembinaan').waitFor({ state: 'visible', timeout: 6000 });
-  log.pass('Halaman Kelola Lomba terpadu berhasil dibuka');
+
+  // Uji buka modal Buat Lomba Baru & Master Jenis/Sub-Lomba
+  const createBtn = page.locator('button:has-text("Buat Lomba Baru")');
+  await createBtn.waitFor({ state: 'visible', timeout: 5000 });
+  await createBtn.click();
+  await page.locator('role=dialog[name="Buat Lomba Baru (Draft)"]').waitFor({ state: 'visible', timeout: 4000 });
+  await page.locator('button[aria-label="Tutup dialog"]').click();
+  log.pass('Modal Buat Lomba Baru terbuka dan tertutup dengan baik');
+
+  const masterCatBtn = page.locator('button:has-text("Master Jenis & Sub-Lomba")');
+  await masterCatBtn.click();
+  await page.locator('role=dialog[name="Master Jenis & Sub-Lomba (Lintas Kompetisi)"]').waitFor({ state: 'visible', timeout: 4000 });
+  await page.locator('button[aria-label="Tutup dialog"]').click();
+  log.pass('Modal Master Jenis & Sub-Lomba dapat diakses dari hub Kelola Lomba');
+
+  // Masuk ke dalam salah satu kartu lomba -> Ruang Kelola Lomba (/admin/konten/:id)
+  const firstManageLink = page.locator('main article a:has-text("Kelola Lomba")').first();
+  if (await firstManageLink.isVisible()) {
+    await firstManageLink.click();
+    await page.waitForURL((url) => url.pathname.startsWith('/admin/konten/'), { timeout: 6000 });
+    await page.locator('a:has-text("Kembali ke Daftar Lomba")').waitFor({ state: 'visible', timeout: 6000 });
+
+    const workspaceTabs = page.locator('[role="tab"]');
+    const tabCount = await workspaceTabs.count();
+    for (let i = 0; i < tabCount; i++) {
+      await workspaceTabs.nth(i).click();
+      await page.waitForTimeout(200);
+    }
+    log.pass(`Ruang Kelola Lomba (/admin/konten/:id) terbuka dan seluruh ${tabCount} tab internal berfungsi`);
+  } else {
+    log.info('Belum ada kartu lomba aktif pada basis data uji; hub Kelola Lomba terpadu memuat normal');
+  }
 
   // 5. Uji Kompatibilitas Redirect Rute Lama (/validator & /super-admin)
   log.step('Memverifikasi redirect rute lama (/validator/* dan /super-admin/* -> /admin/*)');

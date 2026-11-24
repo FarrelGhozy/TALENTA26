@@ -182,17 +182,49 @@ export async function getCurrentAcademicPeriod(): Promise<AcademicPeriod | null>
   });
 }
 
-export async function getAllCompetitionsAdmin(institutionId?: string): Promise<Competition[]> {
+const ADMIN_COMPETITION_INCLUDE = {
+  academicPeriod: true,
+  competitionCategory: { select: { id: true, name: true, code: true } },
+  pointTemplate: { select: { id: true, name: true, version: true } },
+  roadmaps: {
+    select: {
+      id: true,
+      status: true,
+      version: true,
+      _count: { select: { phases: true } },
+    },
+    orderBy: { version: 'desc' as const },
+    take: 1,
+  },
+  _count: {
+    select: {
+      competitionPointRules: true,
+      teams: true,
+      studentTargets: true,
+      consultantContacts: true,
+      selections: true,
+      roadmaps: true,
+    },
+  },
+} satisfies Prisma.CompetitionInclude;
+
+export async function getAllCompetitionsAdmin(institutionId?: string) {
   return prisma.competition.findMany({
     where: institutionId ? { institutionId } : undefined,
-    include: {
-      academicPeriod: true,
-      competitionCategory: { select: { id: true, name: true, code: true } },
-      pointTemplate: { select: { id: true, name: true, version: true } },
-      _count: { select: { competitionPointRules: true, teams: true } },
-    },
+    include: ADMIN_COMPETITION_INCLUDE,
     orderBy: { createdAt: 'desc' },
   });
+}
+
+export async function getCompetitionByIdAdmin(id: string, institutionId: string) {
+  const comp = await prisma.competition.findUnique({
+    where: { id },
+    include: ADMIN_COMPETITION_INCLUDE,
+  });
+  if (!comp || comp.institutionId !== institutionId) {
+    throw new NotFoundError('Kompetisi tidak ditemukan');
+  }
+  return comp;
 }
 
 function normalizeTeamBounds(

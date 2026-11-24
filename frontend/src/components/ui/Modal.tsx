@@ -8,9 +8,17 @@ export interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  size?: 'md' | 'lg' | 'xl' | '2xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+const MODAL_SIZE_CLASSES: Record<NonNullable<ModalProps['size']>, string> = {
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-3xl',
+  '2xl': 'max-w-4xl',
+};
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const onCloseRef = useRef(onClose);
@@ -66,9 +74,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
         tabIndex={-1}
         aria-modal="true"
         aria-label={title}
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in zoom-in-95 duration-150"
+        className={`bg-white rounded-3xl shadow-2xl border border-slate-200/90 ${MODAL_SIZE_CLASSES[size]} w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150`}
       >
-        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between shrink-0">
           <h3 id="modal-title" className="font-bold text-slate-900 text-base tracking-tight">{title}</h3>
           <button
             onClick={onClose}
@@ -78,13 +86,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-6 text-xs text-slate-600 space-y-4">{children}</div>
+        <div className="p-6 text-xs text-slate-600 space-y-4 overflow-y-auto flex-1">{children}</div>
         {footer ? (
-          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex justify-end gap-2.5">
+          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
             {footer}
           </div>
         ) : (
-          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex justify-end">
+          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex justify-end shrink-0">
             <Button variant="secondary" size="sm" onClick={onClose}>
               Tutup
             </Button>

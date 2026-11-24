@@ -34,6 +34,8 @@ interface AdminNavContextValue {
   loadingCounts: boolean;
   refreshNavCounts: () => Promise<void>;
   openMobileDrawer: () => void;
+  activeCompetitionName: string | null;
+  setActiveCompetitionName: (name: string | null) => void;
 }
 
 const AdminNavContext = createContext<AdminNavContextValue>({
@@ -41,6 +43,8 @@ const AdminNavContext = createContext<AdminNavContextValue>({
   loadingCounts: false,
   refreshNavCounts: async () => undefined,
   openMobileDrawer: () => undefined,
+  activeCompetitionName: null,
+  setActiveCompetitionName: () => undefined,
 });
 
 export const AdminNavProvider: React.FC<{
@@ -49,6 +53,7 @@ export const AdminNavProvider: React.FC<{
 }> = ({ children, onOpenMobileDrawer }) => {
   const [counts, setCounts] = useState<AdminNavCounts>(DEFAULT_COUNTS);
   const [loadingCounts, setLoadingCounts] = useState(true);
+  const [activeCompetitionName, setActiveCompetitionName] = useState<string | null>(null);
 
   const refreshNavCounts = useCallback(async () => {
     try {
@@ -141,6 +146,8 @@ export const AdminNavProvider: React.FC<{
         loadingCounts,
         refreshNavCounts,
         openMobileDrawer: onOpenMobileDrawer,
+        activeCompetitionName,
+        setActiveCompetitionName,
       }}
     >
       {children}

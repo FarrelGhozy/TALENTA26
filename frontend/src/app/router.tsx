@@ -88,7 +88,8 @@ export const router = createBrowserRouter(
         element: <AdminLayout />,
         children: [
           { index: true, lazy: lazyRoute(() => import('../features/dashboard/AdminDashboardPage'), 'AdminDashboardPage') },
-          { path: 'konten', lazy: lazyRoute(() => import('../features/validator/ValidatorContentPage'), 'ValidatorContentPage') },
+          { path: 'konten', lazy: lazyRoute(() => import('../features/validator/CompetitionCatalogPage'), 'CompetitionCatalogPage') },
+          { path: 'konten/:id', lazy: lazyRoute(() => import('../features/validator/CompetitionWorkspacePage'), 'CompetitionWorkspacePage') },
           { path: 'prestasi', lazy: lazyRoute(() => import('../features/verifikasi/VerificationListPage'), 'VerificationListPage') },
           { path: 'prestasi/:id', lazy: lazyRoute(() => import('../features/verifikasi/VerificationDetailPage'), 'VerificationDetailPage') },
           { path: 'sistem', lazy: lazyRoute(() => import('../features/super-admin/SuperAdminDashboardPage'), 'SuperAdminDashboardPage') },

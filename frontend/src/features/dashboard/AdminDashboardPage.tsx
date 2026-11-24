@@ -2,14 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  BookOpenCheck,
-  CalendarDays,
   ClipboardCheck,
-  Contact,
   Download,
+  Settings2,
   ShieldCheck,
   Trophy,
-  UsersRound,
 } from 'lucide-react';
 import { AdminStats } from '../../services/types';
 import { statsService, competitionService, dashboardService } from '@talenta/services';
@@ -89,55 +86,36 @@ export const AdminDashboardPage: React.FC = () => {
   const maxCount = Math.max(1, ...Object.values(stats.pesertaPerKompetisi || {}));
   const pendingCount =
     rawDashboard?.queue?.pendingVerifications ?? stats.pengajuanPrestasi.menunggu;
-  const approvedConsultants = rawDashboard?.users?.approvedConsultants;
   const publishedCompetitions = rawDashboard?.competitions?.published ?? competitions.length;
-  const formedTeamsCount = rawDashboard?.teams?.terbentuk ?? stats.totalTimTerbentuk;
+  const totalCompetitions =
+    rawDashboard?.competitions?.total !== undefined
+      ? Number(rawDashboard.competitions.total)
+      : publishedCompetitions;
 
   const modules = [
     {
-      title: 'Kompetisi & Aturan Tim',
+      title: 'Kelola Lomba Terpadu',
       description:
-        'Susun informasi lomba, syarat, batas anggota tim, bobot poin sub-lomba, dan status publikasi.',
+        'Buat lomba baru dan atur seluruh detail, aturan tim, roadmap persiapan, bobot poin, kontak konsultasi WA, serta seleksi internal langsung di dalam masing-masing kartu lomba.',
       icon: Trophy,
-      status: `${publishedCompetitions} aktif`,
-      to: '/admin/konten?tab=kompetisi',
-    },
-    {
-      title: 'Roadmap Persiapan',
-      description:
-        'Kelola fase persiapan, tugas, tenggat, dan sumber belajar mahasiswa secara non-destruktif.',
-      icon: BookOpenCheck,
-      status: 'Terstruktur',
-      to: '/admin/konten?tab=roadmap',
-    },
-    {
-      title: 'Kontak Konsultasi',
-      description: 'Atur kontak WhatsApp dosen/konsultan yang telah disetujui untuk ditampilkan.',
-      icon: Contact,
-      status: approvedConsultants !== undefined ? `${approvedConsultants} kontak` : 'Disetujui',
-      to: '/admin/konten?tab=konsultan',
-    },
-    {
-      title: 'Seleksi Internal',
-      description: 'Catat jadwal, peserta tim maupun individu, hasil, dan status konfirmasi seleksi.',
-      icon: UsersRound,
-      status: `${formedTeamsCount} tim`,
-      to: '/admin/konten?tab=seleksi',
-    },
-    {
-      title: 'Aturan Poin & Sub-Lomba',
-      description: 'Atur master jenis/sub-lomba dan bobot poin pengecualian perlombaan.',
-      icon: CalendarDays,
-      status: '3 Lapis',
-      to: '/admin/konten?tab=poin',
+      status: `${publishedCompetitions}/${totalCompetitions} terbit`,
+      to: '/admin/konten',
     },
     {
       title: 'Validasi Prestasi',
       description:
-        'Periksa data, bukti sertifikat, revisi, dan keputusan pengajuan prestasi mahasiswa.',
+        'Periksa data, bukti sertifikat privat, revisi mahasiswa, kalkulasi poin otomatis, dan keputusan pengajuan prestasi.',
       icon: ClipboardCheck,
       to: '/admin/prestasi?status=menunggu',
       status: `${pendingCount} menunggu`,
+    },
+    {
+      title: 'Pengaturan Sistem & Periode',
+      description:
+        'Kelola akun admin & mahasiswa, pergantian periode akademik, template bobot poin kampus, jejak audit, dan kesehatan layanan.',
+      icon: Settings2,
+      to: '/admin/sistem',
+      status: 'Tata Kelola',
     },
   ];
 

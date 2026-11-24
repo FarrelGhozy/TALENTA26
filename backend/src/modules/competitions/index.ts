@@ -47,6 +47,12 @@ export const competitionRoutes = new Elysia()
     const data = await compService.getAllCompetitionsAdmin(auth.user.institutionId);
     return { data };
   })
+  .get('/api/v1/admin/competitions/:id', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const data = await compService.getCompetitionByIdAdmin(params.id, auth.user.institutionId);
+    return { data };
+  })
   .get('/api/v1/admin/competitions/:id/participants', async ({ auth, params }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);

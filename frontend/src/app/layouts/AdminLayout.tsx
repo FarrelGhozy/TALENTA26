@@ -16,10 +16,10 @@ const AdminShell: React.FC<{
   setMobileDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }> = ({ mobileDrawerOpen, setMobileDrawerOpen }) => {
   const location = useLocation();
-  const { counts } = useAdminNav();
+  const { counts, activeCompetitionName } = useAdminNav();
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
 
-  const breadcrumb = getAdminBreadcrumb(location.pathname, location.search);
+  const breadcrumb = getAdminBreadcrumb(location.pathname, location.search, activeCompetitionName);
 
   // Tutup drawer mobile saat pindah halaman/query
   useEffect(() => {
@@ -124,15 +124,24 @@ const AdminShell: React.FC<{
                   Portal Admin
                 </Link>
                 <ChevronRight className="hidden sm:inline w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />
-                <span
-                  className={`truncate ${
-                    breadcrumb.subsection
-                      ? 'font-semibold text-slate-600'
-                      : 'font-extrabold text-slate-900'
-                  }`}
-                >
-                  {breadcrumb.section}
-                </span>
+                {breadcrumb.sectionTo && breadcrumb.subsection ? (
+                  <Link
+                    to={breadcrumb.sectionTo}
+                    className="font-semibold text-slate-600 hover:text-blue-700 truncate transition-colors"
+                  >
+                    {breadcrumb.section}
+                  </Link>
+                ) : (
+                  <span
+                    className={`truncate ${
+                      breadcrumb.subsection
+                        ? 'font-semibold text-slate-600'
+                        : 'font-extrabold text-slate-900'
+                    }`}
+                  >
+                    {breadcrumb.section}
+                  </span>
+                )}
                 {breadcrumb.subsection && (
                   <>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true" />

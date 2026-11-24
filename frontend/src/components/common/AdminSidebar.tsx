@@ -3,14 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   AlertCircle,
-  Award,
-  BookOpenCheck,
   CalendarRange,
   CheckCheck,
   CheckCircle2,
   ChevronDown,
   Clock,
-  Contact,
   Globe,
   History,
   LayoutDashboard,
@@ -21,7 +18,6 @@ import {
   SlidersHorizontal,
   Trophy,
   Users,
-  UsersRound,
   X,
   XCircle,
 } from 'lucide-react';
@@ -43,7 +39,7 @@ interface SidebarSubItem {
 }
 
 interface SidebarGroup {
-  id: 'prestasi' | 'konten' | 'sistem';
+  id: 'prestasi' | 'sistem';
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   headBadge?: number | null;
@@ -89,13 +85,6 @@ function normalizeSystemTab(raw: string | null): string {
   }
 }
 
-function normalizeContentTab(raw: string | null): string {
-  if (raw && ['kompetisi', 'poin', 'roadmap', 'konsultan', 'seleksi'].includes(raw)) {
-    return raw;
-  }
-  return 'kompetisi';
-}
-
 function normalizeAchievementStatus(raw: string | null): string {
   if (raw && ['menunggu', 'perlu_perbaikan', 'disetujui', 'ditolak', 'semua'].includes(raw)) {
     return raw;
@@ -103,8 +92,13 @@ function normalizeAchievementStatus(raw: string | null): string {
   return 'menunggu';
 }
 
-export function getAdminBreadcrumb(pathname: string, search: string): {
+export function getAdminBreadcrumb(
+  pathname: string,
+  search: string,
+  activeCompetitionName?: string | null
+): {
   section: string;
+  sectionTo?: string;
   subsection?: string;
 } {
   const cleanPath = stripBasePath(pathname);
@@ -115,7 +109,11 @@ export function getAdminBreadcrumb(pathname: string, search: string): {
   }
 
   if (cleanPath.startsWith('/admin/prestasi/')) {
-    return { section: 'Validasi Prestasi', subsection: 'Pemeriksaan Bukti' };
+    return {
+      section: 'Validasi Prestasi',
+      sectionTo: '/admin/prestasi?status=menunggu',
+      subsection: 'Pemeriksaan Bukti',
+    };
   }
 
   if (cleanPath === '/admin/prestasi') {
@@ -130,16 +128,16 @@ export function getAdminBreadcrumb(pathname: string, search: string): {
     return { section: 'Validasi Prestasi', subsection: statusLabels[status] };
   }
 
-  if (cleanPath === '/admin/konten') {
-    const tab = normalizeContentTab(params.get('tab'));
-    const tabLabels: Record<string, string> = {
-      kompetisi: 'Kompetisi',
-      poin: 'Aturan Poin & Sub-Lomba',
-      roadmap: 'Roadmap',
-      konsultan: 'Kontak Konsultasi',
-      seleksi: 'Seleksi Internal',
+  if (cleanPath === '/admin/konten' || cleanPath === '/admin/konten/') {
+    return { section: 'Kelola Lomba' };
+  }
+
+  if (cleanPath.startsWith('/admin/konten/')) {
+    return {
+      section: 'Kelola Lomba',
+      sectionTo: '/admin/konten',
+      subsection: activeCompetitionName || 'Ruang Kelola Lomba',
     };
-    return { section: 'Kelola Lomba', subsection: tabLabels[tab] };
   }
 
   if (cleanPath === '/admin/sistem') {
@@ -241,55 +239,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         ],
       },
       {
-        id: 'konten',
-        label: 'Kelola Lomba',
-        icon: Trophy,
-        isGroupActive: (p) => p === '/admin/konten',
-        items: [
-          {
-            id: 'konten-kompetisi',
-            label: 'Kompetisi',
-            to: '/admin/konten?tab=kompetisi',
-            icon: Trophy,
-            badge: counts.competitions,
-            badgeTone: 'slate',
-            isActive: (p, q) => p === '/admin/konten' && normalizeContentTab(q.get('tab')) === 'kompetisi',
-          },
-          {
-            id: 'konten-poin',
-            label: 'Aturan Poin & Sub-Lomba',
-            to: '/admin/konten?tab=poin',
-            icon: Award,
-            isActive: (p, q) => p === '/admin/konten' && normalizeContentTab(q.get('tab')) === 'poin',
-          },
-          {
-            id: 'konten-roadmap',
-            label: 'Roadmap',
-            to: '/admin/konten?tab=roadmap',
-            icon: BookOpenCheck,
-            isActive: (p, q) => p === '/admin/konten' && normalizeContentTab(q.get('tab')) === 'roadmap',
-          },
-          {
-            id: 'konten-konsultan',
-            label: 'Kontak Konsultasi',
-            to: '/admin/konten?tab=konsultan',
-            icon: Contact,
-            badge: counts.consultants,
-            badgeTone: 'slate',
-            isActive: (p, q) => p === '/admin/konten' && normalizeContentTab(q.get('tab')) === 'konsultan',
-          },
-          {
-            id: 'konten-seleksi',
-            label: 'Seleksi Internal',
-            to: '/admin/konten?tab=seleksi',
-            icon: UsersRound,
-            badge: counts.selections,
-            badgeTone: 'slate',
-            isActive: (p, q) => p === '/admin/konten' && normalizeContentTab(q.get('tab')) === 'seleksi',
-          },
-        ],
-      },
-      {
         id: 'sistem',
         label: 'Pengaturan Sistem',
         icon: Settings2,
@@ -341,7 +290,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   // Grup yang aktif pada rute saat ini otomatis terbuka
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
     prestasi: cleanPath === '/admin/prestasi' || cleanPath.startsWith('/admin/prestasi/'),
-    konten: cleanPath === '/admin/konten',
     sistem: cleanPath === '/admin/sistem',
   }));
 
@@ -350,8 +298,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       const next = { ...prev };
       if (cleanPath === '/admin/prestasi' || cleanPath.startsWith('/admin/prestasi/')) {
         next.prestasi = true;
-      } else if (cleanPath === '/admin/konten') {
-        next.konten = true;
       } else if (cleanPath === '/admin/sistem') {
         next.sistem = true;
       }
@@ -370,6 +316,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   };
 
   const isDashboardActive = cleanPath === '/admin' || cleanPath === '/admin/';
+  const isCompetitionsActive =
+    cleanPath === '/admin/konten' || cleanPath.startsWith('/admin/konten/');
 
   return (
     <div className="flex flex-col h-full bg-white text-slate-800 select-none">
@@ -441,11 +389,42 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </Link>
         </div>
 
-        {/* Grup Accordion Head + Sub-Menu */}
+        {/* Grup Modul Pengelolaan */}
         <div className="space-y-1.5">
           <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
             Modul Pengelolaan
           </div>
+
+          {/* Menu Terpadu Kelola Lomba (1 bagian utuh berbasis kartu lomba) */}
+          <Link
+            to="/admin/konten"
+            onClick={() => onNavigate?.()}
+            aria-current={isCompetitionsActive ? 'page' : undefined}
+            className={`flex items-center justify-between gap-2 px-3 py-2.5 min-h-[42px] rounded-xl text-xs font-bold transition-colors ${
+              isCompetitionsActive
+                ? 'bg-blue-50 text-blue-800 border border-blue-200/80 shadow-2xs'
+                : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 border border-transparent'
+            }`}
+          >
+            <span className="flex items-center gap-3 min-w-0">
+              <Trophy
+                className={`w-4 h-4 shrink-0 ${isCompetitionsActive ? 'text-blue-700' : 'text-slate-500'}`}
+                aria-hidden="true"
+              />
+              <span className="truncate">Kelola Lomba</span>
+            </span>
+            {counts.competitions !== null && (
+              <span
+                className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border leading-none shrink-0 ${
+                  isCompetitionsActive
+                    ? 'bg-blue-100 text-blue-900 border-blue-200'
+                    : BADGE_TONE_CLASSES.slate
+                }`}
+              >
+                {counts.competitions}
+              </span>
+            )}
+          </Link>
 
           {groups.map((group) => {
             const GroupIcon = group.icon;

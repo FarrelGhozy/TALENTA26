@@ -155,6 +155,42 @@ export interface ValidatorCompetitionItem {
   pointTemplateId?: string | null;
   pointDescription?: string | null;
   status: 'draft' | 'published' | 'archived';
+  createdAt?: string;
+  updatedAt?: string;
+  academicPeriod?: { id: string; name: string; year?: number; semester?: string } | null;
+  competitionCategory?: { id: string; name: string; code: string } | null;
+  pointTemplate?: { id: string; name: string; version: number } | null;
+  roadmaps?: Array<{
+    id: string;
+    status: string;
+    version?: number;
+    _count?: { phases: number };
+  }>;
+  _count?: {
+    competitionPointRules?: number;
+    teams?: number;
+    studentTargets?: number;
+    consultantContacts?: number;
+    selections?: number;
+    roadmaps?: number;
+  };
+}
+
+export interface ValidatorSelectionItem {
+  id: string;
+  stage: string;
+  result: string;
+  organizerVerified: boolean;
+  notes?: string | null;
+  confirmedAt?: string | null;
+  updatedAt?: string;
+  competitionId?: string;
+  teamId?: string | null;
+  userId?: string | null;
+  competition?: { id: string; name: string; slug?: string; format?: string };
+  team?: { id: string; name: string; status?: string } | null;
+  user?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string; studyProgram?: string } | null } | null;
+  participant?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string; studyProgram?: string } | null } | null;
 }
 
 export interface ValidatorRoadmapDetail {
@@ -234,6 +270,7 @@ export interface CompetitionDeleteResult {
 
 export interface IValidatorContentService {
   getCompetitions(): Promise<ValidatorCompetitionItem[]>;
+  getCompetitionById?(id: string): Promise<ValidatorCompetitionItem>;
   createCompetition(data: Partial<ValidatorCompetitionItem> & { name: string; organizer: string; category: string; level: string; format: 'individu' | 'beregu'; minTeamMembers: number; maxTeamMembers: number; description: string }): Promise<ValidatorCompetitionItem>;
   updateCompetition?(id: string, data: Partial<ValidatorCompetitionItem>): Promise<ValidatorCompetitionItem>;
   setCompetitionStatus(id: string, status: 'published' | 'archived'): Promise<ValidatorCompetitionItem>;
@@ -254,7 +291,7 @@ export interface IValidatorContentService {
   updateConsultant?(id: string, data: Partial<{ name: string; field: string; whatsappNumber: string; capacityNote: string; isApproved: boolean; status: 'draft' | 'published' | 'archived' }>): Promise<ValidatorConsultantItem>;
   deleteConsultant?(id: string): Promise<void>;
   getCompetitionParticipants?(competitionId: string): Promise<CompetitionParticipantOption>;
-  getSelections(): Promise<Array<{ id: string; stage: string; result: string; organizerVerified: boolean; notes?: string | null; confirmedAt?: string | null; competitionId?: string; teamId?: string | null; userId?: string | null; competition?: { id: string; name: string; format?: string }; team?: { id: string; name: string } | null; user?: { id: string; fullName?: string | null; studentProfile?: { fullName: string; nim: string } | null } | null }>>;
+  getSelections(): Promise<ValidatorSelectionItem[]>;
   saveSelection(data: { competitionId: string; teamId?: string | null; userId?: string | null; stage: string; result: 'menunggu' | 'lolos' | 'tidak'; organizerVerified: boolean; notes?: string }): Promise<unknown>;
   getCompetitionCategories?(): Promise<CompetitionCategoryItem[]>;
   createCompetitionCategory?(data: { code: string; name: string; description?: string }): Promise<CompetitionCategoryItem>;

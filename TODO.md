@@ -138,6 +138,14 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 
 ---
 
+## Tugas mandiri — Penyatuan & redesign Kelola Lomba Admin berbasis kartu (24 November 2026)
+- [x] Satukan menu sidebar `Kelola Lomba` menjadi 1 menu utama langsung (`/admin/konten`) dan bangun ulang hub berbasis **Card-Card Lomba** (`CompetitionCatalogPage`, `CompetitionCardAdmin`) dengan modal `+ Buat Lomba Baru` (opsi *Simpan Draft* dan *Simpan & Atur Lomba*), modal `Master Jenis & Sub-Lomba`, pencarian, filter status/format/tingkat, serta indikator kelengkapan 4 modul (Roadmap, Aturan Poin, Konsultan, Seleksi).
+- [x] Bangun **Ruang Kelola Lomba** per kartu (`/admin/konten/:id`) dengan breadcrumb dinamis, aksi siklus hidup terpadu (`Terbitkan`, `Arsipkan`, `Lihat Publik`, `Hapus Permanen`), dan 5 tab internal terikat otomatis ke lomba aktif (`Profil & Aturan` dengan editor dinamis Syarat & Jadwal, `Roadmap` non-destruktif, `Aturan Poin` dengan pratinjau template, `Kontak Konsultasi` dengan edit penuh, dan `Seleksi Internal` dengan tombol nilai cepat 1-klik) tanpa dropdown pilih lomba berulang.
+- [x] Perkaya `GET /api/v1/admin/competitions` (`_count` + ringkasan fase roadmap) dan tambah `GET /api/v1/admin/competitions/:id` terisolasi institusi + uji integrasi (`backend/tests/integration/admin-competition-detail.test.ts`), selaraskan `AdminDashboardPage`, adapter mock `build:demo`, `docs/04-sitemap.md`, `docs/14-keputusan-terbuka.md`, `docs/16-kontrak-api.md`, serta skrip E2E `tests/e2e/specs/04-superadmin-flows.ts`.
+- Verifikasi: `bun run typecheck`, `bun run lint` (0 error, 0 warning), `bun run test` (22 unit + 10 integration suites termasuk `admin-competition-detail.test.ts` lulus 100%), `bun run build` & `bun run build:demo`, `bun run test:e2e` (seluruh 4 suite lulus), serta pemeriksaan visual/responsif Playwright pada Desktop (`1440×900`), Tablet (`768×1024`), dan Mobile (`390×844`) dengan 0 console error & 0 horizontal overflow.
+
+---
+
 ## Tugas mandiri — Rancangan logo TALENTA (24 November 2026)
 - [x] Buat tiga papan konsep modern minimal **T Bertumbuh**, **Jalur Prestasi**, dan **Simpul Talenta** melalui imagegen; setiap papan PNG memuat simbol, tulisan TALENTA, versi satu warna, ikon aplikasi, dan navbar terang/gelap. Artefak, prompt, makna, rekomendasi, dan batas finalisasi ada di `docs/design/logo-talenta-2026-11/README.md`.
 - [x] Periksa ejaan TALENTA dan sampel simbol 16/24/32 px pada versi warna dan satu warna terang/gelap; bukti `docs/design/logo-talenta-2026-11/qa-small-sizes.png`. T Bertumbuh paling jelas; detail negatif Simpul Talenta perlu disederhanakan bila dipilih untuk 16 px. Tipografi asli, warna tepat, dan geometri master merupakan pekerjaan finalisasi vektor setelah pemilihan.

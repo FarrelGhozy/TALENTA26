@@ -850,6 +850,7 @@ export const consultantApiService: IConsultantService = {
 
 export const validatorContentApiService: IValidatorContentService = {
   getCompetitions: () => apiFetch<ValidatorCompetitionItem[]>('/admin/competitions'),
+  getCompetitionById: (id) => apiFetch<ValidatorCompetitionItem>(`/admin/competitions/${id}`),
   createCompetition: (data) =>
     apiFetch<ValidatorCompetitionItem>('/admin/competitions', { method: 'POST', body: JSON.stringify(data) }),
   updateCompetition: (id, data) =>
