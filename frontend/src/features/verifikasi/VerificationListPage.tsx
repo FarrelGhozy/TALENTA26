@@ -151,6 +151,7 @@ export const VerificationListPage: React.FC = () => {
       <section aria-label={`Daftar pengajuan ${statusMeta.label}`}>
         <AchievementTable
           achievements={filtered}
+          showSubmitter
           onSelect={(item) => navigate(`/admin/prestasi/${item.id}`)}
         />
       </section>

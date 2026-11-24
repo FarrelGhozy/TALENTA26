@@ -12,23 +12,29 @@ export const ScheduleTimeline: React.FC<{
     <div className="space-y-8">
       <section aria-labelledby="jadwal-resmi">
         <h3 id="jadwal-resmi" className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-700" />
+          <Calendar className="w-4 h-4 text-blue-700" aria-hidden="true" />
           <span>Jadwal Kompetisi</span>
         </h3>
-        <ol className="border-l-2 border-blue-200 ml-3 pl-5 space-y-5">
-          {jadwalResmi.map((item, idx) => (
-            <li key={idx} className="relative">
-              <span
-                aria-hidden="true"
-                className="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-blue-700 ring-4 ring-blue-100"
-              />
-              <div className="text-xs font-bold text-slate-800">{item.label}</div>
-              <time dateTime={item.tanggal} className="text-[11px] text-slate-500 font-medium">
-                {formatDate(item.tanggal)}
-              </time>
-            </li>
-          ))}
-        </ol>
+        {jadwalResmi && jadwalResmi.length > 0 ? (
+          <ol className="border-l-2 border-blue-200 ml-3 pl-5 space-y-5">
+            {jadwalResmi.map((item, idx) => (
+              <li key={idx} className="relative">
+                <span
+                  aria-hidden="true"
+                  className="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-blue-700 ring-4 ring-blue-100"
+                />
+                <div className="text-xs font-bold text-slate-800">{item.label}</div>
+                <time dateTime={item.tanggal} className="text-[11px] text-slate-500 font-medium">
+                  {formatDate(item.tanggal)}
+                </time>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+            Jadwal resmi untuk kompetisi ini sedang disiapkan oleh pengelola lomba.
+          </p>
+        )}
       </section>
 
       {seleksiInternal && seleksiInternal.length > 0 && (

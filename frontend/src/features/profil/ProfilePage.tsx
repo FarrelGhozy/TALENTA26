@@ -118,7 +118,8 @@ export const ProfilePage: React.FC = () => {
     setUploadingAvatar(true);
     try {
       const res = await userService.uploadAvatar(file);
-      const cacheBusted = `${res.avatarUrl}?t=${Date.now()}`;
+      const sep = res.avatarUrl.includes('?') ? '&' : '?';
+      const cacheBusted = `${res.avatarUrl}${sep}t=${Date.now()}`;
       setUserData((prev) => ({ ...prev, avatar: cacheBusted }));
       await refreshUser();
       notify('Foto profil privat berhasil diperbarui!');

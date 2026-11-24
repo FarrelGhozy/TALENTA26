@@ -8,12 +8,13 @@ import {
   ListOrdered,
   Award,
 } from 'lucide-react';
-import { Competition, Profile } from '../../types';
-import { achievementService, competitionService, userService } from '@talenta/services';
+import { Competition, Profile, Team } from '../../types';
+import { achievementService, competitionService, teamService, userService } from '@talenta/services';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
 import { Tabs } from '../../components/ui/Tabs';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { ScheduleTimeline } from './components/ScheduleTimeline';
@@ -26,11 +27,13 @@ export const CompetitionDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentUser } = useAuth();
+  const { currentUser, refreshUser } = useAuth();
   const { notify } = useToast();
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [pointConfig, setPointConfig] = useState<Awaited<ReturnType<NonNullable<typeof achievementService.getCompetitionPointConfig>>> | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeTeam, setActiveTeam] = useState<Team | null>(null);
+  const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const activeTab = (searchParams.get('tab') as string) || 'ringkasan';
@@ -46,15 +49,19 @@ export const CompetitionDetailPage: React.FC = () => {
   useEffect(() => {
     if (!slug) return;
     let cancelled = false;
+    setLoading(true);
+    const isMahasiswa = Boolean(currentUser && currentUser.role.includes('mahasiswa'));
     Promise.all([
       competitionService.getBySlug(slug),
-      currentUser && currentUser.role.includes('mahasiswa') ? userService.getProfile(currentUser.id) : Promise.resolve(null),
+      isMahasiswa && currentUser ? userService.getProfile(currentUser.id).catch(() => null) : Promise.resolve(null),
+      isMahasiswa && currentUser ? teamService.getTeamByUserId(currentUser.id).catch(() => null) : Promise.resolve(null),
       achievementService.getCompetitionPointConfig ? achievementService.getCompetitionPointConfig(slug).catch(() => null) : Promise.resolve(null),
     ])
-      .then(([comp, prof, pConf]) => {
+      .then(([comp, prof, team, pConf]) => {
         if (cancelled) return;
         setCompetition(comp);
         setProfile(prof);
+        setActiveTeam(team && team.status !== 'arsip' ? team : null);
         setPointConfig(pConf);
         setLoading(false);
       })
@@ -66,15 +73,13 @@ export const CompetitionDetailPage: React.FC = () => {
     };
   }, [slug, currentUser]);
 
-  const handleSelectAsTarget = async () => {
-    if (!currentUser) {
-      navigate(`/masuk?redirect=${encodeURIComponent(`/kompetisi/${slug}`)}`);
-      return;
-    }
-    if (!slug) return;
+  const executeSelectTarget = async () => {
+    if (!currentUser || !slug) return;
     setSaving(true);
+    setConfirmSwitchOpen(false);
     try {
       await userService.setTargetCompetition(currentUser.id, slug);
+      await refreshUser();
       notify('Target kompetisi berhasil diperbarui.');
       const isIndividu =
         competition?.format === 'individu' ||
@@ -84,11 +89,24 @@ export const CompetitionDetailPage: React.FC = () => {
       } else {
         navigate('/app/tim');
       }
-    } catch {
-      notify('Gagal memilih target. Coba lagi.', 'error');
+    } catch (err: any) {
+      notify(err?.message || 'Gagal memilih target. Coba lagi.', 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSelectAsTarget = async () => {
+    if (!currentUser) {
+      navigate(`/masuk?redirect=${encodeURIComponent(`/kompetisi/${slug}`)}`);
+      return;
+    }
+    if (!slug) return;
+    if (activeTeam && activeTeam.competitionSlug !== slug) {
+      setConfirmSwitchOpen(true);
+      return;
+    }
+    await executeSelectTarget();
   };
 
   if (loading) return <PageLoading message="Memuat detail kompetisi..." />;
@@ -202,7 +220,12 @@ export const CompetitionDetailPage: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {competition.tahapan.map((t, idx) => {
+                {competition.tahapan.length === 0 ? (
+                  <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl p-4">
+                    Tahapan roadmap pembinaan untuk kompetisi ini sedang disiapkan oleh pengelola lomba.
+                  </p>
+                ) : (
+                  competition.tahapan.map((t, idx) => {
                   const isObject = typeof t === 'object' && t !== null;
                   const judul = isObject ? t.judul : t;
                   const deskripsi = isObject ? t.deskripsi : null;
@@ -255,7 +278,8 @@ export const CompetitionDetailPage: React.FC = () => {
                       </div>
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
             </div>
           )}
@@ -322,6 +346,30 @@ export const CompetitionDetailPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={confirmSwitchOpen}
+        onClose={() => setConfirmSwitchOpen(false)}
+        title="Konfirmasi Ganti Target Kompetisi"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setConfirmSwitchOpen(false)}>
+              Batal
+            </Button>
+            <Button size="sm" isLoading={saving} onClick={() => void executeSelectTarget()}>
+              Ya, Pindah Target
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-xs text-slate-600 leading-relaxed">
+          Kamu saat ini tergabung di tim aktif{' '}
+          <strong className="text-slate-900">{activeTeam?.nama}</strong>. Memilih{' '}
+          <strong className="text-slate-900">{competition.namaResmi}</strong> sebagai target baru
+          akan mengeluarkanmu dari tim lama secara otomatis (atau mengarsipkannya bila kamu
+          anggota terakhir). Lanjutkan?
+        </p>
+      </Modal>
     </div>
   );
 };

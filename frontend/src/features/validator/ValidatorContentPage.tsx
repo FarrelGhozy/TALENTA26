@@ -700,8 +700,13 @@ export const ValidatorContentPage: React.FC = () => {
                         <Button
                           size="sm"
                           onClick={async () => {
-                            await validatorContentService.setCompetitionStatus(item.id, 'published');
-                            await loadAll();
+                            try {
+                              await validatorContentService.setCompetitionStatus(item.id, 'published');
+                              notify(`Kompetisi "${item.name}" berhasil diterbitkan.`);
+                              await loadAll();
+                            } catch (err: any) {
+                              notify(err?.message || 'Gagal menerbitkan kompetisi.', 'error');
+                            }
                           }}
                           leftIcon={<Send className="h-3.5 w-3.5" aria-hidden="true" />}
                         >
@@ -713,8 +718,13 @@ export const ValidatorContentPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={async () => {
-                            await validatorContentService.setCompetitionStatus(item.id, 'archived');
-                            await loadAll();
+                            try {
+                              await validatorContentService.setCompetitionStatus(item.id, 'archived');
+                              notify(`Kompetisi "${item.name}" berhasil diarsipkan.`, 'info');
+                              await loadAll();
+                            } catch (err: any) {
+                              notify(err?.message || 'Gagal mengarsipkan kompetisi.', 'error');
+                            }
                           }}
                         >
                           Arsipkan
@@ -1109,10 +1119,21 @@ export const ValidatorContentPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={async () => {
-                            await validatorContentService.updateConsultant?.(c.id, {
-                              status: c.status === 'published' ? 'archived' : 'published',
-                            });
-                            await loadAll();
+                            try {
+                              const nextStatus = c.status === 'published' ? 'archived' : 'published';
+                              await validatorContentService.updateConsultant?.(c.id, {
+                                status: nextStatus,
+                              });
+                              notify(
+                                nextStatus === 'published'
+                                  ? `Kontak "${c.name}" berhasil diterbitkan.`
+                                  : `Kontak "${c.name}" berhasil diarsipkan.`,
+                                'info'
+                              );
+                              await loadAll();
+                            } catch (err: any) {
+                              notify(err?.message || 'Gagal memperbarui status kontak.', 'error');
+                            }
                           }}
                         >
                           {c.status === 'published' ? 'Arsipkan' : 'Terbitkan'}

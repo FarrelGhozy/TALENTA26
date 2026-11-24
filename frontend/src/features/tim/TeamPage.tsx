@@ -109,8 +109,10 @@ export const TeamPage: React.FC = () => {
       setMyRequests(reqsRes);
 
       if (t) {
-        const comp = await competitionService.getBySlug(t.competitionSlug);
-        setCompetition(comp);
+        const comp = await competitionService
+          .getBySlug(t.competitionSlug)
+          .catch(() => t.competitionDetail ?? null);
+        setCompetition(comp || t.competitionDetail || null);
       } else {
         setCompetition(null);
       }
@@ -552,24 +554,44 @@ export const TeamPage: React.FC = () => {
         )}
 
         {activeTab === 'cari' && (
-          <TeamDirectoryPanel
-            competition={directoryCompetition || activeComp}
-            teams={directoryTeams}
-            myActiveTeamId={activeTeam.id}
-            onReload={loadData}
-            onCreateTeam={() => setMode('buat')}
-            onGoToMyTeam={() => setActiveTab('tim-saya')}
-          />
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Direktori Tim Terbuka
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Daftar tim yang sedang membuka rekrutmen pada {(directoryCompetition || activeComp).namaResmi}.
+              </p>
+            </div>
+            <TeamDirectoryPanel
+              competition={directoryCompetition || activeComp}
+              teams={directoryTeams}
+              myActiveTeamId={activeTeam.id}
+              onReload={loadData}
+              onCreateTeam={() => setMode('buat')}
+              onGoToMyTeam={() => setActiveTab('tim-saya')}
+            />
+          </div>
         )}
 
         {activeTab === 'pengajuan' && (
-          <MyJoinRequestsPanel
-            requests={myRequests}
-            hasActiveTeam
-            onReload={loadData}
-            onBrowseTeams={() => setActiveTab('cari')}
-            onGoToMyTeam={() => setActiveTab('tim-saya')}
-          />
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Riwayat Pengajuan Bergabung
+              </h1>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pantau status pengajuan bergabung tim yang pernah kamu kirimkan.
+              </p>
+            </div>
+            <MyJoinRequestsPanel
+              requests={myRequests}
+              hasActiveTeam
+              onReload={loadData}
+              onBrowseTeams={() => setActiveTab('cari')}
+              onGoToMyTeam={() => setActiveTab('tim-saya')}
+            />
+          </div>
         )}
       </div>
     </div>

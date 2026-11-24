@@ -216,6 +216,7 @@ export interface Team {
     notes?: string | null;
   } | null;
   anggota: TeamMember[];
+  competitionDetail?: Competition | null;
   isFormed: boolean;
   status: 'mencari' | 'menunggu_1_lagi' | 'terbentuk' | 'terkunci_seleksi' | 'arsip';
 }

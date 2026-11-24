@@ -138,13 +138,19 @@ export const SuperAdminDashboardPage: React.FC = () => {
   // Tab 5: Kesehatan Sistem
   const [health, setHealth] = useState<SystemHealthSummary | null>(null);
 
-  const loadUsers = async (page = usersPage) => {
+  const loadUsers = async (
+    page = usersPage,
+    overrides?: { role?: string; status?: string; search?: string }
+  ) => {
+    const effectiveRole = overrides?.role ?? userRoleFilter;
+    const effectiveStatus = overrides?.status ?? userStatusFilter;
+    const effectiveSearch = overrides?.search ?? userSearch;
     try {
       setLoading(true);
       const res = await systemService.getUsers({
-        role: userRoleFilter === 'semua' ? undefined : userRoleFilter,
-        status: userStatusFilter === 'semua' ? undefined : userStatusFilter,
-        search: userSearch || undefined,
+        role: effectiveRole === 'semua' ? undefined : effectiveRole,
+        status: effectiveStatus === 'semua' ? undefined : effectiveStatus,
+        search: effectiveSearch || undefined,
         page,
         limit: 15,
       });
@@ -459,8 +465,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
                       <Select
                         value={userRoleFilter}
                         onChange={(e) => {
-                          setUserRoleFilter(e.target.value);
-                          setTimeout(() => void loadUsers(1), 0);
+                          const nextRole = e.target.value;
+                          setUserRoleFilter(nextRole);
+                          void loadUsers(1, { role: nextRole });
                         }}
                         options={[
                           { value: 'semua', label: 'Semua Peran' },
@@ -474,8 +481,9 @@ export const SuperAdminDashboardPage: React.FC = () => {
                       <Select
                         value={userStatusFilter}
                         onChange={(e) => {
-                          setUserStatusFilter(e.target.value);
-                          setTimeout(() => void loadUsers(1), 0);
+                          const nextStatus = e.target.value;
+                          setUserStatusFilter(nextStatus);
+                          void loadUsers(1, { status: nextStatus });
                         }}
                         options={[
                           { value: 'semua', label: 'Semua Status' },

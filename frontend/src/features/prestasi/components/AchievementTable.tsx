@@ -11,7 +11,17 @@ export const AchievementTable: React.FC<{
   onRevise?: (achievement: Achievement) => void;
   onCancel?: (achievement: Achievement) => void;
   studentDetailBasePath?: string;
-}> = ({ achievements, onSelect, onRevise, onCancel, studentDetailBasePath }) => {
+  currentUserId?: string;
+  showSubmitter?: boolean;
+}> = ({
+  achievements,
+  onSelect,
+  onRevise,
+  onCancel,
+  studentDetailBasePath,
+  currentUserId,
+  showSubmitter = false,
+}) => {
   if (achievements.length === 0) {
     return (
       <div className="text-center py-12 text-xs text-slate-400 bg-white rounded-2xl border border-slate-200/90 p-6 space-y-2">
@@ -80,6 +90,13 @@ export const AchievementTable: React.FC<{
                         ? ` • ${item.subCategoryName || item.subCompetitionName}`
                         : ''}
                     </div>
+                    {showSubmitter && item.submitterName && (
+                      <div className="text-[11px] text-slate-600 font-semibold mt-1">
+                        Pengaju: {item.submitterName}
+                        {item.submitterNim ? ` (${item.submitterNim})` : ''}
+                        {item.submitterProdi ? ` · ${item.submitterProdi}` : ''}
+                      </div>
+                    )}
                     {item.catatan && (
                       <div className="mt-1.5 text-[11px] text-amber-900 bg-amber-50 p-2 rounded-lg border border-amber-200/90 flex items-start gap-1.5 shadow-2xs">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />
@@ -125,7 +142,9 @@ export const AchievementTable: React.FC<{
                           Detail <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                         </Link>
                       )}
-                      {onRevise && item.status === 'perlu_perbaikan' && (
+                      {onRevise &&
+                        item.status === 'perlu_perbaikan' &&
+                        (!currentUserId || item.userId === currentUserId) && (
                         <button
                           onClick={() => onRevise(item)}
                           aria-label={`Revisi pengajuan ${item.nama}`}
@@ -135,7 +154,9 @@ export const AchievementTable: React.FC<{
                           Revisi
                         </button>
                       )}
-                      {onCancel && item.status === 'menunggu' && (
+                      {onCancel &&
+                        item.status === 'menunggu' &&
+                        (!currentUserId || item.userId === currentUserId) && (
                         <button
                           onClick={() => onCancel(item)}
                           aria-label={`Batalkan pengajuan ${item.nama}`}

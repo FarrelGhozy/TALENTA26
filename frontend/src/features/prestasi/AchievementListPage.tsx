@@ -206,6 +206,7 @@ export const AchievementListPage: React.FC = () => {
         <AchievementTable
           achievements={filtered}
           studentDetailBasePath="/app/prestasi"
+          currentUserId={currentUser?.id}
           onRevise={(item) => navigate(`/app/prestasi/${item.id}`)}
           onCancel={achievementService.cancel ? (item) => setCancelTarget(item) : undefined}
         />

@@ -125,6 +125,21 @@ function mapBackendUserToFrontend(raw: any): User {
 }
 
 function mapBackendCompetitionToFrontend(raw: any): Competition {
+  const roadmapPhases = Array.isArray(raw.roadmaps?.[0]?.phases) ? raw.roadmaps[0].phases : [];
+  const derivedTahapan =
+    Array.isArray(raw.tahapan) && raw.tahapan.length > 0
+      ? raw.tahapan
+      : roadmapPhases.map((phase: any, idx: number) => ({
+          nomor: String(idx + 1).padStart(2, '0'),
+          judul: phase.title || `Tahap ${idx + 1}`,
+          kategori: phase.targetDays ? `Target ${phase.targetDays} hari` : 'Pembinaan',
+          deskripsi:
+            phase.description ||
+            (Array.isArray(phase.tasks) && phase.tasks.length > 0
+              ? `${phase.tasks.length} agenda persiapan terstruktur.`
+              : ''),
+        }));
+
   return {
     id: raw.id,
     slug: raw.slug,
@@ -147,7 +162,7 @@ function mapBackendCompetitionToFrontend(raw: any): Competition {
       max: raw.maxTeamMembers ?? raw.komposisi?.max ?? 3,
       peranWajib: Array.isArray(raw.requiredRoles) ? raw.requiredRoles : raw.komposisi?.peranWajib || [],
     },
-    tahapan: raw.tahapan || [],
+    tahapan: derivedTahapan,
     jadwal: Array.isArray(raw.scheduleTimeline) ? raw.scheduleTimeline : raw.jadwal || [],
     seleksiInternal: raw.seleksiInternal || [],
     competitionCategoryId: raw.competitionCategoryId,
@@ -284,6 +299,7 @@ function mapBackendTeamToFrontend(raw: any): Team | null {
         skill: Array.isArray(sp?.skills) ? sp.skills : m.skill || [],
       };
     }),
+    competitionDetail: raw.competition ? mapBackendCompetitionToFrontend(raw.competition) : null,
     isFormed: raw.status === 'terbentuk' || raw.status === 'terkunci_seleksi',
     status: raw.status,
   };
