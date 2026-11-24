@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
     tags:
-      - '*'
+      - 'v*'
 
 permissions:
   contents: read
@@ -19,6 +19,7 @@ jobs:
   test-and-build:
     name: Job 1 — Test, Coverage & Build Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       mysql:
         image: mysql:8.4
@@ -44,6 +45,16 @@ jobs:
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+
+      - name: Advisory dependency security audit
+        run: |
+          {
+            echo "## Audit Keamanan Dependensi (bun audit --audit-level=high)"
+            echo ""
+            echo '```'
+            bun audit --audit-level=high 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate Prisma client
         run: bunx prisma generate
@@ -148,9 +159,9 @@ jobs:
       - name: Production build check (no mock / no VITE API secrets)
         run: bun run build
 
-      - name: Scan production bundle, git tracked files & validate infra/docker-compose.yaml
+      - name: Scan production bundle, git tracked files, Nginx, shell scripts & Compose
         run: |
-          if grep -rnE "sertifikat-juara-1-pkm|AdminGontor2026|RoleCardLogin" frontend/dist/; then
+          if grep -rnE "sertifikat-juara-1-pkm|AdminGontor2026|RoleCardLogin|bima@mock\.ac\.id|Pilih Peran Lain|dari email/konsol" frontend/dist/; then
             echo "ERROR: Kebocoran artifact demo/mock di frontend/dist!"
             exit 1
           fi
@@ -158,6 +169,14 @@ jobs:
             echo "ERROR: File .env ter-track oleh git!"
             exit 1
           fi
+          bash -n infra/scripts/backup-db.sh
+          bash -n run-e2e.sh
+          bun infra/scripts/backup-storage.ts --help >/dev/null
+          docker run --rm \
+            -v "$PWD/infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$PWD/infra/nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro" \
+            -v "$PWD/infra/nginx/proxy-api.conf:/etc/nginx/snippets/proxy-api.conf:ro" \
+            nginx:1.27-alpine nginx -t
           trap 'rm -f infra/.env' EXIT
           cp .env.example infra/.env
           (cd infra && docker compose config -q)
@@ -167,6 +186,7 @@ jobs:
     needs: test-and-build
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
@@ -207,6 +227,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Build and push production image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -216,3 +237,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Publish image digest summary
+        run: |
+          {
+            echo "### Image GHCR: \`${{ matrix.image }}\`"
+            echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
+            echo "- Tags:"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

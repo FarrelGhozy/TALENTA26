@@ -9,6 +9,8 @@ COPY frontend/ ./frontend/
 RUN bun run build
 
 FROM nginx:1.27-alpine AS runtime
+COPY infra/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY infra/nginx/proxy-api.conf /etc/nginx/snippets/proxy-api.conf
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 

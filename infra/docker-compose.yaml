@@ -7,12 +7,20 @@
 #   untuk menyematkan/rollback ke tag rilis tertentu (mis. `v1.0.0` atau `sha-<commit>`).
 # - Seluruh konfigurasi runtime production WAJIB diatur pada `infra/.env`
 #   (salin dari `../.env.example` lalu sesuaikan DB, RustFS, secret, SMTP, dan PUBLIC_ORIGIN).
+# - Secara default `web` hanya bind ke loopback (`127.0.0.1:${WEB_PORT:-8080}:80`) agar
+#   aman di belakang Cloudflare Tunnel / reverse proxy lokal (override via `WEB_BIND_HOST`).
 #
 # Perintah cepat (dari direktori `infra/`):
 #   cp ../.env.example .env && chmod 600 .env   # isi variabel produksi
 #   docker compose pull                         # tarik image terbaru dari GHCR
 #   docker compose up -d                        # jalankan migrasi, API, dan Nginx proxy
 # ==============================================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
   migrate:
@@ -23,6 +31,13 @@ services:
       NODE_ENV: production
     command: ["bunx", "prisma", "migrate", "deploy"]
     restart: "no"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    logging: *default-logging
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -37,6 +52,13 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    cpus: 1.5
+    pids_limit: 256
+    logging: *default-logging
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -46,5 +68,12 @@ services:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-8080}:80"
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 192m
+    cpus: 0.5
+    pids_limit: 128
+    logging: *default-logging

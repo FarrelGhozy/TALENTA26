@@ -18,6 +18,7 @@ build/
 # .env berisi konfigurasi lokal/rahasia, jangan commit.
 # Template publik tetap di-commit sebagai contoh.
 .env
+.env.*
 .env.local
 .env.*.local
 !.env.example
@@ -34,6 +35,8 @@ lerna-debug.log*
 # ── Coverage & test ──
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 tests/e2e/screenshots/
 
 # ── Cache ──

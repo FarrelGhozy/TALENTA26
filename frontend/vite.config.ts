@@ -13,7 +13,9 @@ export default defineConfig(({ mode }) => {
   const source = useMock ? './src/services/factory.mock.ts' : './src/services/factory.api.ts';
 
   return {
-    base: env.VITE_BASE_PATH || '/',
+    // Kunci base path di build produksi agar VITE_BASE_PATH lokal (mis. /TALENTA26/ untuk GitHub Pages demo)
+    // tidak pernah merusak aset container produksi.
+    base: isProductionMode ? (env.PROD_BASE_PATH || '/') : (env.VITE_BASE_PATH || '/'),
     envDir,
     define: isProductionMode
       ? {
