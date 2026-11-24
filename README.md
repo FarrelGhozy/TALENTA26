@@ -31,8 +31,8 @@ Ikuti langkah berurutan berikut untuk menjalankan aplikasi lengkap sampai siap d
 
 ### Langkah 1 — Clone & Pasang Dependensi
 ```bash
-git clone <url-repositori-anda>
-cd STACK2026
+git clone https://github.com/FarrelGhozy/TALENTA26.git
+cd TALENTA26
 bun install --frozen-lockfile
 ```
 
@@ -145,93 +145,77 @@ Pada mode `VITE_APP_ENV=DEPLOYMENT`, halaman `/masuk` menyediakan kartu login ce
 
 ---
 
-## 2. Menjalankan dengan Docker & Docker Compose
+## 2. Menjalankan dengan Docker & Docker Compose (Khusus Production)
 
-Konfigurasi Docker di `infra/docker-compose.yaml` dirancang untuk runtime container (production / staging) dengan 3 service terkoordinasi:
-1. **`migrate`**: job satu kali dari image `talenta-backend` yang **otomatis menjalankan `bunx prisma migrate deploy`** sebelum API menyala.
-2. **`api`**: server backend Bun/Elysia pada jaringan internal Docker (port `3001`, tidak diekspos langsung ke publik).
-3. **`web`**: Nginx reverse proxy satu origin pada port `WEB_PORT` (default `8080`) yang melayani static build React di `/` dan meneruskan `/api/` serta `/health` ke `api:3001`.
+`infra/docker-compose.yaml` dirancang **murni untuk runtime production** di server (bukan untuk development, bukan mode demo, tidak menjalankan Vite dev server, dan tidak melakukan build lokal). Pengembangan lokal maupun uji demo tetap dijalankan langsung dengan Bun (`bun run dev` & `bun run dev:backend`) pada bagian 1 di atas.
 
-> MySQL dan object storage RustFS/MinIO tetap berjalan sebagai layanan eksternal (existing di server/host) yang dihubungkan lewat `infra/.env`.
+Arsitektur 3 container production (menarik image resmi dari GHCR yang dibangun otomatis oleh `.github/workflows/ci-publish.yml`):
+1. **`migrate`** (`ghcr.io/farrelghozy/talenta-backend`): job satu kali dengan `NODE_ENV=production` yang **otomatis menjalankan `bunx prisma migrate deploy`** sebelum API menyala (`restart: "no"`).
+2. **`api`** (`ghcr.io/farrelghozy/talenta-backend`): server backend Bun/Elysia dengan `NODE_ENV=production` dan `PORT=3001` terkunci di jaringan internal Docker (tidak diekspos ke publik; fail-fast bila secret/RustFS belum siap).
+3. **`web`** (`ghcr.io/farrelghozy/talenta-frontend`): Nginx 1.27-alpine serving static build production React (bebas mock & kartu login demo) pada `WEB_PORT` (default `8080`) serta reverse proxy same-origin `/api/` dan `/health` menuju `api:3001`.
 
-### A. Menjalankan dari Image GHCR (Standar Server Production / Staging)
+> MySQL dan object storage RustFS tetap berjalan sebagai layanan eksternal (existing di server) yang dihubungkan lewat `infra/.env`.
 
-#### Langkah 1 — Siapkan `infra/.env`
+### Langkah 1 — Clone Repositori & Siapkan `infra/.env`
 ```bash
-cd infra
+git clone https://github.com/FarrelGhozy/TALENTA26.git
+cd TALENTA26/infra
 cp ../.env.example .env
 chmod 600 .env
 ```
-Edit `infra/.env` dan pastikan variabel wajib berikut terisi benar:
-- **Container & Origin**:
+Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
+- **Image & Origin**:
   - `GHCR_OWNER=farrelghozy` (huruf kecil)
-  - `IMAGE_TAG=latest` *(atau tag spesifik seperti `v1.0.0` / `sha-<commit>`)*
+  - `IMAGE_TAG=latest` *(atau sematkan tag rilis spesifik seperti `v1.0.0` / `sha-<commit>`)*
   - `WEB_PORT=8080`
   - `NODE_ENV=production`
-  - `PUBLIC_ORIGIN=https://domain-anda.example.com` *(atau `http://localhost:8080` untuk uji lokal)*
-  - `TRUST_PROXY=true` *(set `true` jika di belakang Cloudflare Tunnel/Nginx/Traefik)*
+  - `PUBLIC_ORIGIN=https://domain-anda.example.com`
+  - `TRUST_PROXY=true` *(set `true` jika berada di balik Cloudflare Tunnel / reverse proxy HTTPS)*
 - **Keamanan Sesi (Wajib acak minimal 32 karakter — jalankan `openssl rand -base64 32`)**:
   - `SESSION_SECRET=...`
   - `COOKIE_SECRET=...`
-- **Database MySQL**:
+- **Database MySQL Existing**:
   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-  - *(Jika MySQL berjalan langsung di host mesin Docker yang sama, isi `DB_HOST=host.docker.internal` — `extra_hosts` sudah dikonfigurasi di `infra/docker-compose.yaml`).*
-- **Object Storage S3 (RustFS / MinIO)**:
+  - *(Jika MySQL berjalan di host server Docker yang sama, gunakan `DB_HOST=host.docker.internal` — `extra_hosts` sudah tersedia di `infra/docker-compose.yaml`).*
+- **Object Storage S3 Existing (RustFS / MinIO)**:
   - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`
 - **SMTP (Pemulihan Kata Sandi)**:
   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
 - **Bootstrap Super Admin Pertama Kali**:
-  - `SUPER_ADMIN_BOOTSTRAP_EMAIL` dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD` *(wajib kuat saat produksi, lalu putar/hapus setelah bootstrap)*.
+  - `SUPER_ADMIN_BOOTSTRAP_EMAIL` dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD` *(wajib kuat; putar/hapus setelah bootstrap awal selesai)*.
 
-#### Langkah 2 — Tarik Image & Jalankan Stack (Migrasi Otomatis)
+### Langkah 2 — Tarik Image Production GHCR & Jalankan Stack (Migrasi Otomatis)
 Dari direktori `infra/`:
 ```bash
 docker compose pull
 docker compose up -d
 ```
-Urutan otomatis Docker Compose:
+Urutan eksekusi otomatis Docker Compose:
 1. Container `migrate` berjalan terlebih dahulu mengeksekusi `bunx prisma migrate deploy`.
 2. Setelah migrasi selesai sukses (`service_completed_successfully`), container `api` menyala dan melewati health check `/health/live`.
-3. Setelah `api` berstatus `healthy`, container `web` (Nginx) menyala dan melayani aplikasi di `http://localhost:${WEB_PORT:-8080}`.
+3. Setelah `api` berstatus `healthy`, container `web` (Nginx) menyala dan melayani aplikasi pada `http://127.0.0.1:${WEB_PORT:-8080}` (siap diteruskan oleh Cloudflare Tunnel / reverse proxy HTTPS).
 
-Jika suatu saat Anda ingin menjalankan ulang migrasi secara eksplisit:
+Jika ingin menjalankan ulang migrasi secara eksplisit:
 ```bash
 docker compose run --rm migrate
 ```
 
-#### Langkah 3 — Jalankan Seed Awal di Dalam Container Docker
-- **Mode Production (bersih — hanya Institusi, Super Admin dari `infra/.env`, & Template Poin v1)**:
-  ```bash
-  docker compose run --rm api bun backend/prisma/seed.ts
-  ```
-- **Mode Demo / Staging Non-Production (opsional — mengisi data simulasi lengkap seperti tampilan demo saat ini)**:
-  > **PERINGATAN**: Jangan pernah menjalankan perintah simulasi ini pada database produksi kampus!
-  ```bash
-  docker compose run --rm -e NODE_ENV=development api bun backend/prisma/seed-simulation.ts
-  ```
+### Langkah 3 — Bootstrap Awal Database Production (Satu Kali Saat Install Pertama)
+Jalankan seed production bersih untuk membuat entri Institusi, akun Super Admin pertama dari `infra/.env`, dan Template Poin Standar v1 (tanpa akun/data demo):
+```bash
+docker compose run --rm api bun backend/prisma/seed.ts
+```
 
-#### Langkah 4 — Verifikasi Status Container & Health Check
+### Langkah 4 — Verifikasi Status Container & Health Check
 ```bash
 docker compose ps
-curl http://localhost:8080/health/ready
+curl http://127.0.0.1:${WEB_PORT:-8080}/health/ready
 docker compose logs -f api web
 ```
 
-### B. Membangun & Menjalankan Image Docker Secara Lokal (Tanpa Pull GHCR)
-
-Jika ingin membangun image langsung dari source code lokal (misalnya sebelum push ke GHCR), jalankan dari **root repositori**:
-```bash
-# 1. Build kedua image produksi dengan tag lokal yang cocok dengan infra/docker-compose.yaml
-docker build -f backend/Dockerfile -t ghcr.io/farrelghozy/talenta-backend:local .
-docker build -f frontend/Dockerfile -t ghcr.io/farrelghozy/talenta-frontend:local .
-
-# 2. Siapkan infra/.env lalu jalankan memakai IMAGE_TAG=local
-cd infra
-IMAGE_TAG=local docker compose up -d
-```
-
-### C. Update Versi, Pinning Tag, Rollback & Backup
-- **Pinning / Rollback ke versi tertentu**: ubah `IMAGE_TAG=v1.0.0` (atau `sha-<commit>`) di `infra/.env`, lalu jalankan:
+### Langkah 5 — Update Versi, Pinning Tag, Rollback & Backup
+- **Rilis baru otomatis ke GHCR**: setiap push/merge ke branch `main` atau push Git tag (`v1.0.0`) menjalankan `.github/workflows/ci-publish.yml` (uji penuh + build & push image `ghcr.io/farrelghozy/talenta-frontend` dan `ghcr.io/farrelghozy/talenta-backend`).
+- **Update / Pinning / Rollback di server**: ubah `IMAGE_TAG` di `infra/.env` (mis. `latest`, `v1.0.0`, atau `sha-<commit>`), lalu jalankan:
   ```bash
   cd infra
   docker compose pull
@@ -243,7 +227,7 @@ IMAGE_TAG=local docker compose up -d
   ./infra/scripts/backup-db.sh --test-restore talenta_restore_check
   ```
 - **Backup & Restore Object Storage (RustFS)**:
-  Lihat panduan lengkap di `docs/17-runbook-operasi.md` dan `infra/README.md`.
+  Lihat panduan operasional lengkap di `docs/17-runbook-operasi.md` dan `infra/README.md`.
 
 ---
 
