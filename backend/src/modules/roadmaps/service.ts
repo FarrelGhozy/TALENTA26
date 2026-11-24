@@ -32,25 +32,37 @@ export async function getRoadmapByCompetitionSlug(slug: string) {
     return null;
   }
 
-  // Format kompatibel dengan frontend UI & types
-  const fase = roadmap.phases.map((phase, pIdx) => ({
-    id: phase.id,
-    minggu: phase.targetDays ? `${Math.ceil((pIdx * 14) / 7) + 1}-${Math.ceil(((pIdx + 1) * 14) / 7)}` : `${pIdx + 1}`,
-    judul: phase.title,
-    materi: [phase.description || phase.title],
-    skillDilati: [],
-    latihan: phase.tasks.map((t) => t.title),
-    target: phase.description || phase.title,
-    indikator: phase.tasks.map((t) => `Selesai: ${t.title}`),
-    tenggat: phase.targetDays ? [`Target ${phase.targetDays} hari`] : [],
-    sumber: phase.tasks
-      .filter((t) => t.resourceUrl)
-      .map((t) => ({
-        judul: t.resourceTitle || t.title,
-        url: t.resourceUrl || '#',
-        wajib: t.isRequired,
-      })),
-  }));
+  // Format kompatibel dengan frontend UI & types (hitung rentang minggu berdasarkan targetDays aktual)
+  let cumulativeDays = 0;
+  const fase = roadmap.phases.map((phase, pIdx) => {
+    const durationDays = phase.targetDays && phase.targetDays > 0 ? phase.targetDays : 14;
+    const startWeek = Math.floor(cumulativeDays / 7) + 1;
+    cumulativeDays += durationDays;
+    const endWeek = Math.max(startWeek, Math.ceil(cumulativeDays / 7));
+    const weekLabel = phase.targetDays
+      ? startWeek === endWeek
+        ? `${startWeek}`
+        : `${startWeek}-${endWeek}`
+      : `${pIdx + 1}`;
+    return {
+      id: phase.id,
+      minggu: weekLabel,
+      judul: phase.title,
+      materi: [phase.description || phase.title],
+      skillDilati: [],
+      latihan: phase.tasks.map((t) => t.title),
+      target: phase.description || phase.title,
+      indikator: phase.tasks.map((t) => `Selesai: ${t.title}`),
+      tenggat: phase.targetDays ? [`Target ${phase.targetDays} hari`] : [],
+      sumber: phase.tasks
+        .filter((t) => t.resourceUrl)
+        .map((t) => ({
+          judul: t.resourceTitle || t.title,
+          url: t.resourceUrl || '#',
+          wajib: t.isRequired,
+        })),
+    };
+  });
 
   return {
     ...roadmap,
@@ -59,9 +71,13 @@ export async function getRoadmapByCompetitionSlug(slug: string) {
   };
 }
 
-export async function getChecklistProgress(userId: string, slug: string): Promise<Record<string, boolean>> {
+export async function getChecklistProgress(
+  userId: string,
+  slug: string,
+  institutionId?: string
+): Promise<Record<string, boolean>> {
   const comp = await prisma.competition.findFirst({
-    where: { slug, status: 'published' },
+    where: { slug, status: 'published', ...(institutionId ? { institutionId } : {}) },
   });
 
   if (!comp) {
@@ -121,7 +137,7 @@ export async function toggleChecklistTask(
   institutionId: string
 ): Promise<Record<string, boolean>> {
   const comp = await prisma.competition.findFirst({
-    where: { slug, status: 'published' },
+    where: { slug, status: 'published', institutionId },
   });
 
   if (!comp) {
@@ -196,16 +212,7 @@ export async function toggleChecklistTask(
     },
   });
 
-  await recordAuditEvent({
-    institutionId,
-    actorId: userId,
-    action: 'ROADMAP_TASK_TOGGLED',
-    targetType: 'RoadmapTask',
-    targetId: actualTaskId,
-    metadata: { completed: newCompleted, competitionSlug: slug },
-  });
-
-  return getChecklistProgress(userId, slug);
+  return getChecklistProgress(userId, slug, institutionId);
 }
 
 export async function setRoadmapTaskProgress(
@@ -218,7 +225,12 @@ export async function setRoadmapTaskProgress(
     where: { id: taskId },
     include: { phase: { include: { roadmap: { include: { competition: true } } } } },
   });
-  if (!task || task.phase.roadmap.status !== 'published' || task.phase.roadmap.competition.status !== 'published') {
+  if (
+    !task ||
+    task.phase.roadmap.status !== 'published' ||
+    task.phase.roadmap.competition.status !== 'published' ||
+    (institutionId && task.phase.roadmap.competition.institutionId !== institutionId)
+  ) {
     throw new NotFoundError('Tugas roadmap tidak ditemukan');
   }
 
@@ -232,17 +244,6 @@ export async function setRoadmapTaskProgress(
     update: { completed: nextCompleted, completedAt: nextCompleted ? new Date() : null },
     create: { userId, taskId, completed: nextCompleted, completedAt: nextCompleted ? new Date() : null },
   });
-
-  if (institutionId) {
-    await recordAuditEvent({
-      institutionId,
-      actorId: userId,
-      action: 'ROADMAP_TASK_TOGGLED',
-      targetType: 'RoadmapTask',
-      targetId: taskId,
-      metadata: { completed: nextCompleted, competitionSlug: task.phase.roadmap.competition.slug },
-    });
-  }
 
   return progress;
 }
@@ -339,8 +340,11 @@ export async function createOrUpdateRoadmap(
     throw new NotFoundError('Kompetisi tidak ditemukan');
   }
 
-  return prisma.$transaction(async (tx) => {
-    let roadmap = await tx.roadmap.findFirst({
+  const { resultRoadmap, auditAction } = await prisma.$transaction(async (tx) => {
+    // Kunci baris kompetisi agar 2 request paralel tidak membuat 2 roadmap ganda
+    await tx.$executeRaw`SELECT id FROM competitions WHERE id = ${comp.id} FOR UPDATE`;
+
+    const roadmap = await tx.roadmap.findFirst({
       where: { competitionId: comp.id },
       include: {
         phases: {
@@ -382,15 +386,7 @@ export async function createOrUpdateRoadmap(
           });
         }
       }
-      await recordAuditEvent({
-        institutionId,
-        actorId: validatorId,
-        action: 'ROADMAP_CREATED',
-        targetType: 'Roadmap',
-        targetId: createdRoadmap.id,
-        metadata: { competitionSlug, phasesCount: phases.length },
-      });
-      return tx.roadmap.findUniqueOrThrow({
+      const createdFull = await tx.roadmap.findUniqueOrThrow({
         where: { id: createdRoadmap.id },
         include: {
           phases: {
@@ -399,20 +395,25 @@ export async function createOrUpdateRoadmap(
           },
         },
       });
+      return { resultRoadmap: createdFull, auditAction: 'ROADMAP_CREATED' as const };
     }
 
     // Pembaruan non-destruktif: pertahankan fase/tugas eksisting agar RoadmapProgress mahasiswa tetap utuh
+    const matchedPhaseIds = new Set<string>();
     const keptPhaseIds: string[] = [];
     for (let pIdx = 0; pIdx < phases.length; pIdx++) {
       const phaseDto = phases[pIdx];
       const existingPhase =
-        (phaseDto.id ? roadmap.phases.find((p) => p.id === phaseDto.id) : undefined) ||
-        roadmap.phases.find((p) => p.orderIndex === phaseDto.orderIndex);
+        (phaseDto.id
+          ? roadmap.phases.find((p) => p.id === phaseDto.id && !matchedPhaseIds.has(p.id))
+          : undefined) ||
+        roadmap.phases.find((p) => p.orderIndex === phaseDto.orderIndex && !matchedPhaseIds.has(p.id));
 
       let phaseId: string;
       const existingTasks = existingPhase?.tasks || [];
 
       if (existingPhase) {
+        matchedPhaseIds.add(existingPhase.id);
         await tx.roadmapPhase.update({
           where: { id: existingPhase.id },
           data: {
@@ -437,13 +438,17 @@ export async function createOrUpdateRoadmap(
       }
       keptPhaseIds.push(phaseId);
 
+      const matchedTaskIds = new Set<string>();
       const keptTaskIds: string[] = [];
       for (const tDto of phaseDto.tasks || []) {
         const existingTask =
-          (tDto.id ? existingTasks.find((t) => t.id === tDto.id) : undefined) ||
-          existingTasks.find((t) => t.orderIndex === tDto.orderIndex);
+          (tDto.id
+            ? existingTasks.find((t) => t.id === tDto.id && !matchedTaskIds.has(t.id))
+            : undefined) ||
+          existingTasks.find((t) => t.orderIndex === tDto.orderIndex && !matchedTaskIds.has(t.id));
 
         if (existingTask) {
+          matchedTaskIds.add(existingTask.id);
           await tx.roadmapTask.update({
             where: { id: existingTask.id },
             data: {
@@ -502,26 +507,28 @@ export async function createOrUpdateRoadmap(
       },
     });
 
-    await recordAuditEvent({
-      institutionId,
-      actorId: validatorId,
-      action: 'ROADMAP_UPDATED',
-      targetType: 'Roadmap',
-      targetId: roadmap.id,
-      metadata: { competitionSlug, phasesCount: phases.length, nonDestructive: true },
-    });
-
-    return updatedRoadmap;
+    return { resultRoadmap: updatedRoadmap, auditAction: 'ROADMAP_UPDATED' as const };
   });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: validatorId,
+    action: auditAction,
+    targetType: 'Roadmap',
+    targetId: resultRoadmap.id,
+    metadata: { competitionSlug, phasesCount: phases.length, nonDestructive: auditAction === 'ROADMAP_UPDATED' },
+  });
+
+  return resultRoadmap;
 }
 
 function normalizeWhatsappNumber(raw: string): string {
-  const digits = raw.replace(/\D+/g, '');
+  let digits = raw.replace(/\D+/g, '');
   if (digits.startsWith('0')) {
-    return `62${digits.slice(1)}`;
+    digits = `62${digits.slice(1)}`;
   }
   if (!digits.startsWith('62') || digits.length < 10 || digits.length > 15) {
-    throw new ValidationError('Nomor WhatsApp tidak valid. Gunakan format 628xxxxxxxxxx.');
+    throw new ValidationError('Nomor WhatsApp tidak valid. Gunakan format 628xxxxxxxxxx (10–15 digit).');
   }
   return digits;
 }

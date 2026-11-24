@@ -15,7 +15,11 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
     async ({ auth, params }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
-      const checklist = await roadmapService.getChecklistProgress(auth.user.id, params.competitionSlug);
+      const checklist = await roadmapService.getChecklistProgress(
+        auth.user.id,
+        params.competitionSlug,
+        auth.user.institutionId
+      );
       return { data: checklist };
     }
   )

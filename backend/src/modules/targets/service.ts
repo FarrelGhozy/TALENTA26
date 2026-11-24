@@ -46,18 +46,22 @@ export async function setTargetCompetition(
     where: { institutionId, isActive: true },
   });
 
-  return prisma.$transaction(async (tx) => {
+  const { newTarget, previousTargetSlug } = await prisma.$transaction(async (tx) => {
+    // Kunci baris user untuk mencegah multiple active StudentTarget pada request paralel
+    await tx.$executeRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+
     const currentTarget = await tx.studentTarget.findFirst({
       where: { userId, status: 'active' },
       include: { competition: true },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (currentTarget) {
       if (currentTarget.competitionId === comp.id) {
-        return currentTarget;
+        return { newTarget: currentTarget, previousTargetSlug: null as string | null, unchanged: true };
       }
 
-      const currentMembership = await tx.teamMember.findFirst({
+      const activeMemberships = await tx.teamMember.findMany({
         where: {
           userId,
           status: 'active',
@@ -76,61 +80,82 @@ export async function setTargetCompetition(
         },
       });
 
-      if (currentMembership) {
-        if (currentMembership.team.status === 'terkunci_seleksi') {
+      if (activeMemberships.some((m) => m.team.status === 'terkunci_seleksi')) {
+        throw new ForbiddenError(
+          'Anda tergabung dalam tim yang sudah terkunci untuk seleksi internal dan tidak dapat mengganti target lomba secara mandiri.'
+        );
+      }
+
+      for (const membership of activeMemberships) {
+        await tx.$executeRaw`SELECT id FROM teams WHERE id = ${membership.teamId} FOR UPDATE`;
+
+        const lockedTeam = await tx.team.findUnique({
+          where: { id: membership.teamId },
+          include: {
+            members: { where: { status: 'active' }, orderBy: { joinedAt: 'asc' } },
+            competition: true,
+          },
+        });
+        if (!lockedTeam) continue;
+        if (lockedTeam.status === 'terkunci_seleksi') {
           throw new ForbiddenError(
             'Anda tergabung dalam tim yang sudah terkunci untuk seleksi internal dan tidak dapat mengganti target lomba secara mandiri.'
           );
         }
 
         await tx.teamMember.update({
-          where: { id: currentMembership.id },
+          where: { id: membership.id },
           data: { status: 'left' },
         });
 
-        const remainingActiveMembers = currentMembership.team.members.filter(
-          (m) => m.id !== currentMembership.id
-        );
+        const remainingActiveMembers = lockedTeam.members.filter((m) => m.id !== membership.id);
 
         if (remainingActiveMembers.length === 0) {
           await tx.team.update({
-            where: { id: currentMembership.teamId },
+            where: { id: membership.teamId },
             data: { status: 'arsip', isRecruiting: false, version: { increment: 1 } },
           });
           await tx.teamJoinRequest.updateMany({
-            where: { teamId: currentMembership.teamId, status: 'menunggu' },
+            where: { teamId: membership.teamId, status: 'menunggu' },
             data: { status: 'kedaluwarsa' },
+          });
+          await tx.teamInvite.updateMany({
+            where: { teamId: membership.teamId, status: 'diajukan' },
+            data: { status: 'kedaluwarsa', respondedAt: new Date() },
           });
         } else {
           const nextTeamStatus =
-            remainingActiveMembers.length >= currentMembership.team.competition.minTeamMembers
+            remainingActiveMembers.length >= lockedTeam.competition.minTeamMembers
               ? 'terbentuk'
               : 'mencari';
-          let nextLeaderId = currentMembership.team.leaderId;
-          if (currentMembership.team.leaderId === userId) {
+          let nextLeaderId = lockedTeam.leaderId;
+          if (lockedTeam.leaderId === userId) {
             const promoted = remainingActiveMembers[0];
             nextLeaderId = promoted.userId;
-            await tx.teamMember.update({
-              where: { id: promoted.id },
-              data: { roleInTeam: 'Ketua Tim' },
-            });
+            const currentRoleLower = (promoted.roleInTeam || '').trim().toLowerCase();
+            if (!currentRoleLower || currentRoleLower === 'anggota' || currentRoleLower === 'anggota tim') {
+              await tx.teamMember.update({
+                where: { id: promoted.id },
+                data: { roleInTeam: 'Ketua Tim' },
+              });
+            }
           }
           await tx.team.update({
-            where: { id: currentMembership.teamId },
+            where: { id: membership.teamId },
             data: {
               status: nextTeamStatus,
               leaderId: nextLeaderId,
               isRecruiting:
-                currentMembership.team.recruitmentType === 'terbuka'
+                lockedTeam.recruitmentType === 'terbuka'
                   ? true
-                  : currentMembership.team.isRecruiting,
+                  : lockedTeam.isRecruiting,
               version: { increment: 1 },
             },
           });
         }
       }
 
-      // Batalkan pengajuan bergabung tertunda pada kompetisi lama
+      // Batalkan pengajuan bergabung & undangan lama tertunda pada kompetisi lama
       await tx.teamJoinRequest.updateMany({
         where: {
           userId,
@@ -140,13 +165,22 @@ export async function setTargetCompetition(
         data: { status: 'dibatalkan' },
       });
 
-      await tx.studentTarget.update({
-        where: { id: currentTarget.id },
+      await tx.teamInvite.updateMany({
+        where: {
+          receiverId: userId,
+          status: 'diajukan',
+          team: { competitionId: currentTarget.competitionId },
+        },
+        data: { status: 'kedaluwarsa', respondedAt: new Date() },
+      });
+
+      await tx.studentTarget.updateMany({
+        where: { userId, status: 'active' },
         data: { status: 'archived' },
       });
     }
 
-    const newTarget = await tx.studentTarget.create({
+    const created = await tx.studentTarget.create({
       data: {
         userId,
         competitionId: comp.id,
@@ -159,6 +193,14 @@ export async function setTargetCompetition(
       },
     });
 
+    return {
+      newTarget: created,
+      previousTargetSlug: currentTarget?.competition.slug || null,
+      unchanged: false,
+    };
+  });
+
+  if (previousTargetSlug !== null || newTarget.competitionId === comp.id) {
     await recordAuditEvent({
       institutionId,
       actorId: userId,
@@ -168,10 +210,10 @@ export async function setTargetCompetition(
       metadata: {
         competitionSlug: comp.slug,
         academicPeriodId: newTarget.academicPeriodId,
-        previousTargetSlug: currentTarget?.competition.slug || null,
+        previousTargetSlug,
       },
     });
+  }
 
-    return newTarget;
-  });
+  return newTarget;
 }

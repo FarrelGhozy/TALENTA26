@@ -1,6 +1,26 @@
 import { prisma } from '../../lib/prisma';
 import { evaluateTeamReadiness } from '../teams/readiness';
+import { ValidationError } from '../../app/middleware/error';
+import { recordAuditEvent } from '../../lib/audit';
 import type { AchievementStatus, AchievementCategory } from '@prisma/client';
+
+const VALID_ACH_STATUSES = new Set<string>([
+  'draft',
+  'menunggu',
+  'perlu_perbaikan',
+  'disetujui',
+  'ditolak',
+  'dibatalkan',
+]);
+const VALID_ACH_CATEGORIES = new Set<string>([
+  'kompetisi',
+  'konferensi',
+  'olahraga',
+  'seni',
+  'nominasi',
+  'lain',
+  'seleksi_internal',
+]);
 
 export async function getStudentDashboard(userId: string, institutionId: string) {
   // 1. Profil mahasiswa & kelengkapan
@@ -405,13 +425,23 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     },
     targetCompetition: target ? target.competition : null,
     activeTeam: teamMember
-      ? {
-          ...teamMember.team,
-          isLeader: teamMember.team.leaderId === userId,
-          pendingJoinRequestsCount:
-            teamMember.team.leaderId === userId ? teamMember.team.joinRequests.length : 0,
-          readiness: activeTeamReadiness,
-        }
+      ? (() => {
+          const isLeader = teamMember.team.leaderId === userId;
+          const {
+            inviteCode,
+            inviteCodeUpdatedAt,
+            joinRequests,
+            ...safeTeamFields
+          } = teamMember.team;
+          return {
+            ...safeTeamFields,
+            inviteCode: isLeader ? inviteCode : null,
+            inviteCodeUpdatedAt: isLeader ? inviteCodeUpdatedAt : null,
+            isLeader,
+            pendingJoinRequestsCount: isLeader ? joinRequests.length : 0,
+            readiness: activeTeamReadiness,
+          };
+        })()
       : null,
     myPendingJoinRequests: myPendingJoinRequests.map((req) => ({
       id: req.id,
@@ -608,19 +638,26 @@ export async function generateAchievementsCsv(
     status?: string;
     academicPeriodId?: string;
     category?: string;
-  }
+  },
+  actorId?: string
 ): Promise<string> {
   const where: any = {
     institutionId,
   };
 
-  if (filters.status) {
+  if (filters.status && filters.status !== 'semua') {
+    if (!VALID_ACH_STATUSES.has(filters.status)) {
+      throw new ValidationError('Filter status ekspor prestasi tidak valid');
+    }
     where.status = filters.status as AchievementStatus;
   }
   if (filters.academicPeriodId) {
     where.academicPeriodId = filters.academicPeriodId;
   }
-  if (filters.category) {
+  if (filters.category && filters.category !== 'semua') {
+    if (!VALID_ACH_CATEGORIES.has(filters.category)) {
+      throw new ValidationError('Filter kategori ekspor prestasi tidak valid');
+    }
     where.category = filters.category as AchievementCategory;
   }
 
@@ -628,13 +665,48 @@ export async function generateAchievementsCsv(
     where,
     include: {
       user: {
-        include: {
-          studentProfile: true,
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          studentProfile: {
+            select: {
+              fullName: true,
+              nim: true,
+              studyProgram: true,
+              faculty: true,
+            },
+          },
         },
       },
-      academicPeriod: true,
-      competition: true,
-      pointLedgers: true,
+      team: {
+        select: { name: true },
+      },
+      participants: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              studentProfile: {
+                select: {
+                  fullName: true,
+                  nim: true,
+                  studyProgram: true,
+                  faculty: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ isSubmitter: 'desc' }, { createdAt: 'asc' }],
+      },
+      academicPeriod: { select: { name: true } },
+      competition: { select: { name: true } },
+      pointLedgers: {
+        select: { userId: true, points: true },
+      },
     },
     orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
   });
@@ -645,6 +717,8 @@ export async function generateAchievementsCsv(
     'NIM',
     'Program Studi',
     'Fakultas',
+    'Tipe Kepesertaan',
+    'Nama Tim',
     'Nama Capaian / Lomba',
     'Penyelenggara',
     'Kategori',
@@ -657,9 +731,9 @@ export async function generateAchievementsCsv(
     'Catatan Review',
   ];
 
-  const rows = achievements.map((a) => {
-    const totalPoints = a.pointLedgers.reduce((sum, ledger) => sum + ledger.points, 0);
+  const rows: string[] = [];
 
+  for (const a of achievements) {
     const eventDateStr = a.eventDate
       ? new Intl.DateTimeFormat('en-CA', {
           timeZone: 'Asia/Jakarta',
@@ -669,24 +743,56 @@ export async function generateAchievementsCsv(
         }).format(a.eventDate)
       : '';
 
-    return [
-      escapeCsvField(a.id),
-      escapeCsvField(a.user.studentProfile?.fullName || a.user.email),
-      escapeCsvField(a.user.studentProfile?.nim || '-'),
-      escapeCsvField(a.user.studentProfile?.studyProgram || '-'),
-      escapeCsvField(a.user.studentProfile?.faculty || '-'),
-      escapeCsvField(a.name),
-      escapeCsvField(a.organizer),
-      escapeCsvField(a.category),
-      escapeCsvField(a.level),
-      escapeCsvField(a.result),
-      escapeCsvField(eventDateStr),
-      escapeCsvField(a.academicPeriod?.name || '-'),
-      escapeCsvField(a.status),
-      escapeCsvField(totalPoints),
-      escapeCsvField(a.reviewNote || ''),
-    ].join(',');
-  });
+    const participantUsers =
+      a.participants.length > 0
+        ? a.participants.map((p) => p.user)
+        : [a.user];
+
+    for (const memberUser of participantUsers) {
+      const memberPoints = a.pointLedgers
+        .filter((ledger) => ledger.userId === memberUser.id)
+        .reduce((sum, ledger) => sum + ledger.points, 0);
+
+      rows.push(
+        [
+          escapeCsvField(a.id),
+          escapeCsvField(memberUser.studentProfile?.fullName || memberUser.fullName || memberUser.email),
+          escapeCsvField(memberUser.studentProfile?.nim || '-'),
+          escapeCsvField(memberUser.studentProfile?.studyProgram || '-'),
+          escapeCsvField(memberUser.studentProfile?.faculty || '-'),
+          escapeCsvField(a.participationType === 'kelompok' ? 'Kelompok' : 'Individu'),
+          escapeCsvField(a.team?.name || '-'),
+          escapeCsvField(a.name),
+          escapeCsvField(a.organizer),
+          escapeCsvField(a.category),
+          escapeCsvField(a.level),
+          escapeCsvField(a.result),
+          escapeCsvField(eventDateStr),
+          escapeCsvField(a.academicPeriod?.name || '-'),
+          escapeCsvField(a.status),
+          escapeCsvField(memberPoints),
+          escapeCsvField(a.reviewNote || ''),
+        ].join(',')
+      );
+    }
+  }
+
+  if (actorId) {
+    await recordAuditEvent({
+      institutionId,
+      actorId,
+      action: 'ACHIEVEMENT_CSV_EXPORTED',
+      targetType: 'Achievement',
+      targetId: null,
+      metadata: {
+        status: filters.status || 'semua',
+        academicPeriodId: filters.academicPeriodId || null,
+        category: filters.category || 'semua',
+        achievementsCount: achievements.length,
+        rowsCount: rows.length,
+      },
+    });
+  }
 
   // Tambahkan UTF-8 BOM agar Excel dapat membuka file berkarakter khusus langsung tanpa mojibake
   return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');

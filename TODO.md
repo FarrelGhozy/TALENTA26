@@ -138,6 +138,20 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-24` di 
 
 ---
 
+## Tugas mandiri — Audit Menyeluruh, Hardening DDoS, & Anti-Bloat MySQL/RustFS (24 November 2026)
+- [x] **Wave 1 — Patch Kritis Keamanan, Bug Logika Bisnis, & Integritas Data Backend**:
+  - Tutup fail-closed SMTP `K-13` (`MailerUnavailableError` + timeout/close transport), TOCTOU reset password atomik + cabut sesi dalam `$transaction`, anti-timing enumeration pada login, dan batas panjang field registrasi.
+  - Samarkan `inviteCode` & `joinRequests` bagi non-ketua di `GET /api/v1/me/dashboard`, perbaiki ekspor CSV prestasi kelompok (1 baris per peserta sah + audit log + validasi enum), dan perbaiki bug wipe multipart revisi (`readOptionalString`/`readNullableString`) serta `cancelAchievement` atomik dengan penghapusan objek RustFS.
+  - Nonaktifkan 5 rute legacy `matching`/`invites` yang mem-bypass `K-19`/`K-23`, tambahkan row lock deterministik (`users` → `teams FOR UPDATE`) dan bipartite matching peran di `evaluateTeamReadiness`, keluarkan `recordAuditEvent` dan upload RustFS dari dalam `$transaction`, perketat `/api/v1/system/*` khusus `super_admin` (kecuali read-only `GET /system/point-templates`), cegah eskalasi/lockout staf, perbaiki filter SQL `NULL` pergantian periode, isolasi `institutionId` pada point-rules & ranking, normalisasi nomor WA, dan multi-stage `InternalSelection`.
+  - Verifikasi: `bun run typecheck`, `bun run lint` (0 error/warning), 23 unit test, dan 11 suite integrasi (termasuk `hardening-and-fixes.test.ts` — 6 test, 40 assertions) lulus 100%.
+- [ ] **Wave 2 — Proteksi DDoS, Rate Limiting Berlapis, & Hardening Application Layer** *(berikutnya)*.
+- [ ] **Wave 3 — Anti-Bloat & Optimasi Performa MySQL + RustFS**.
+- [ ] **Wave 4 — Perbaikan Bug Frontend, Validasi Klien, Deduplikasi Fetch, & UX**.
+- [ ] **Wave 5 — Hardening Infrastruktur, Nginx Edge, Docker Compose, Backup, & CI/CD**.
+- [ ] **Wave 6 — Rekonsiliasi Total Dokumentasi & Kebersihan Repositori**.
+
+---
+
 ## Tugas mandiri — Perbaikan anomali alur & UI Beranda Mahasiswa (`/app/beranda`, 24 November 2026)
 - [x] Perkaya `GET /api/v1/me/dashboard` ([dashboard/service.ts](file:///home/fazy/projek/STACK2026/backend/src/modules/dashboard/service.ts)) dengan `myPendingJoinRequests`, `recentAchievements`, `firstRevisionAchievementId`, `submissions.dibatalkan`, dan detail `targetCompetition` sehingga [BerandaPage.tsx](file:///home/fazy/projek/STACK2026/frontend/src/features/mahasiswa/BerandaPage.tsx) hanya memuat 1 panggilan API utama dengan penanganan error & tombol *Muat Ulang Beranda*.
 - [x] Perbaiki seluruh anomali alur & UI Beranda: fokuskan stepper murni pada kesiapan target aktif (tanpa polusi prestasi historis), tangani kompetisi tanpa roadmap secara jujur (*Belum Tersedia*, bebas *dead-end*), perbaiki status progres roadmap parsial (`1/4 = 25%` tidak dianggap selesai), buat grid 3 kolom simetris untuk lomba individu, tampilkan status pelamar tim menunggu persetujuan ketua (`/app/tim?tab=pengajuan`), pisahkan syarat wajib vs saran opsional (`K-23`), perbaiki format kapasitas anggota (`2 dari 3 Anggota`), tampilkan label jujur saat seluruh jadwal telah berlalu, hapus hardcode `"Belmawa"` & duplikasi tombol, aktifkan tautan klik pada item prestasi & filter `?status=` di [AchievementListPage.tsx](file:///home/fazy/projek/STACK2026/frontend/src/features/prestasi/AchievementListPage.tsx), serta perbaiki rute mock rusak di [dashboardMock.ts](file:///home/fazy/projek/STACK2026/frontend/src/services/mock/dashboardMock.ts).

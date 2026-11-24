@@ -1,7 +1,10 @@
+import crypto from 'node:crypto';
 import { prisma } from '../../lib/prisma';
-import { NotFoundError, ValidationError } from '../../app/middleware/error';
+import { ConflictError, NotFoundError, ValidationError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 import type { Competition, AcademicPeriod, CompetitionFormat, CompetitionStatus, RegistrationStatus, Prisma } from '@prisma/client';
+
+const VALID_COMPETITION_FORMATS = new Set<string>(['individu', 'beregu']);
 
 function parseDeadlineInput(val?: string | null): Date | null {
   if (!val || !val.trim()) return null;
@@ -112,6 +115,9 @@ export async function getPublishedCompetitions(filters: CompetitionFilterParams 
   }
 
   if (filters.format && filters.format !== 'semua') {
+    if (!VALID_COMPETITION_FORMATS.has(filters.format)) {
+      throw new ValidationError('Filter format kompetisi tidak valid');
+    }
     whereClause.format = filters.format as CompetitionFormat;
   }
 
@@ -176,9 +182,10 @@ export async function getCompetitionBySlug(slug: string): Promise<Competition | 
   });
 }
 
-export async function getCurrentAcademicPeriod(): Promise<AcademicPeriod | null> {
+export async function getCurrentAcademicPeriod(institutionId?: string): Promise<AcademicPeriod | null> {
+  const resolvedInstitutionId = institutionId || (await getDefaultInstitutionId());
   return prisma.academicPeriod.findFirst({
-    where: { isActive: true },
+    where: { institutionId: resolvedInstitutionId, isActive: true },
   });
 }
 
@@ -249,17 +256,38 @@ export async function createCompetition(
     throw new ValidationError('Nama, penyelenggara, kategori, dan deskripsi wajib diisi');
   }
 
-  const slug = dto.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
+  const baseSlug =
+    dto.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '') || 'kompetisi';
 
-  const activePeriod = await getCurrentAcademicPeriod();
+  if (dto.competitionCategoryId) {
+    const cat = await prisma.competitionCategory.findUnique({
+      where: { id: dto.competitionCategoryId },
+    });
+    if (!cat || cat.institutionId !== institutionId) {
+      throw new ValidationError('Jenis lomba tidak ditemukan di institusi Anda');
+    }
+  }
+  if (dto.pointTemplateId) {
+    const tpl = await prisma.pointTemplate.findUnique({
+      where: { id: dto.pointTemplateId },
+    });
+    if (!tpl || tpl.institutionId !== institutionId) {
+      throw new ValidationError('Template poin tidak ditemukan di institusi Anda');
+    }
+  }
+
+  const activePeriod = await getCurrentAcademicPeriod(institutionId);
   const { minTeamMembers, maxTeamMembers } = normalizeTeamBounds(
     dto.format,
     dto.minTeamMembers,
     dto.maxTeamMembers
   );
+
+  const uniqueSuffix = crypto.randomBytes(3).toString('hex');
+  const trimmedSourceUrl = dto.sourceUrl?.trim() || null;
 
   const comp = await prisma.competition.create({
     data: {
@@ -268,9 +296,9 @@ export async function createCompetition(
       competitionCategoryId: dto.competitionCategoryId || null,
       pointTemplateId: dto.pointTemplateId || null,
       pointDescription: dto.pointDescription?.trim() || null,
-      sourceUrl: dto.sourceUrl?.trim() || null,
-      sourceUpdatedAt: dto.sourceUrl ? new Date() : null,
-      slug: `${slug}-${Date.now().toString().slice(-4)}`,
+      sourceUrl: trimmedSourceUrl,
+      sourceUpdatedAt: trimmedSourceUrl ? new Date() : null,
+      slug: `${baseSlug.slice(0, 120)}-${uniqueSuffix}`,
       name: dto.name.trim(),
       organizer: dto.organizer.trim(),
       category: dto.category.trim(),
@@ -285,7 +313,8 @@ export async function createCompetition(
       internalSelectionDeadline: parseDeadlineInput(dto.internalSelectionDeadline),
       requireRoles: dto.format === 'individu' ? false : Boolean(dto.requireRoles),
       requireCrossStudyProgram: dto.format === 'individu' ? false : Boolean(dto.requireCrossStudyProgram),
-      singleTeamPerCompetition: dto.singleTeamPerCompetition ?? true,
+      // Rilis pertama menerapkan 1 tim aktif per kompetisi per mahasiswa (Keputusan #3)
+      singleTeamPerCompetition: true,
       description: dto.description.trim(),
       requirements: dto.requirements || [],
       scheduleTimeline: dto.scheduleTimeline || [],
@@ -324,6 +353,52 @@ export async function updateCompetition(
     dto.maxTeamMembers ?? existing.maxTeamMembers
   );
 
+  if (dto.competitionCategoryId) {
+    const cat = await prisma.competitionCategory.findUnique({
+      where: { id: dto.competitionCategoryId },
+    });
+    if (!cat || cat.institutionId !== existing.institutionId) {
+      throw new ValidationError('Jenis lomba tidak ditemukan di institusi Anda');
+    }
+  }
+  if (dto.pointTemplateId) {
+    const tpl = await prisma.pointTemplate.findUnique({
+      where: { id: dto.pointTemplateId },
+    });
+    if (!tpl || tpl.institutionId !== existing.institutionId) {
+      throw new ValidationError('Template poin tidak ditemukan di institusi Anda');
+    }
+  }
+
+  // Cegah perubahan format beregu -> individu atau penurunan maxTeamMembers yang merusak tim aktif
+  if (
+    (existing.format === 'beregu' && nextFormat === 'individu') ||
+    bounds.maxTeamMembers < existing.maxTeamMembers
+  ) {
+    const activeTeams = await prisma.team.findMany({
+      where: {
+        competitionId: id,
+        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+      },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { members: { where: { status: 'active' } } } },
+      },
+    });
+    if (existing.format === 'beregu' && nextFormat === 'individu' && activeTeams.length > 0) {
+      throw new ConflictError(
+        `Tidak dapat mengubah format ke individu karena masih terdapat ${activeTeams.length} tim aktif pada lomba ini`
+      );
+    }
+    const oversizedTeam = activeTeams.find((t) => t._count.members > bounds.maxTeamMembers);
+    if (oversizedTeam) {
+      throw new ConflictError(
+        `Batas maksimal anggota (${bounds.maxTeamMembers}) lebih kecil dari jumlah anggota aktif tim '${oversizedTeam.name}' (${oversizedTeam._count.members})`
+      );
+    }
+  }
+
   const updateData: Prisma.CompetitionUpdateInput = {
     version: { increment: 1 },
     minTeamMembers: bounds.minTeamMembers,
@@ -360,15 +435,15 @@ export async function updateCompetition(
       updateData.requireCrossStudyProgram = Boolean(dto.requireCrossStudyProgram);
     }
   }
-  if (dto.singleTeamPerCompetition !== undefined) {
-    updateData.singleTeamPerCompetition = Boolean(dto.singleTeamPerCompetition);
-  }
+  // Rilis pertama menerapkan 1 tim aktif per kompetisi per mahasiswa (Keputusan #3)
+  updateData.singleTeamPerCompetition = true;
   if (dto.pointDescription !== undefined) {
     updateData.pointDescription = dto.pointDescription?.trim() || null;
   }
   if (dto.sourceUrl !== undefined) {
-    updateData.sourceUrl = dto.sourceUrl?.trim() || null;
-    updateData.sourceUpdatedAt = new Date();
+    const trimmedSource = dto.sourceUrl?.trim() || null;
+    updateData.sourceUrl = trimmedSource;
+    updateData.sourceUpdatedAt = trimmedSource ? new Date() : null;
   }
   if (dto.competitionCategoryId !== undefined) {
     updateData.competitionCategory = dto.competitionCategoryId

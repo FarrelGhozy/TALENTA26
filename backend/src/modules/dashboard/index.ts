@@ -41,11 +41,15 @@ export const dashboardRoutes = new Elysia()
       assertRole(auth, ['validator', 'super_admin']);
       const institutionId = auth.user.institutionId;
 
-      const csvContent = await dashboardService.generateAchievementsCsv(institutionId, {
-        status: query.status,
-        academicPeriodId: query.academicPeriodId,
-        category: query.category,
-      });
+      const csvContent = await dashboardService.generateAchievementsCsv(
+        institutionId,
+        {
+          status: query.status,
+          academicPeriodId: query.academicPeriodId,
+          category: query.category,
+        },
+        auth.user.id
+      );
 
       const todayStr = new Date().toISOString().split('T')[0];
       const filename = `rekap-prestasi-talenta-${todayStr}.csv`;

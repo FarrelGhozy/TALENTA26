@@ -51,6 +51,15 @@ export async function saveSelection(
   if (!input.teamId && !input.userId) {
     throw new ValidationError('Pilih tim peserta (beregu) atau mahasiswa peserta (individu)');
   }
+  if (input.teamId && input.userId) {
+    throw new ValidationError('Tidak boleh memilih tim dan peserta individu secara bersamaan');
+  }
+  if (comp.format === 'individu' && input.teamId) {
+    throw new ValidationError('Kompetisi format individu hanya menerima peserta mahasiswa (userId), bukan tim');
+  }
+  if (comp.format === 'beregu' && input.userId) {
+    throw new ValidationError('Kompetisi format beregu hanya menerima peserta tim (teamId)');
+  }
 
   const confirmedAt = input.organizerVerified ? new Date() : null;
   const validatorId = input.organizerVerified ? actorId : null;
@@ -58,15 +67,20 @@ export async function saveSelection(
   let selection;
 
   if (input.teamId) {
-    const team = await prisma.team.findUnique({
-      where: { id: input.teamId },
-      include: { competition: true, members: { where: { status: 'active' } } },
-    });
-    if (!team || team.competition.institutionId !== institutionId || team.competitionId !== input.competitionId) {
-      throw new NotFoundError('Tim seleksi tidak ditemukan untuk kompetisi tersebut');
-    }
-
     selection = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM teams WHERE id = ${input.teamId!} FOR UPDATE`;
+
+      const team = await tx.team.findUnique({
+        where: { id: input.teamId! },
+        include: { competition: true, members: { where: { status: 'active' } } },
+      });
+      if (!team || team.competition.institutionId !== institutionId || team.competitionId !== input.competitionId) {
+        throw new NotFoundError('Tim seleksi tidak ditemukan untuk kompetisi tersebut');
+      }
+      if (team.status === 'arsip') {
+        throw new ValidationError('Tim yang telah diarsipkan tidak dapat diproses dalam seleksi internal');
+      }
+
       const saved = await tx.internalSelection.upsert({
         where: {
           competitionId_teamId_stage: {
@@ -78,7 +92,7 @@ export async function saveSelection(
         update: {
           result: input.result,
           organizerVerified: input.organizerVerified,
-          notes: input.notes?.trim() || null,
+          notes: input.notes?.trim().slice(0, 1000) || null,
           confirmedAt,
           validatorId,
         },
@@ -89,7 +103,7 @@ export async function saveSelection(
           stage,
           result: input.result,
           organizerVerified: input.organizerVerified,
-          notes: input.notes?.trim() || null,
+          notes: input.notes?.trim().slice(0, 1000) || null,
           confirmedAt,
           validatorId,
         },
@@ -98,15 +112,35 @@ export async function saveSelection(
       if (input.result === 'lolos' && input.organizerVerified) {
         await tx.team.update({
           where: { id: team.id },
-          data: { status: 'terkunci_seleksi', version: { increment: 1 } },
+          data: { status: 'terkunci_seleksi', isRecruiting: false, version: { increment: 1 } },
+        });
+        await tx.teamJoinRequest.updateMany({
+          where: { teamId: team.id, status: 'menunggu' },
+          data: { status: 'kedaluwarsa' },
+        });
+        await tx.teamInvite.updateMany({
+          where: { teamId: team.id, status: 'diajukan' },
+          data: { status: 'kedaluwarsa', respondedAt: new Date() },
         });
       } else if (team.status === 'terkunci_seleksi') {
-        const nextStatus =
-          team.members.length >= team.competition.minTeamMembers ? 'terbentuk' : 'mencari';
-        await tx.team.update({
-          where: { id: team.id },
-          data: { status: nextStatus, version: { increment: 1 } },
+        // Buka kunci hanya bila TIDAK ADA tahap seleksi lain pada tim ini yang masih lolos & terkonfirmasi
+        const otherLockedStage = await tx.internalSelection.findFirst({
+          where: {
+            teamId: team.id,
+            competitionId: input.competitionId,
+            result: 'lolos',
+            organizerVerified: true,
+          },
+          select: { id: true },
         });
+        if (!otherLockedStage) {
+          const nextStatus =
+            team.members.length >= team.competition.minTeamMembers ? 'terbentuk' : 'mencari';
+          await tx.team.update({
+            where: { id: team.id },
+            data: { status: nextStatus, version: { increment: 1 } },
+          });
+        }
       }
 
       return saved;

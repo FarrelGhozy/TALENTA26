@@ -248,51 +248,62 @@ describe('Fase 1 — Patch Kritis Keamanan, Poin/Ledger, & Stabilitas Alur', () 
     expect(kRes.status).toBe(404);
   });
 
-  it('Undangan tim: pengirim bisa cancel, anggota keluar bisa bergabung ulang, dan getMyTeam bebas passwordHash/PII', async () => {
+  it('Rekrutmen tim: pelamar bisa cancel pengajuan, anggota keluar bisa bergabung ulang, dan getMyTeam bebas passwordHash/PII', async () => {
     const teamRes = await app.handle(
       new Request('http://localhost/api/v1/teams', {
         method: 'POST',
         headers: { Authorization: `Bearer ${mhs1Token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ competitionSlug: pubCompSlug, teamName: 'Tim Fase 1' }),
+        body: JSON.stringify({ competitionSlug: pubCompSlug, teamName: 'Tim Fase 1', recruitmentType: 'terbuka' }),
       })
     );
     expect(teamRes.status).toBe(200);
-    const teamId = ((await teamRes.json()) as any).data.id;
+    const teamData = ((await teamRes.json()) as any).data;
+    const teamId = teamData.id;
 
-    // Kirim undangan ke mhs2 lalu batalkan oleh pengirim
-    const inv1Res = await app.handle(
+    // Pastikan rute legacy /invites telah dihapus (404)
+    const legacyInvRes = await app.handle(
       new Request(`http://localhost/api/v1/teams/${teamId}/invites`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${mhs1Token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ receiverId: mhs2Id }),
       })
     );
-    expect(inv1Res.status).toBe(200);
-    const inv1Id = ((await inv1Res.json()) as any).data.id;
+    expect(legacyInvRes.status).toBe(404);
+
+    // Ajukan bergabung oleh mhs2 lalu batalkan
+    const req1Res = await app.handle(
+      new Request(`http://localhost/api/v1/teams/${teamId}/join-requests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhs2Token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferredRole: 'Anggota' }),
+      })
+    );
+    expect(req1Res.status).toBe(200);
+    const req1Id = ((await req1Res.json()) as any).data.id;
 
     const cancelRes = await app.handle(
-      new Request(`http://localhost/api/v1/invites/${inv1Id}/cancel`, {
+      new Request(`http://localhost/api/v1/join-requests/${req1Id}/cancel`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${mhs1Token}` },
+        headers: { Authorization: `Bearer ${mhs2Token}` },
       })
     );
     expect(cancelRes.status).toBe(200);
 
-    // Undang lagi, terima, keluar, undang ulang dan terima ulang (uji reaktivasi TeamMember)
-    const inv2Res = await app.handle(
-      new Request(`http://localhost/api/v1/teams/${teamId}/invites`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${mhs1Token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiverId: mhs2Id }),
-      })
-    );
-    const inv2Id = ((await inv2Res.json()) as any).data.id;
-
-    const acc1 = await app.handle(
-      new Request(`http://localhost/api/v1/invites/${inv2Id}/respond`, {
+    // Ajukan lagi, disetujui ketua, keluar, lalu bergabung ulang via kode undangan (uji reaktivasi TeamMember)
+    const req2Res = await app.handle(
+      new Request(`http://localhost/api/v1/teams/${teamId}/join-requests`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${mhs2Token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'diterima' }),
+        body: JSON.stringify({ preferredRole: 'Anggota' }),
+      })
+    );
+    const req2Id = ((await req2Res.json()) as any).data.id;
+
+    const acc1 = await app.handle(
+      new Request(`http://localhost/api/v1/join-requests/${req2Id}/decide`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhs1Token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disetujui' }),
       })
     );
     expect(acc1.status).toBe(200);
@@ -318,22 +329,14 @@ describe('Fase 1 — Patch Kritis Keamanan, Poin/Ledger, & Stabilitas Alur', () 
     );
     expect(leaveRes.status).toBe(200);
 
-    const inv3Res = await app.handle(
-      new Request(`http://localhost/api/v1/teams/${teamId}/invites`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${mhs1Token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ receiverId: mhs2Id }),
-      })
-    );
-    const inv3Id = ((await inv3Res.json()) as any).data.id;
-    const acc2 = await app.handle(
-      new Request(`http://localhost/api/v1/invites/${inv3Id}/respond`, {
+    const rejoinRes = await app.handle(
+      new Request('http://localhost/api/v1/teams/join-by-code', {
         method: 'POST',
         headers: { Authorization: `Bearer ${mhs2Token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'diterima' }),
+        body: JSON.stringify({ inviteCode: teamData.inviteCode }),
       })
     );
-    expect(acc2.status).toBe(200);
+    expect(rejoinRes.status).toBe(200);
   });
 
   it('PointRule v2 dipakai saat approve, reversal tidak double-negation di dashboard/CSV, dan koreksi ulang tidak minus/double-count', async () => {

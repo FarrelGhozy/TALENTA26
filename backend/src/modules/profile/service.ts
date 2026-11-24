@@ -52,6 +52,25 @@ function validateAvatarBuffer(fileName: string, mimeType: string, buffer: Buffer
   }
 }
 
+const MAX_PROFILE_JSON_BYTES = 8 * 1024;
+const MAX_PROFILE_LIST_ITEMS = 30;
+
+function validateBoundedJsonField(fieldName: string, value: unknown): any {
+  if (value === null) return null;
+  if (Array.isArray(value)) {
+    if (value.length > MAX_PROFILE_LIST_ITEMS) {
+      throw new ValidationError(`Kolom ${fieldName} maksimal ${MAX_PROFILE_LIST_ITEMS} item`);
+    }
+  } else if (typeof value !== 'object' && typeof value !== 'string') {
+    throw new ValidationError(`Format kolom ${fieldName} tidak valid`);
+  }
+  const serialized = JSON.stringify(value);
+  if (!serialized || Buffer.byteLength(serialized, 'utf8') > MAX_PROFILE_JSON_BYTES) {
+    throw new ValidationError(`Ukuran data kolom ${fieldName} melebihi batas yang diizinkan`);
+  }
+  return value;
+}
+
 export async function getStudentProfile(userId: string) {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
@@ -66,9 +85,11 @@ export async function getStudentProfile(userId: string) {
     include: { competition: true },
   });
 
+  const { avatarObjectKey, ...safeProfile } = profile;
+
   return {
-    ...profile,
-    avatarUrl: profile.avatarObjectKey
+    ...safeProfile,
+    avatarUrl: avatarObjectKey
       ? `/api/v1/users/${userId}/avatar?v=${profile.updatedAt.getTime()}`
       : profile.avatarUrl,
     targetKompetisiSlug: activeTarget?.competition.slug || null,
@@ -81,7 +102,7 @@ export async function updateStudentProfile(
   dto: UpdateStudentProfileDto,
   ipAddress?: string,
   userAgent?: string
-): Promise<StudentProfile> {
+): Promise<Omit<StudentProfile, 'avatarObjectKey'>> {
   const profile = await prisma.studentProfile.findUnique({
     where: { userId },
     include: { user: true },
@@ -103,22 +124,28 @@ export async function updateStudentProfile(
   } = {};
 
   if (dto.fullName !== undefined && dto.fullName !== null) {
-    if (dto.fullName.trim().length < 2) {
-      throw new ValidationError('Nama lengkap minimal 2 karakter');
+    const trimmed = dto.fullName.trim();
+    if (trimmed.length < 2 || trimmed.length > 150) {
+      throw new ValidationError('Nama lengkap harus 2–150 karakter');
     }
-    updateData.fullName = dto.fullName.trim();
+    updateData.fullName = trimmed;
   }
 
   if (dto.studyProgram !== undefined && dto.studyProgram !== null) {
-    if (!dto.studyProgram.trim()) {
-      throw new ValidationError('Program studi tidak boleh kosong');
+    const trimmed = dto.studyProgram.trim();
+    if (!trimmed || trimmed.length > 120) {
+      throw new ValidationError('Program studi wajib diisi (maksimal 120 karakter)');
     }
-    updateData.studyProgram = dto.studyProgram.trim();
+    updateData.studyProgram = trimmed;
   }
 
   if (dto.faculty !== undefined && dto.faculty !== null) {
-    if (dto.faculty.trim()) {
-      updateData.faculty = dto.faculty.trim();
+    const trimmed = dto.faculty.trim();
+    if (trimmed) {
+      if (trimmed.length > 120) {
+        throw new ValidationError('Fakultas maksimal 120 karakter');
+      }
+      updateData.faculty = trimmed;
     }
   }
 
@@ -137,38 +164,69 @@ export async function updateStudentProfile(
   }
 
   if (dto.phone !== undefined) {
-    updateData.phone = dto.phone && dto.phone.trim() ? dto.phone.trim() : null;
+    const trimmed = dto.phone ? dto.phone.trim() : '';
+    if (trimmed.length > 30) {
+      throw new ValidationError('Nomor telepon maksimal 30 karakter');
+    }
+    updateData.phone = trimmed || null;
   }
 
   if (dto.bio !== undefined) {
-    updateData.bio = dto.bio && dto.bio.trim() ? dto.bio.trim() : null;
+    const trimmed = dto.bio ? dto.bio.trim() : '';
+    if (trimmed.length > 2000) {
+      throw new ValidationError('Bio maksimal 2000 karakter');
+    }
+    updateData.bio = trimmed || null;
   }
 
+  let shouldDeleteOldAvatar = false;
   if (dto.avatarUrl !== undefined) {
     const val = (dto.avatarUrl || '').trim();
     if (!val) {
       updateData.avatarUrl = null;
       updateData.avatarObjectKey = null;
+      shouldDeleteOldAvatar = true;
     } else if (val.startsWith('data:') || val.length > 512) {
       throw new ValidationError('Unggah foto profil melalui endpoint multipart /me/profile/avatar, bukan Base64.');
-    } else if (val.startsWith('/api/v1/users/')) {
+    } else if (val.startsWith(`/api/v1/users/${userId}/avatar`)) {
       updateData.avatarUrl = val;
     } else {
-      throw new ValidationError('URL avatar tidak valid');
+      throw new ValidationError('URL avatar tidak valid atau tidak milik akun Anda');
     }
   }
 
   const jsonUpdateData: any = { ...updateData };
 
-  if (dto.skills !== undefined) jsonUpdateData.skills = dto.skills;
-  if (dto.interests !== undefined) jsonUpdateData.interests = dto.interests;
-  if (dto.availability !== undefined) jsonUpdateData.availability = dto.availability;
-  if (dto.rolesCapable !== undefined) jsonUpdateData.rolesCapable = dto.rolesCapable;
+  if (dto.skills !== undefined) {
+    jsonUpdateData.skills = validateBoundedJsonField('skills', dto.skills);
+  }
+  if (dto.interests !== undefined) {
+    jsonUpdateData.interests = validateBoundedJsonField('interests', dto.interests);
+  }
+  if (dto.availability !== undefined) {
+    jsonUpdateData.availability = validateBoundedJsonField('availability', dto.availability);
+  }
+  if (dto.rolesCapable !== undefined) {
+    jsonUpdateData.rolesCapable = validateBoundedJsonField('rolesCapable', dto.rolesCapable);
+  }
   if (dto.experience !== undefined) {
-    jsonUpdateData.experience = dto.experience && dto.experience.trim() ? dto.experience.trim() : null;
+    const trimmed = dto.experience ? dto.experience.trim() : '';
+    if (trimmed.length > 3000) {
+      throw new ValidationError('Pengalaman maksimal 3000 karakter');
+    }
+    jsonUpdateData.experience = trimmed || null;
   }
 
-  const updatedProfile = await prisma.$transaction(async (tx) => {
+  const { updatedProfile, previousAvatarObjectKey } = await prisma.$transaction(async (tx) => {
+    let oldKey: string | null = null;
+    if (shouldDeleteOldAvatar) {
+      await tx.$executeRaw`SELECT id FROM student_profiles WHERE userId = ${userId} FOR UPDATE`;
+      const locked = await tx.studentProfile.findUnique({
+        where: { userId },
+        select: { avatarObjectKey: true },
+      });
+      oldKey = locked?.avatarObjectKey || null;
+    }
     const prof = await tx.studentProfile.update({
       where: { userId },
       data: jsonUpdateData,
@@ -179,8 +237,15 @@ export async function updateStudentProfile(
         data: { fullName: updateData.fullName },
       });
     }
-    return prof;
+    return { updatedProfile: prof, previousAvatarObjectKey: oldKey };
   });
+
+  if (shouldDeleteOldAvatar && previousAvatarObjectKey) {
+    const storage = getStorageService();
+    await storage.deleteFile(previousAvatarObjectKey).catch((err) => {
+      console.warn(`[STORAGE_DELETE_WARN] Gagal menghapus avatar lama ${previousAvatarObjectKey}:`, err);
+    });
+  }
 
   await recordAuditEvent({
     institutionId: profile.user.institutionId,
@@ -193,7 +258,8 @@ export async function updateStudentProfile(
     userAgent,
   });
 
-  return updatedProfile;
+  const { avatarObjectKey: _omit, ...safeUpdated } = updatedProfile;
+  return safeUpdated;
 }
 
 export async function uploadStudentAvatar(
@@ -214,24 +280,36 @@ export async function uploadStudentAvatar(
 
   await storage.uploadFile(newKey, file.buffer, file.type);
 
-  const oldKey = profile.avatarObjectKey;
   const avatarEndpoint = `/api/v1/users/${userId}/avatar?v=${Date.now()}`;
+  let oldKey: string | null = null;
 
   try {
-    await prisma.studentProfile.update({
-      where: { userId },
-      data: {
-        avatarObjectKey: newKey,
-        avatarUrl: avatarEndpoint,
-      },
+    oldKey = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM student_profiles WHERE userId = ${userId} FOR UPDATE`;
+      const locked = await tx.studentProfile.findUnique({
+        where: { userId },
+        select: { avatarObjectKey: true },
+      });
+      await tx.studentProfile.update({
+        where: { userId },
+        data: {
+          avatarObjectKey: newKey,
+          avatarUrl: avatarEndpoint,
+        },
+      });
+      return locked?.avatarObjectKey || null;
     });
   } catch (err) {
-    await storage.deleteFile(newKey).catch(() => undefined);
+    await storage.deleteFile(newKey).catch((delErr) => {
+      console.warn(`[STORAGE_DELETE_WARN] Gagal cleanup avatar gagal simpan ${newKey}:`, delErr);
+    });
     throw err;
   }
 
   if (oldKey && oldKey !== newKey) {
-    await storage.deleteFile(oldKey).catch(() => undefined);
+    await storage.deleteFile(oldKey).catch((delErr) => {
+      console.warn(`[STORAGE_DELETE_WARN] Gagal menghapus avatar sebelumnya ${oldKey}:`, delErr);
+    });
   }
 
   await recordAuditEvent({
@@ -252,15 +330,24 @@ export async function deleteStudentAvatar(userId: string, institutionId: string)
   const profile = await prisma.studentProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError('Profil mahasiswa tidak ditemukan.');
 
-  const oldKey = profile.avatarObjectKey;
-  await prisma.studentProfile.update({
-    where: { userId },
-    data: { avatarObjectKey: null, avatarUrl: null },
+  const oldKey = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM student_profiles WHERE userId = ${userId} FOR UPDATE`;
+    const locked = await tx.studentProfile.findUnique({
+      where: { userId },
+      select: { avatarObjectKey: true },
+    });
+    await tx.studentProfile.update({
+      where: { userId },
+      data: { avatarObjectKey: null, avatarUrl: null },
+    });
+    return locked?.avatarObjectKey || null;
   });
 
   if (oldKey) {
     const storage = getStorageService();
-    await storage.deleteFile(oldKey).catch(() => undefined);
+    await storage.deleteFile(oldKey).catch((delErr) => {
+      console.warn(`[STORAGE_DELETE_WARN] Gagal menghapus avatar ${oldKey}:`, delErr);
+    });
   }
 
   await recordAuditEvent({
@@ -280,18 +367,28 @@ export async function getAuthorizedUserAvatar(targetUserId: string, institutionI
     select: {
       id: true,
       institutionId: true,
+      status: true,
       studentProfile: {
         select: { avatarObjectKey: true },
       },
     },
   });
 
-  if (!user || user.institutionId !== institutionId || !user.studentProfile?.avatarObjectKey) {
+  if (
+    !user ||
+    user.institutionId !== institutionId ||
+    user.status !== 'active' ||
+    !user.studentProfile?.avatarObjectKey
+  ) {
     throw new NotFoundError('Avatar tidak ditemukan');
   }
 
   const storage = getStorageService();
-  return storage.getFile(user.studentProfile.avatarObjectKey);
+  try {
+    return await storage.getFile(user.studentProfile.avatarObjectKey);
+  } catch {
+    throw new NotFoundError('Berkas avatar tidak ditemukan di penyimpanan');
+  }
 }
 
 export async function searchStudentDirectory(institutionId: string, query?: string) {

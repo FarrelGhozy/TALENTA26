@@ -3,12 +3,11 @@ import { hashPassword, verifyPassword } from '../../lib/password';
 import {
   createSession,
   revokeSession,
-  revokeAllUserSessions,
   generateSecureToken,
   hashToken,
 } from '../../lib/session';
 import { recordAuditEvent } from '../../lib/audit';
-import { sendPasswordResetEmail } from '../../lib/mailer';
+import { MailerUnavailableError, sendPasswordResetEmail } from '../../lib/mailer';
 import {
   ValidationError,
   ConflictError,
@@ -17,6 +16,16 @@ import {
   AppError,
 } from '../../app/middleware/error';
 import type { User, StudentProfile, Role } from '@prisma/client';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let dummyPasswordHashPromise: Promise<string> | null = null;
+
+function getDummyPasswordHash(): Promise<string> {
+  if (!dummyPasswordHashPromise) {
+    dummyPasswordHashPromise = hashPassword('TalentaTimingGuardDummy!2026');
+  }
+  return dummyPasswordHashPromise;
+}
 
 export interface RegisterDto {
   email: string;
@@ -72,23 +81,38 @@ export async function registerMahasiswa(
 
   // Validasi input
   const fieldErrors: Record<string, string> = {};
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    fieldErrors.email = 'Format email tidak valid';
+  if (!email || email.length > 254 || !EMAIL_RE.test(email)) {
+    fieldErrors.email = 'Format email tidak valid (maksimal 254 karakter)';
   }
-  if (!nim || nim.length < 5) {
-    fieldErrors.nim = 'NIM minimal 5 karakter';
+  if (!nim || nim.length < 5 || nim.length > 32) {
+    fieldErrors.nim = 'NIM harus 5–32 karakter';
   }
-  if (!fullName || fullName.length < 2) {
-    fieldErrors.fullName = 'Nama lengkap minimal 2 karakter';
+  if (!fullName || fullName.length < 2 || fullName.length > 150) {
+    fieldErrors.fullName = 'Nama lengkap harus 2–150 karakter';
   }
-  if (!studyProgram) {
-    fieldErrors.studyProgram = 'Program studi wajib diisi';
+  if (!studyProgram || studyProgram.length > 120) {
+    fieldErrors.studyProgram = 'Program studi wajib diisi (maksimal 120 karakter)';
   }
-  if (!faculty) {
-    fieldErrors.faculty = 'Fakultas wajib diisi';
+  if (!faculty || faculty.length > 120) {
+    fieldErrors.faculty = 'Fakultas wajib diisi (maksimal 120 karakter)';
   }
-  if (!dto.password || dto.password.length < 8) {
-    fieldErrors.password = 'Password minimal 8 karakter';
+  if (!dto.password || dto.password.length < 8 || dto.password.length > 128) {
+    fieldErrors.password = 'Password harus 8–128 karakter';
+  }
+  if (dto.phone !== undefined && dto.phone.trim().length > 30) {
+    fieldErrors.phone = 'Nomor telepon maksimal 30 karakter';
+  }
+  if (dto.enrollmentYear !== undefined && dto.enrollmentYear !== null) {
+    const currentYear = Number(
+      new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric' }).format(new Date())
+    );
+    if (
+      !Number.isInteger(dto.enrollmentYear) ||
+      dto.enrollmentYear < 1900 ||
+      dto.enrollmentYear > currentYear + 1
+    ) {
+      fieldErrors.enrollmentYear = 'Tahun angkatan tidak valid';
+    }
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -176,8 +200,8 @@ export async function login(
   const email = dto.email?.trim().toLowerCase();
   const password = dto.password;
 
-  if (!email || !password) {
-    throw new ValidationError('Email dan password wajib diisi');
+  if (!email || email.length > 254 || !password || password.length > 128) {
+    throw new ValidationError('Email dan password wajib diisi dengan panjang yang valid');
   }
 
   const user = await prisma.user.findUnique({
@@ -188,8 +212,10 @@ export async function login(
     },
   });
 
-  // Pesan error seragam untuk mencegah enumerasi pengguna
+  // Pesan error seragam + verifikasi dummy konstan untuk mencegah timing enumeration
   if (!user) {
+    const dummyHash = await getDummyPasswordHash();
+    await verifyPassword(password, dummyHash);
     throw new UnauthorizedError('Email atau password yang Anda masukkan salah');
   }
 
@@ -302,7 +328,7 @@ export async function requestPasswordReset(
     message: 'Jika email terdaftar, instruksi reset password telah dikirim ke alamat tersebut.',
   };
 
-  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+  if (!normalizedEmail || normalizedEmail.length > 254 || !EMAIL_RE.test(normalizedEmail)) {
     return genericResponse;
   }
 
@@ -310,7 +336,7 @@ export async function requestPasswordReset(
     where: { email: normalizedEmail },
   });
 
-  if (!user || user.status === 'suspended') {
+  if (!user || user.status !== 'active') {
     // Tetap kembalikan respons generik agar tidak membocorkan status email
     return genericResponse;
   }
@@ -319,22 +345,31 @@ export async function requestPasswordReset(
   const tokenHash = hashToken(plainToken);
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
 
-  // Simpan token reset ke database
-  const resetRecord = await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      expiresAt,
-    },
+  // Nonaktifkan token reset sebelumnya yang belum dipakai agar hanya 1 token aktif per akun
+  const resetRecord = await prisma.$transaction(async (tx) => {
+    await tx.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    return tx.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
   });
 
   let mailResult;
   try {
     mailResult = await sendPasswordResetEmail(user.email, plainToken);
   } catch (err: any) {
-    await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } });
+    await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } }).catch(() => undefined);
     console.error('[MAILER] Pengiriman email pemulihan akun gagal');
-    if (process.env.NODE_ENV === 'production' && err?.message?.includes('SMTP')) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (err instanceof MailerUnavailableError || err?.message?.includes('SMTP'))
+    ) {
       throw new AppError(
         503,
         'MAILER_UNAVAILABLE',
@@ -370,18 +405,24 @@ export async function resetPasswordWithToken(
     throw new ValidationError('Token dan password baru wajib diisi');
   }
 
-  if (newPassword.length < 8) {
-    throw new ValidationError('Password baru minimal 8 karakter');
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    throw new ValidationError('Password baru harus 8–128 karakter');
   }
 
   const tokenHash = hashToken(token.trim());
+  const now = new Date();
 
   const resetRecord = await prisma.passwordResetToken.findUnique({
     where: { tokenHash },
     include: { user: true },
   });
 
-  if (!resetRecord || resetRecord.usedAt !== null || resetRecord.expiresAt.getTime() < Date.now()) {
+  if (
+    !resetRecord ||
+    resetRecord.usedAt !== null ||
+    resetRecord.expiresAt.getTime() < now.getTime() ||
+    resetRecord.user.status !== 'active'
+  ) {
     throw new AppError(
       400,
       'INVALID_RESET_TOKEN',
@@ -392,19 +433,40 @@ export async function resetPasswordWithToken(
   const newPasswordHash = await hashPassword(newPassword);
 
   await prisma.$transaction(async (tx) => {
+    // Konsumsi token secara atomik untuk mencegah TOCTOU replay race
+    const claimed = await tx.passwordResetToken.updateMany({
+      where: {
+        id: resetRecord.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count !== 1) {
+      throw new AppError(
+        400,
+        'INVALID_RESET_TOKEN',
+        'Token reset password tidak valid atau telah digunakan. Silakan minta instruksi baru.'
+      );
+    }
+
+    // Batalkan seluruh token reset lain milik pengguna yang belum terpakai
+    await tx.passwordResetToken.updateMany({
+      where: { userId: resetRecord.userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
     await tx.user.update({
       where: { id: resetRecord.userId },
       data: { passwordHash: newPasswordHash },
     });
 
-    await tx.passwordResetToken.update({
-      where: { id: resetRecord.id },
-      data: { usedAt: new Date() },
+    // Cabut semua sesi aktif secara atomik di dalam transaksi yang sama
+    await tx.authSession.updateMany({
+      where: { userId: resetRecord.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
     });
   });
-
-  // Cabut semua sesi lama pengguna demi keamanan
-  await revokeAllUserSessions(resetRecord.userId);
 
   await recordAuditEvent({
     institutionId: resetRecord.user.institutionId,

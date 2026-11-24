@@ -9,6 +9,7 @@ const testFiles = [
   'backend/tests/integration/team-recruitment.test.ts',
   'backend/tests/integration/competition-delete.test.ts',
   'backend/tests/integration/admin-competition-detail.test.ts',
+  'backend/tests/integration/hardening-and-fixes.test.ts',
 ];
 
 for (const testFile of testFiles) {

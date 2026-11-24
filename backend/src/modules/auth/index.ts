@@ -101,7 +101,16 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       );
     }
 
+    const currentConfig = loadConfig();
     if (cookie.talenta_session) {
+      cookie.talenta_session.set({
+        value: '',
+        httpOnly: true,
+        secure: currentConfig.nodeEnv === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 0,
+      });
       cookie.talenta_session.remove();
     }
 

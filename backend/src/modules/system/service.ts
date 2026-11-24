@@ -1,10 +1,22 @@
 import { prisma } from '../../lib/prisma';
 import { recordAuditEvent } from '../../lib/audit';
 import { hashPassword } from '../../lib/password';
-import { revokeAllUserSessions } from '../../lib/session';
 import { getStorageDriverName, getStorageService } from '../../lib/storage';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../app/middleware/error';
 import type { Role, UserStatus, AchievementLevel, AchievementResult, Prisma } from '@prisma/client';
+
+const VALID_ROLES = new Set<string>(['mahasiswa', 'validator', 'super_admin']);
+const VALID_USER_STATUSES = new Set<string>(['active', 'suspended', 'pending_verification']);
+const VALID_LEVELS = new Set<string>(['lokal', 'nasional', 'internasional']);
+const VALID_RESULTS = new Set<string>([
+  'partisipasi',
+  'finalis',
+  'juara_3',
+  'juara_2',
+  'juara_1',
+  'penghargaan_khusus',
+]);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface UserFilterParams {
   role?: string;
@@ -26,10 +38,16 @@ export async function getUsers(institutionId: string, params: UserFilterParams) 
   if (params.role === 'admin') {
     where.role = { in: ['validator', 'super_admin'] };
   } else if (params.role && params.role !== 'semua') {
+    if (!VALID_ROLES.has(params.role)) {
+      throw new ValidationError('Filter peran pengguna tidak valid');
+    }
     where.role = params.role as Role;
   }
 
-  if (params.status) {
+  if (params.status && params.status !== 'semua') {
+    if (!VALID_USER_STATUSES.has(params.status)) {
+      throw new ValidationError('Filter status pengguna tidak valid');
+    }
     where.status = params.status as UserStatus;
   }
 
@@ -108,41 +126,59 @@ export async function updateUserStatus(
   actorId: string,
   institutionId: string
 ) {
-  if (!['active', 'suspended', 'pending_verification'].includes(status)) {
+  if (!VALID_USER_STATUSES.has(status)) {
     throw new ValidationError('Status pengguna tidak valid');
   }
 
-  const target = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, role: true, status: true, institutionId: true },
+  const { updated, target } = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
+
+    const found = await tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true, status: true, institutionId: true },
+    });
+
+    if (!found || found.institutionId !== institutionId) {
+      throw new NotFoundError('Pengguna tidak ditemukan');
+    }
+
+    if (userId === actorId && status !== 'active') {
+      throw new ForbiddenError('Anda tidak dapat menangguhkan atau menonaktifkan akun Anda sendiri');
+    }
+
+    if (found.role === 'super_admin' && found.status === 'active' && status !== 'active') {
+      const activeSuperAdminCount = await tx.user.count({
+        where: { institutionId, role: 'super_admin', status: 'active' },
+      });
+      if (activeSuperAdminCount <= 1) {
+        throw new ConflictError('Harus ada minimal satu super admin aktif di institusi');
+      }
+    }
+
+    const upd = await tx.user.update({
+      where: { id: userId },
+      data: { status },
+      select: {
+        id: true,
+        institutionId: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Jika akun tidak aktif (suspended / pending_verification), cabut semua sesi aktif secara atomik
+    if (status !== 'active') {
+      await tx.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    return { updated: upd, target: found };
   });
-
-  if (!target || target.institutionId !== institutionId) {
-    throw new NotFoundError('Pengguna tidak ditemukan');
-  }
-
-  if (userId === actorId && status === 'suspended') {
-    throw new ForbiddenError('Anda tidak dapat menangguhkan akun Anda sendiri');
-  }
-
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { status },
-    select: {
-      id: true,
-      institutionId: true,
-      email: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  // Jika akun di-suspend, cabut semua sesi aktif secara instan
-  if (status === 'suspended') {
-    await revokeAllUserSessions(userId);
-  }
 
   await recordAuditEvent({
     institutionId,
@@ -154,7 +190,7 @@ export async function updateUserStatus(
       email: target.email,
       previousStatus: target.status,
       newStatus: status,
-      sessionsRevoked: status === 'suspended',
+      sessionsRevoked: status !== 'active',
     },
   });
 
@@ -172,16 +208,17 @@ export async function createStaff(
   institutionId: string
 ) {
   const email = data.email?.trim().toLowerCase();
-  if (!email || !email.includes('@')) {
+  if (!email || email.length > 254 || !EMAIL_RE.test(email)) {
     throw new ValidationError('Format email tidak valid');
   }
 
-  if (!data.password || data.password.length < 8) {
-    throw new ValidationError('Password minimal 8 karakter');
+  if (!data.password || data.password.length < 8 || data.password.length > 128) {
+    throw new ValidationError('Password harus 8–128 karakter');
   }
 
+  // Default aman ke 'validator' bila peran tidak dispesifikasikan
   const normalizedRole: 'validator' | 'super_admin' =
-    !data.role || data.role === 'admin' ? 'super_admin' : data.role;
+    !data.role || data.role === 'admin' ? 'validator' : data.role;
 
   if (!['validator', 'super_admin'].includes(normalizedRole)) {
     throw new ValidationError('Peran admin tidak valid');
@@ -196,7 +233,7 @@ export async function createStaff(
   }
 
   const passwordHash = await hashPassword(data.password);
-  const displayName = data.fullName?.trim() || email.split('@')[0];
+  const displayName = (data.fullName?.trim() || email.split('@')[0]).slice(0, 150);
 
   const newUser = await prisma.user.create({
     data: {
@@ -242,28 +279,43 @@ export async function updateUserName(
   institutionId: string
 ) {
   const cleanName = fullName?.trim();
-  if (!cleanName || cleanName.length < 2) {
-    throw new ValidationError('Nama lengkap minimal 2 karakter');
+  if (!cleanName || cleanName.length < 2 || cleanName.length > 150) {
+    throw new ValidationError('Nama lengkap harus 2–150 karakter');
   }
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, institutionId: true, fullName: true, role: true },
+    select: {
+      id: true,
+      institutionId: true,
+      fullName: true,
+      role: true,
+      studentProfile: { select: { id: true } },
+    },
   });
   if (!target || target.institutionId !== institutionId) {
     throw new NotFoundError('Pengguna tidak ditemukan');
   }
 
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { fullName: cleanName },
-    select: {
-      id: true,
-      institutionId: true,
-      email: true,
-      fullName: true,
-      role: true,
-      status: true,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const upd = await tx.user.update({
+      where: { id: userId },
+      data: { fullName: cleanName },
+      select: {
+        id: true,
+        institutionId: true,
+        email: true,
+        fullName: true,
+        role: true,
+        status: true,
+      },
+    });
+    if (target.studentProfile) {
+      await tx.studentProfile.update({
+        where: { userId },
+        data: { fullName: cleanName },
+      });
+    }
+    return upd;
   });
 
   await recordAuditEvent({
@@ -288,44 +340,58 @@ export async function updateStaffRole(
     throw new ValidationError('Peran hanya boleh validator atau super_admin');
   }
 
-  const target = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, email: true, role: true, status: true, institutionId: true },
-  });
+  const { updated, target } = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
 
-  if (!target || target.institutionId !== institutionId) {
-    throw new NotFoundError('Pengguna tidak ditemukan');
-  }
-
-  if (target.role === 'super_admin' && role !== 'super_admin') {
-    if (userId === actorId) {
-      throw new ForbiddenError('Anda tidak dapat menurunkan peran super admin milik Anda sendiri');
-    }
-    const activeSuperAdminCount = await prisma.user.count({
-      where: { institutionId, role: 'super_admin', status: 'active' },
+    const found = await tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true, status: true, institutionId: true },
     });
-    if (activeSuperAdminCount <= 1) {
-      throw new ConflictError('Harus ada minimal satu super admin aktif di institusi');
+
+    if (!found || found.institutionId !== institutionId) {
+      throw new NotFoundError('Pengguna tidak ditemukan');
     }
-  }
 
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { role },
-    select: {
-      id: true,
-      institutionId: true,
-      email: true,
-      role: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    if (found.role === 'mahasiswa') {
+      throw new ForbiddenError('Akun mahasiswa tidak dapat diubah menjadi akun staf secara langsung');
+    }
+
+    if (userId === actorId) {
+      throw new ForbiddenError('Anda tidak dapat mengubah peran akun Anda sendiri');
+    }
+
+    if (found.role === 'super_admin' && role !== 'super_admin') {
+      const activeSuperAdminCount = await tx.user.count({
+        where: { institutionId, role: 'super_admin', status: 'active' },
+      });
+      if (activeSuperAdminCount <= 1) {
+        throw new ConflictError('Harus ada minimal satu super admin aktif di institusi');
+      }
+    }
+
+    const upd = await tx.user.update({
+      where: { id: userId },
+      data: { role },
+      select: {
+        id: true,
+        institutionId: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (found.role !== role) {
+      await tx.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+
+    return { updated: upd, target: found };
   });
-
-  if (target.role !== role) {
-    await revokeAllUserSessions(userId);
-  }
 
   await recordAuditEvent({
     institutionId,
@@ -407,6 +473,32 @@ export async function createAcademicPeriod(
   return period;
 }
 
+function buildOldTargetsWhere(institutionId: string, periodId: string): Prisma.StudentTargetWhereInput {
+  return {
+    status: 'active',
+    user: { institutionId },
+    OR: [
+      { academicPeriodId: { not: periodId } },
+      {
+        academicPeriodId: null,
+        competition: {
+          OR: [{ academicPeriodId: null }, { academicPeriodId: { not: periodId } }],
+        },
+      },
+    ],
+  };
+}
+
+function buildOldTeamsWhere(institutionId: string, periodId: string): Prisma.TeamWhereInput {
+  return {
+    status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+    competition: {
+      institutionId,
+      OR: [{ academicPeriodId: null }, { academicPeriodId: { not: periodId } }],
+    },
+  };
+}
+
 export async function getAcademicPeriodActivationPreview(
   periodId: string,
   institutionId: string
@@ -422,22 +514,10 @@ export async function getAcademicPeriodActivationPreview(
 
   const [activeTargetsToArchive, activeTeamsToArchive] = await Promise.all([
     prisma.studentTarget.count({
-      where: {
-        status: 'active',
-        user: { institutionId },
-        competition: {
-          academicPeriodId: { not: periodId },
-        },
-      },
+      where: buildOldTargetsWhere(institutionId, periodId),
     }),
     prisma.team.count({
-      where: {
-        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
-        competition: {
-          institutionId,
-          academicPeriodId: { not: periodId },
-        },
-      },
+      where: buildOldTeamsWhere(institutionId, periodId),
     }),
   ]);
 
@@ -464,6 +544,9 @@ export async function activateAcademicPeriod(
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    // Kunci baris institusi agar aktivasi periode paralel tidak menghasilkan 2 periode aktif
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
+
     await tx.academicPeriod.updateMany({
       where: { institutionId, isActive: true, id: { not: periodId } },
       data: { isActive: false, archivedAt: new Date() },
@@ -479,26 +562,18 @@ export async function activateAcademicPeriod(
 
     if (archiveOldTargets) {
       const targetRes = await tx.studentTarget.updateMany({
-        where: {
-          status: 'active',
-          user: { institutionId },
-          OR: [
-            { academicPeriodId: { not: periodId } },
-            { academicPeriodId: null, competition: { academicPeriodId: { not: periodId } } },
-          ],
-        },
+        where: buildOldTargetsWhere(institutionId, periodId),
         data: { status: 'archived' },
       });
       archivedTargetsCount = targetRes.count;
 
+      const oldTeamCompetitionWhere: Prisma.CompetitionWhereInput = {
+        institutionId,
+        OR: [{ academicPeriodId: null }, { academicPeriodId: { not: periodId } }],
+      };
+
       const teamRes = await tx.team.updateMany({
-        where: {
-          status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
-          competition: {
-            institutionId,
-            academicPeriodId: { not: periodId },
-          },
-        },
+        where: buildOldTeamsWhere(institutionId, periodId),
         data: { status: 'arsip', isRecruiting: false, version: { increment: 1 } },
       });
       archivedTeamsCount = teamRes.count;
@@ -506,14 +581,29 @@ export async function activateAcademicPeriod(
       await tx.teamJoinRequest.updateMany({
         where: {
           status: 'menunggu',
-          team: {
-            competition: {
-              institutionId,
-              academicPeriodId: { not: periodId },
-            },
-          },
+          team: { competition: oldTeamCompetitionWhere },
         },
         data: { status: 'kedaluwarsa' },
+      });
+
+      await tx.teamInvite.updateMany({
+        where: {
+          status: 'diajukan',
+          team: { competition: oldTeamCompetitionWhere },
+        },
+        data: { status: 'kedaluwarsa', respondedAt: new Date() },
+      });
+
+      await tx.internalSelection.updateMany({
+        where: {
+          institutionId,
+          result: 'menunggu',
+          competition: oldTeamCompetitionWhere,
+        },
+        data: {
+          result: 'tidak',
+          notes: 'Ditutup otomatis saat pergantian periode akademik',
+        },
       });
     }
 
@@ -584,42 +674,72 @@ export async function createPointRuleVersion(
     throw new ValidationError('Daftar aturan poin tidak boleh kosong');
   }
 
+  const seenPairs = new Set<string>();
   for (const item of rules) {
-    if (typeof item.points !== 'number' || item.points < 0) {
-      throw new ValidationError(`Poin untuk level ${item.level} dan capaian ${item.result} harus berupa angka positif`);
+    if (!VALID_LEVELS.has(item.level) || !VALID_RESULTS.has(item.result)) {
+      throw new ValidationError('Level atau hasil capaian pada aturan poin tidak valid');
     }
+    if (!Number.isInteger(item.points) || item.points < 0 || item.points > 10000) {
+      throw new ValidationError(
+        `Poin untuk level ${item.level} dan capaian ${item.result} harus berupa bilangan bulat 0–10000`
+      );
+    }
+    const pairKey = `${item.level}::${item.result}`;
+    if (seenPairs.has(pairKey)) {
+      throw new ValidationError(`Kombinasi duplikat ${item.level} / ${item.result} tidak diizinkan`);
+    }
+    seenPairs.add(pairKey);
   }
 
-  // Tentukan nomor versi baru
-  const latestRule = await prisma.pointRule.findFirst({
-    where: { institutionId },
-    orderBy: { version: 'desc' },
-    select: { version: true },
-  });
+  const { nextVersion, createdRules } = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
 
-  const nextVersion = (latestRule?.version ?? 0) + 1;
+    const latestRule = await tx.pointRule.findFirst({
+      where: { institutionId },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
 
-  // Atomik: nonaktifkan aturan versi sebelumnya dan masukkan versi baru
-  await prisma.$transaction([
-    prisma.pointRule.updateMany({
+    const ver = (latestRule?.version ?? 0) + 1;
+
+    await tx.pointRule.updateMany({
       where: { institutionId },
       data: { isActive: false },
-    }),
-    prisma.pointRule.createMany({
+    });
+    // Sinkronkan PointTemplate aktif dengan versi baru aturan poin
+    await tx.pointTemplate.updateMany({
+      where: { institutionId },
+      data: { isActive: false },
+    });
+
+    const newTemplate = await tx.pointTemplate.create({
+      data: {
+        institutionId,
+        name: `Standar Institusi v${ver}`,
+        description: 'Versi aturan poin standar institusi',
+        version: ver,
+        isActive: true,
+      },
+    });
+
+    await tx.pointRule.createMany({
       data: rules.map((r) => ({
         institutionId,
-        version: nextVersion,
+        pointTemplateId: newTemplate.id,
+        version: ver,
         level: r.level,
         result: r.result,
         points: r.points,
         isActive: true,
       })),
-    }),
-  ]);
+    });
 
-  const createdRules = await prisma.pointRule.findMany({
-    where: { institutionId, version: nextVersion },
-    orderBy: [{ level: 'asc' }, { points: 'desc' }],
+    const rows = await tx.pointRule.findMany({
+      where: { institutionId, version: ver },
+      orderBy: [{ level: 'asc' }, { points: 'desc' }],
+    });
+
+    return { nextVersion: ver, createdRules: rows };
   });
 
   await recordAuditEvent({

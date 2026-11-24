@@ -18,7 +18,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
     return { data };
   })
 
-  // Super Admin: Template Poin Berversi
+  // Template Poin Berversi (Read: validator & super_admin; Mutasi: khusus super_admin)
   .get('/system/point-templates', async ({ auth }) => {
     assertAuthenticated(auth);
     assertRole(auth, ADMIN_ROLES);
@@ -29,7 +29,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
     '/system/point-templates',
     async ({ auth, body, set }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const data = await pointsService.createPointTemplate(auth.user.institutionId, auth.user.id, {
         name: body.name,
         description: body.description,
@@ -60,7 +60,7 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
   )
   .post('/system/point-templates/:id/activate', async ({ auth, params }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ADMIN_ROLES);
+    assertRole(auth, ['super_admin']);
     const data = await pointsService.activatePointTemplate(
       auth.user.institutionId,
       params.id,
@@ -186,7 +186,11 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
   .get('/admin/competitions/:id/point-rules', async ({ auth, params }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);
-    const data = await pointsService.getCompetitionPointConfig(params.id, false);
+    const data = await pointsService.getCompetitionPointConfig(
+      params.id,
+      false,
+      auth.user.institutionId
+    );
     return { data };
   })
   .put(

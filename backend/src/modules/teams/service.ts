@@ -495,30 +495,37 @@ export async function createTeam(
     targetMaxMembers = dto.targetMaxMembers;
   }
 
-  const existingMembership = await prisma.teamMember.findFirst({
-    where: {
-      userId,
-      status: 'active',
-      team: {
-        competitionId: comp.id,
-        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
-      },
-    },
-  });
-
-  if (existingMembership) {
-    throw new ConflictError('Anda sudah memiliki tim aktif pada kompetisi ini');
-  }
-
   const inviteCode = await generateUniqueInviteCode();
   const neededRoles = normalizeNeededRoles(dto.neededRoles);
   const description = dto.description?.trim() ? dto.description.trim().slice(0, 1000) : null;
 
-  return prisma.$transaction(async (tx) => {
-    // Pastikan mahasiswa memiliki target aktif bila belum memilih target sebelumnya
+  const team = await prisma.$transaction(async (tx) => {
+    // Kunci baris user agar pembuatan tim paralel tidak membuat 2 tim aktif atau 2 target aktif
+    await tx.$executeRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+
+    const existingMembership = await tx.teamMember.findFirst({
+      where: {
+        userId,
+        status: 'active',
+        team: {
+          competitionId: comp.id,
+          status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+        },
+      },
+    });
+    if (existingMembership) {
+      throw new ConflictError('Anda sudah memiliki tim aktif pada kompetisi ini');
+    }
+
+    // Pastikan target aktif mahasiswa selaras dengan kompetisi (atau buat otomatis bila belum ada target)
     const currentTarget = await tx.studentTarget.findFirst({
       where: { userId, status: 'active' },
     });
+    if (currentTarget && currentTarget.competitionId !== comp.id) {
+      throw new ConflictError(
+        'Target kompetisi aktif Anda berbeda dengan lomba ini. Ubah target kompetisi di halaman Profil terlebih dahulu.'
+      );
+    }
     if (!currentTarget) {
       await tx.studentTarget.create({
         data: {
@@ -532,7 +539,7 @@ export async function createTeam(
 
     const initialStatus = 1 >= comp.minTeamMembers ? 'terbentuk' : 'mencari';
 
-    const team = await tx.team.create({
+    const createdTeam = await tx.team.create({
       data: {
         competitionId: comp.id,
         name: dto.teamName.trim(),
@@ -552,14 +559,14 @@ export async function createTeam(
 
     await tx.teamMember.create({
       data: {
-        teamId: team.id,
+        teamId: createdTeam.id,
         userId,
-        roleInTeam: dto.roleInTeam?.trim() || 'Ketua Tim',
+        roleInTeam: dto.roleInTeam?.trim().slice(0, 80) || 'Ketua Tim',
         status: 'active',
       },
     });
 
-    // Batalkan pengajuan gabung menunggu milik pembuat di kompetisi yang sama
+    // Batalkan pengajuan gabung & undangan lama menunggu milik pembuat di kompetisi yang sama
     await tx.teamJoinRequest.updateMany({
       where: {
         userId,
@@ -569,22 +576,33 @@ export async function createTeam(
       data: { status: 'dibatalkan' },
     });
 
-    await recordAuditEvent({
-      institutionId,
-      actorId: userId,
-      action: 'TEAM_CREATED',
-      targetType: 'Team',
-      targetId: team.id,
-      metadata: {
-        teamName: team.name,
-        competitionSlug: comp.slug,
-        recruitmentType,
-        targetMaxMembers,
+    await tx.teamInvite.updateMany({
+      where: {
+        receiverId: userId,
+        status: 'diajukan',
+        team: { competitionId: comp.id },
       },
+      data: { status: 'kedaluwarsa', respondedAt: new Date() },
     });
 
-    return team;
+    return createdTeam;
   });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: userId,
+    action: 'TEAM_CREATED',
+    targetType: 'Team',
+    targetId: team.id,
+    metadata: {
+      teamName: team.name,
+      competitionSlug: comp.slug,
+      recruitmentType,
+      targetMaxMembers,
+    },
+  });
+
+  return team;
 }
 
 export async function updateTeam(
@@ -733,77 +751,79 @@ export async function createJoinRequest(
   dto: CreateJoinRequestDto,
   institutionId: string
 ): Promise<TeamJoinRequest> {
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-    include: {
-      competition: true,
-      members: { where: { status: 'active' } },
-    },
-  });
-
-  if (!team || team.competition.institutionId !== institutionId || team.competition.status !== 'published') {
-    throw new NotFoundError('Tim tidak ditemukan');
-  }
-
-  if (team.competition.format === 'individu') {
-    throw new ValidationError('Kompetisi individu tidak mendukung pengajuan gabung tim');
-  }
-
-  const regCheck = isCompetitionRegistrationOpen(team.competition);
-  if (!regCheck.open) {
-    throw new ForbiddenError(regCheck.reason || 'Pendaftaran kompetisi sedang ditutup');
-  }
-
-  if (team.status === 'terkunci_seleksi' || team.status === 'arsip') {
-    throw new ForbiddenError('Tim tidak lagi menerima pengajuan anggota baru');
-  }
-
-  if (team.recruitmentType !== 'terbuka' || !team.isRecruiting) {
-    throw new ForbiddenError('Tim ini tidak membuka rekrutmen publik');
-  }
-
-  const effectiveMax = resolveEffectiveMax(team, team.competition);
-  if (team.members.length >= effectiveMax) {
-    throw new ConflictError('Kapasitas anggota tim sudah penuh');
-  }
-
-  // Cek target aktif mahasiswa (wajib sama, atau otomatis disetel bila belum ada target)
-  const activeTarget = await prisma.studentTarget.findFirst({
-    where: { userId, status: 'active' },
-  });
-  if (activeTarget && activeTarget.competitionId !== team.competitionId) {
-    throw new ConflictError(
-      'Target kompetisi aktif Anda berbeda dengan tim ini. Ubah target kompetisi di halaman Profil terlebih dahulu.'
-    );
-  }
-
-  // Cegah keanggotaan aktif ganda pada kompetisi yang sama
-  const existingMembership = await prisma.teamMember.findFirst({
-    where: {
-      userId,
-      status: 'active',
-      team: {
-        competitionId: team.competitionId,
-        status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
-      },
-    },
-  });
-  if (existingMembership) {
-    throw new ConflictError('Anda sudah terdaftar pada tim aktif di kompetisi ini');
-  }
-
-  const duplicatePending = await prisma.teamJoinRequest.findFirst({
-    where: {
-      teamId,
-      userId,
-      status: 'menunggu',
-    },
-  });
-  if (duplicatePending) {
-    throw new ConflictError('Pengajuan bergabung Anda ke tim ini masih menunggu persetujuan ketua');
-  }
-
   const created = await prisma.$transaction(async (tx) => {
+    // Urutan lock deterministik: users -> teams (mencegah deadlock & pengajuan duplikat paralel)
+    await tx.$executeRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+    await tx.$executeRaw`SELECT id FROM teams WHERE id = ${teamId} FOR UPDATE`;
+
+    const team = await tx.team.findUnique({
+      where: { id: teamId },
+      include: {
+        competition: true,
+        members: { where: { status: 'active' } },
+      },
+    });
+
+    if (!team || team.competition.institutionId !== institutionId || team.competition.status !== 'published') {
+      throw new NotFoundError('Tim tidak ditemukan');
+    }
+
+    if (team.competition.format === 'individu') {
+      throw new ValidationError('Kompetisi individu tidak mendukung pengajuan gabung tim');
+    }
+
+    const regCheck = isCompetitionRegistrationOpen(team.competition);
+    if (!regCheck.open) {
+      throw new ForbiddenError(regCheck.reason || 'Pendaftaran kompetisi sedang ditutup');
+    }
+
+    if (team.status === 'terkunci_seleksi' || team.status === 'arsip') {
+      throw new ForbiddenError('Tim tidak lagi menerima pengajuan anggota baru');
+    }
+
+    if (team.recruitmentType !== 'terbuka' || !team.isRecruiting) {
+      throw new ForbiddenError('Tim ini tidak membuka rekrutmen publik');
+    }
+
+    const effectiveMax = resolveEffectiveMax(team, team.competition);
+    if (team.members.length >= effectiveMax) {
+      throw new ConflictError('Kapasitas anggota tim sudah penuh');
+    }
+
+    const activeTarget = await tx.studentTarget.findFirst({
+      where: { userId, status: 'active' },
+    });
+    if (activeTarget && activeTarget.competitionId !== team.competitionId) {
+      throw new ConflictError(
+        'Target kompetisi aktif Anda berbeda dengan tim ini. Ubah target kompetisi di halaman Profil terlebih dahulu.'
+      );
+    }
+
+    const existingMembership = await tx.teamMember.findFirst({
+      where: {
+        userId,
+        status: 'active',
+        team: {
+          competitionId: team.competitionId,
+          status: { in: ['mencari', 'terbentuk', 'terkunci_seleksi'] },
+        },
+      },
+    });
+    if (existingMembership) {
+      throw new ConflictError('Anda sudah terdaftar pada tim aktif di kompetisi ini');
+    }
+
+    const pendingRequests = await tx.teamJoinRequest.findMany({
+      where: { userId, status: 'menunggu' },
+      select: { id: true, teamId: true },
+    });
+    if (pendingRequests.some((r) => r.teamId === teamId)) {
+      throw new ConflictError('Pengajuan bergabung Anda ke tim ini masih menunggu persetujuan ketua');
+    }
+    if (pendingRequests.length >= 10) {
+      throw new ConflictError('Anda telah mencapai batas maksimal 10 pengajuan gabung aktif sekaligus');
+    }
+
     if (!activeTarget) {
       await tx.studentTarget.create({
         data: {
@@ -843,22 +863,26 @@ export async function cancelJoinRequest(
   requestId: string,
   institutionId: string
 ): Promise<{ message: string }> {
-  const req = await prisma.teamJoinRequest.findFirst({
-    where: { id: requestId, userId },
-    include: { team: { include: { competition: true } } },
-  });
+  const cancelledTeamId = await prisma.$transaction(async (tx) => {
+    const pre = await tx.teamJoinRequest.findFirst({
+      where: { id: requestId, userId },
+      include: { team: { include: { competition: { select: { institutionId: true } } } } },
+    });
+    if (!pre || pre.team.competition.institutionId !== institutionId) {
+      throw new NotFoundError('Pengajuan bergabung tidak ditemukan');
+    }
 
-  if (!req || req.team.competition.institutionId !== institutionId) {
-    throw new NotFoundError('Pengajuan bergabung tidak ditemukan');
-  }
+    await tx.$executeRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+    await tx.$executeRaw`SELECT id FROM teams WHERE id = ${pre.teamId} FOR UPDATE`;
 
-  if (req.status !== 'menunggu') {
-    throw new ConflictError('Hanya pengajuan berstatus menunggu yang dapat dibatalkan');
-  }
-
-  await prisma.teamJoinRequest.update({
-    where: { id: req.id },
-    data: { status: 'dibatalkan' },
+    const updated = await tx.teamJoinRequest.updateMany({
+      where: { id: pre.id, userId, status: 'menunggu' },
+      data: { status: 'dibatalkan' },
+    });
+    if (updated.count !== 1) {
+      throw new ConflictError('Hanya pengajuan berstatus menunggu yang dapat dibatalkan');
+    }
+    return pre.teamId;
   });
 
   await recordAuditEvent({
@@ -866,8 +890,8 @@ export async function cancelJoinRequest(
     actorId: userId,
     action: 'TEAM_JOIN_REQUEST_CANCELLED',
     targetType: 'TeamJoinRequest',
-    targetId: req.id,
-    metadata: { teamId: req.teamId },
+    targetId: requestId,
+    metadata: { teamId: cancelledTeamId },
   });
 
   return { message: 'Pengajuan bergabung berhasil dibatalkan' };
@@ -884,7 +908,19 @@ export async function decideJoinRequest(
     attempts++;
     let markExpiredOutsideTx = false;
     try {
-      return await prisma.$transaction(async (tx) => {
+      const outcome = await prisma.$transaction(async (tx) => {
+        // Baca ID target lebih dulu lalu ambil lock deterministik (users -> teams) sebelum validasi final
+        const initialReq = await tx.teamJoinRequest.findUnique({
+          where: { id: requestId },
+          select: { id: true, userId: true, teamId: true },
+        });
+        if (!initialReq) {
+          throw new NotFoundError('Pengajuan bergabung tidak ditemukan');
+        }
+
+        await tx.$executeRaw`SELECT id FROM users WHERE id = ${initialReq.userId} FOR UPDATE`;
+        await tx.$executeRaw`SELECT id FROM teams WHERE id = ${initialReq.teamId} FOR UPDATE`;
+
         const req = await tx.teamJoinRequest.findUnique({
           where: { id: requestId },
           include: {
@@ -916,16 +952,14 @@ export async function decideJoinRequest(
             },
           });
 
-          await recordAuditEvent({
-            institutionId,
-            actorId: leaderUserId,
-            action: 'TEAM_JOIN_REQUEST_REJECTED',
-            targetType: 'TeamJoinRequest',
-            targetId: req.id,
-            metadata: { teamId: req.teamId, applicantId: req.userId },
-          });
-
-          return { message: 'Pengajuan bergabung telah ditolak' };
+          return {
+            message: 'Pengajuan bergabung telah ditolak',
+            audit: {
+              action: 'TEAM_JOIN_REQUEST_REJECTED',
+              targetId: req.id,
+              metadata: { teamId: req.teamId, applicantId: req.userId },
+            },
+          };
         }
 
         if (req.team.status === 'terkunci_seleksi' || req.team.status === 'arsip') {
@@ -936,9 +970,6 @@ export async function decideJoinRequest(
         if (!regCheck.open) {
           throw new ForbiddenError(regCheck.reason || 'Pendaftaran kompetisi sedang ditutup');
         }
-
-        // Row lock untuk mencegah race condition kapasitas maksimal
-        await tx.$executeRaw`SELECT id FROM teams WHERE id = ${req.teamId} FOR UPDATE`;
 
         const countRes = await tx.$queryRaw<Array<{ total: bigint | number }>>`
           SELECT COUNT(*) as total FROM team_members WHERE teamId = ${req.teamId} AND status = 'active' FOR UPDATE
@@ -1013,6 +1044,15 @@ export async function decideJoinRequest(
           data: { status: 'dibatalkan' },
         });
 
+        await tx.teamInvite.updateMany({
+          where: {
+            receiverId: req.userId,
+            status: 'diajukan',
+            team: { competitionId: req.team.competitionId },
+          },
+          data: { status: 'kedaluwarsa', respondedAt: new Date() },
+        });
+
         const newTotalMembers = activeMembersCount + 1;
         const reachedMax = newTotalMembers >= effectiveMax;
         const newStatus =
@@ -1038,22 +1078,31 @@ export async function decideJoinRequest(
           });
         }
 
-        await recordAuditEvent({
-          institutionId,
-          actorId: leaderUserId,
-          action: 'TEAM_JOIN_REQUEST_APPROVED',
-          targetType: 'TeamJoinRequest',
-          targetId: req.id,
-          metadata: {
-            teamId: req.teamId,
-            applicantId: req.userId,
-            newTotalMembers,
-            reachedMax,
+        return {
+          message: 'Permintaan telah diproses. Anggota baru berhasil ditambahkan ke tim.',
+          audit: {
+            action: 'TEAM_JOIN_REQUEST_APPROVED',
+            targetId: req.id,
+            metadata: {
+              teamId: req.teamId,
+              applicantId: req.userId,
+              newTotalMembers,
+              reachedMax,
+            },
           },
-        });
-
-        return { message: 'Permintaan telah diproses. Anggota baru berhasil ditambahkan ke tim.' };
+        };
       });
+
+      await recordAuditEvent({
+        institutionId,
+        actorId: leaderUserId,
+        action: outcome.audit.action,
+        targetType: 'TeamJoinRequest',
+        targetId: outcome.audit.targetId,
+        metadata: outcome.audit.metadata,
+      });
+
+      return { message: outcome.message };
     } catch (err: any) {
       if (markExpiredOutsideTx) {
         await prisma.teamJoinRequest.updateMany({
@@ -1083,7 +1132,7 @@ export async function joinTeamByCode(
   institutionId: string
 ): Promise<{ teamId: string; teamName: string; message: string }> {
   const code = (inviteCodeRaw || '').trim().toUpperCase();
-  if (!code || code.length < 4) {
+  if (!code || code.length < 4 || code.length > 32) {
     throw new ValidationError('Masukkan kode undangan tim yang valid');
   }
 
@@ -1091,13 +1140,25 @@ export async function joinTeamByCode(
   while (attempts < 3) {
     attempts++;
     try {
-      return await prisma.$transaction(async (tx) => {
-        const team = await tx.team.findUnique({
+      const outcome = await prisma.$transaction(async (tx) => {
+        const preTeam = await tx.team.findUnique({
           where: { inviteCode: code },
+          select: { id: true },
+        });
+        if (!preTeam) {
+          throw new NotFoundError('Kode undangan tim tidak ditemukan atau sudah diperbarui ketua');
+        }
+
+        // Urutan lock deterministik: users -> teams sebelum validasi kode & kapasitas
+        await tx.$executeRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+        await tx.$executeRaw`SELECT id FROM teams WHERE id = ${preTeam.id} FOR UPDATE`;
+
+        const team = await tx.team.findUnique({
+          where: { id: preTeam.id },
           include: { competition: true },
         });
 
-        if (!team || team.competition.institutionId !== institutionId) {
+        if (!team || team.inviteCode !== code || team.competition.institutionId !== institutionId) {
           throw new NotFoundError('Kode undangan tim tidak ditemukan atau sudah diperbarui ketua');
         }
 
@@ -1127,9 +1188,6 @@ export async function joinTeamByCode(
             `Kode ini milik tim untuk lomba ${team.competition.name}, sedangkan target aktif Anda berbeda. Ganti target terlebih dahulu di halaman Profil.`
           );
         }
-
-        // Row lock tim untuk menjamin batas maksimal
-        await tx.$executeRaw`SELECT id FROM teams WHERE id = ${team.id} FOR UPDATE`;
 
         const countRes = await tx.$queryRaw<Array<{ total: bigint | number }>>`
           SELECT COUNT(*) as total FROM team_members WHERE teamId = ${team.id} AND status = 'active' FOR UPDATE
@@ -1192,7 +1250,7 @@ export async function joinTeamByCode(
           });
         }
 
-        // Batalkan pengajuan gabung menunggu user ini pada kompetisi yang sama
+        // Batalkan pengajuan gabung & undangan lama menunggu user ini pada kompetisi yang sama
         await tx.teamJoinRequest.updateMany({
           where: {
             userId,
@@ -1200,6 +1258,15 @@ export async function joinTeamByCode(
             team: { competitionId: team.competitionId },
           },
           data: { status: 'dibatalkan' },
+        });
+
+        await tx.teamInvite.updateMany({
+          where: {
+            receiverId: userId,
+            status: 'diajukan',
+            team: { competitionId: team.competitionId },
+          },
+          data: { status: 'kedaluwarsa', respondedAt: new Date() },
         });
 
         const newTotal = activeMembersCount + 1;
@@ -1222,21 +1289,33 @@ export async function joinTeamByCode(
           });
         }
 
-        await recordAuditEvent({
-          institutionId,
-          actorId: userId,
-          action: 'TEAM_JOINED_BY_CODE',
-          targetType: 'Team',
-          targetId: team.id,
-          metadata: { teamName: team.name, newTotal, reachedMax },
-        });
-
         return {
           teamId: team.id,
           teamName: team.name,
+          newTotal,
+          reachedMax,
           message: `Berhasil bergabung dengan ${team.name}`,
         };
       });
+
+      await recordAuditEvent({
+        institutionId,
+        actorId: userId,
+        action: 'TEAM_JOINED_BY_CODE',
+        targetType: 'Team',
+        targetId: outcome.teamId,
+        metadata: {
+          teamName: outcome.teamName,
+          newTotal: outcome.newTotal,
+          reachedMax: outcome.reachedMax,
+        },
+      });
+
+      return {
+        teamId: outcome.teamId,
+        teamName: outcome.teamName,
+        message: outcome.message,
+      };
     } catch (err: any) {
       if (
         (err?.code === 'P2034' ||
@@ -1264,62 +1343,66 @@ export async function removeMember(
     throw new ValidationError('Gunakan aksi keluar tim untuk meninggalkan tim sendiri');
   }
 
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-    include: {
-      competition: true,
-      members: { where: { status: 'active' } },
-    },
-  });
+  const remainingCount = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM teams WHERE id = ${teamId} FOR UPDATE`;
 
-  if (!team || team.competition.institutionId !== institutionId) {
-    throw new NotFoundError('Tim tidak ditemukan');
-  }
+    const team = await tx.team.findUnique({
+      where: { id: teamId },
+      include: {
+        competition: true,
+        members: { where: { status: 'active' } },
+      },
+    });
 
-  if (team.leaderId !== leaderUserId) {
-    throw new ForbiddenError('Hanya ketua tim yang berwenang mengeluarkan anggota');
-  }
+    if (!team || team.competition.institutionId !== institutionId) {
+      throw new NotFoundError('Tim tidak ditemukan');
+    }
 
-  if (team.status === 'terkunci_seleksi' || team.status === 'arsip') {
-    throw new ForbiddenError('Anggota tidak dapat dikeluarkan karena tim sudah terkunci seleksi atau diarsipkan');
-  }
+    if (team.leaderId !== leaderUserId) {
+      throw new ForbiddenError('Hanya ketua tim yang berwenang mengeluarkan anggota');
+    }
 
-  const targetMembership = team.members.find((m) => m.userId === targetUserId);
-  if (!targetMembership) {
-    throw new NotFoundError('Anggota tersebut tidak ditemukan di tim ini');
-  }
+    if (team.status === 'terkunci_seleksi' || team.status === 'arsip') {
+      throw new ForbiddenError('Anggota tidak dapat dikeluarkan karena tim sudah terkunci seleksi atau diarsipkan');
+    }
 
-  await prisma.$transaction(async (tx) => {
+    const targetMembership = team.members.find((m) => m.userId === targetUserId);
+    if (!targetMembership) {
+      throw new NotFoundError('Anggota tersebut tidak ditemukan di tim ini');
+    }
+
     await tx.teamMember.update({
       where: { id: targetMembership.id },
       data: { status: 'left' },
     });
 
-    const remainingCount = team.members.length - 1;
+    const nextRemaining = team.members.length - 1;
     const effectiveMax = resolveEffectiveMax(team, team.competition);
     const nextStatus =
-      remainingCount >= team.competition.minTeamMembers ? 'terbentuk' : 'mencari';
+      nextRemaining >= team.competition.minTeamMembers ? 'terbentuk' : 'mencari';
 
     await tx.team.update({
       where: { id: teamId },
       data: {
         status: nextStatus,
         isRecruiting:
-          team.recruitmentType === 'terbuka' && remainingCount < effectiveMax
+          team.recruitmentType === 'terbuka' && nextRemaining < effectiveMax
             ? true
             : team.isRecruiting,
         version: { increment: 1 },
       },
     });
 
-    await recordAuditEvent({
-      institutionId,
-      actorId: leaderUserId,
-      action: 'TEAM_MEMBER_REMOVED',
-      targetType: 'Team',
-      targetId: teamId,
-      metadata: { removedUserId: targetUserId, remainingCount },
-    });
+    return nextRemaining;
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: leaderUserId,
+    action: 'TEAM_MEMBER_REMOVED',
+    targetType: 'Team',
+    targetId: teamId,
+    metadata: { removedUserId: targetUserId, remainingCount },
   });
 
   return { message: 'Anggota berhasil dikeluarkan dari tim' };
@@ -1330,38 +1413,42 @@ export async function leaveTeam(
   teamId: string,
   institutionId: string
 ): Promise<{ message: string; newLeaderId?: string | null }> {
-  const membership = await prisma.teamMember.findFirst({
-    where: { teamId, userId, status: 'active' },
-    include: {
-      team: {
-        include: {
-          members: {
-            where: { status: 'active' },
-            orderBy: { joinedAt: 'asc' },
+  const outcome = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM teams WHERE id = ${teamId} FOR UPDATE`;
+
+    const membership = await tx.teamMember.findFirst({
+      where: { teamId, userId, status: 'active' },
+      include: {
+        team: {
+          include: {
+            members: {
+              where: { status: 'active' },
+              orderBy: { joinedAt: 'asc' },
+            },
+            competition: true,
           },
-          competition: true,
         },
       },
-    },
-  });
+    });
 
-  if (!membership || membership.team.competition.institutionId !== institutionId) {
-    throw new NotFoundError('Keanggotaan tim tidak ditemukan');
-  }
+    if (!membership || membership.team.competition.institutionId !== institutionId) {
+      throw new NotFoundError('Keanggotaan tim tidak ditemukan');
+    }
 
-  if (membership.team.status === 'terkunci_seleksi') {
-    throw new ForbiddenError('Tim telah terkunci untuk tahap seleksi dan tidak dapat ditinggalkan mandiri');
-  }
+    if (membership.team.status === 'terkunci_seleksi') {
+      throw new ForbiddenError('Tim telah terkunci untuk tahap seleksi dan tidak dapat ditinggalkan mandiri');
+    }
+    if (membership.team.status === 'arsip') {
+      throw new ConflictError('Tim ini sudah diarsipkan');
+    }
 
-  let promotedLeaderId: string | null = null;
-
-  await prisma.$transaction(async (tx) => {
     await tx.teamMember.update({
       where: { id: membership.id },
       data: { status: 'left' },
     });
 
     const remainingActive = membership.team.members.filter((m) => m.id !== membership.id);
+    let promotedLeaderId: string | null = null;
 
     if (remainingActive.length === 0) {
       await tx.team.update({
@@ -1371,6 +1458,10 @@ export async function leaveTeam(
       await tx.teamJoinRequest.updateMany({
         where: { teamId, status: 'menunggu' },
         data: { status: 'kedaluwarsa' },
+      });
+      await tx.teamInvite.updateMany({
+        where: { teamId, status: 'diajukan' },
+        data: { status: 'kedaluwarsa', respondedAt: new Date() },
       });
     } else {
       const effectiveMax = resolveEffectiveMax(membership.team, membership.team.competition);
@@ -1383,10 +1474,14 @@ export async function leaveTeam(
       if (wasLeader) {
         const nextLeader = remainingActive[0];
         promotedLeaderId = nextLeader.userId;
-        await tx.teamMember.update({
-          where: { id: nextLeader.id },
-          data: { roleInTeam: 'Ketua Tim' },
-        });
+        const currentRoleLower = (nextLeader.roleInTeam || '').trim().toLowerCase();
+        // Pertahankan peran spesifik anggota (mis. Analis Data) agar syarat requireRoles tidak rusak
+        if (!currentRoleLower || currentRoleLower === 'anggota' || currentRoleLower === 'anggota tim') {
+          await tx.teamMember.update({
+            where: { id: nextLeader.id },
+            data: { roleInTeam: 'Ketua Tim' },
+          });
+        }
       }
 
       await tx.team.update({
@@ -1403,24 +1498,29 @@ export async function leaveTeam(
       });
     }
 
-    await recordAuditEvent({
-      institutionId,
-      actorId: userId,
-      action: 'TEAM_LEFT',
-      targetType: 'Team',
-      targetId: teamId,
-      metadata: {
-        teamName: membership.team.name,
-        promotedLeaderId,
-      },
-    });
+    return {
+      teamName: membership.team.name,
+      promotedLeaderId,
+    };
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId: userId,
+    action: 'TEAM_LEFT',
+    targetType: 'Team',
+    targetId: teamId,
+    metadata: {
+      teamName: outcome.teamName,
+      promotedLeaderId: outcome.promotedLeaderId,
+    },
   });
 
   return {
-    message: promotedLeaderId
+    message: outcome.promotedLeaderId
       ? 'Berhasil keluar dari tim. Kepemimpinan dialihkan otomatis ke anggota terlama.'
       : 'Berhasil keluar dari tim',
-    newLeaderId: promotedLeaderId,
+    newLeaderId: outcome.promotedLeaderId,
   };
 }
 
@@ -1444,6 +1544,10 @@ export async function registerForInternalSelection(
 
   if (!team || team.competition.institutionId !== institutionId) {
     throw new NotFoundError('Tim tidak ditemukan');
+  }
+
+  if (team.competition.status !== 'published') {
+    throw new ForbiddenError('Kompetisi tidak lagi berstatus diterbitkan');
   }
 
   if (team.leaderId !== leaderUserId) {
@@ -1477,7 +1581,7 @@ export async function registerForInternalSelection(
   }
 
   const stage = 'Pendaftaran Internal';
-  const selection = await prisma.internalSelection.upsert({
+  const existingSelection = await prisma.internalSelection.findUnique({
     where: {
       competitionId_teamId_stage: {
         competitionId: team.competitionId,
@@ -1485,19 +1589,30 @@ export async function registerForInternalSelection(
         stage,
       },
     },
-    update: {
-      notes: 'Diajukan oleh ketua tim melalui Ruang Tim',
-    },
-    create: {
-      institutionId,
-      competitionId: team.competitionId,
-      teamId: team.id,
-      stage,
-      result: 'menunggu',
-      organizerVerified: false,
-      notes: 'Diajukan oleh ketua tim melalui Ruang Tim',
-    },
   });
+
+  if (existingSelection && existingSelection.result !== 'menunggu') {
+    throw new ConflictError(
+      `Tahap '${stage}' sudah memiliki keputusan seleksi ('${existingSelection.result}') dan tidak dapat didaftarkan ulang`
+    );
+  }
+
+  const selection = existingSelection
+    ? await prisma.internalSelection.update({
+        where: { id: existingSelection.id },
+        data: { notes: 'Diajukan oleh ketua tim melalui Ruang Tim' },
+      })
+    : await prisma.internalSelection.create({
+        data: {
+          institutionId,
+          competitionId: team.competitionId,
+          teamId: team.id,
+          stage,
+          result: 'menunggu',
+          organizerVerified: false,
+          notes: 'Diajukan oleh ketua tim melalui Ruang Tim',
+        },
+      });
 
   await recordAuditEvent({
     institutionId,

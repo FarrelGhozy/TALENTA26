@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import * as systemService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
-import { ADMIN_ROLES, assertRole } from '../../app/middleware/rbac';
+import { assertRole } from '../../app/middleware/rbac';
 import type { UserStatus, AchievementLevel, AchievementResult } from '@prisma/client';
 
 export const systemRoutes = new Elysia()
@@ -11,7 +11,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/users',
     async ({ auth, query }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.getUsers(institutionId, {
@@ -39,7 +39,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/users/:id/status',
     async ({ auth, params, body }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.updateUserStatus(
@@ -71,7 +71,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/users/staff',
     async ({ auth, body, set }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.createStaff(
@@ -104,7 +104,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/users/:id/role',
     async ({ auth, params, body }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.updateStaffRole(
@@ -133,7 +133,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/users/:id/name',
     async ({ auth, params, body }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const data = await systemService.updateUserName(
         params.id,
         body.fullName,
@@ -151,7 +151,7 @@ export const systemRoutes = new Elysia()
   // Periode Akademik
   .get('/api/v1/system/academic-periods', async ({ auth }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ADMIN_ROLES);
+    assertRole(auth, ['super_admin']);
     const institutionId = auth.user.institutionId;
 
     const data = await systemService.getAcademicPeriods(institutionId);
@@ -161,7 +161,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/academic-periods',
     async ({ auth, body, set }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.createAcademicPeriod(
@@ -196,7 +196,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/academic-periods/:id/activation-preview',
     async ({ auth, params }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const data = await systemService.getAcademicPeriodActivationPreview(
         params.id,
         auth.user.institutionId
@@ -211,7 +211,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/academic-periods/:id/activate',
     async ({ auth, params, body }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.activateAcademicPeriod(
@@ -241,7 +241,7 @@ export const systemRoutes = new Elysia()
   // Aturan Poin
   .get('/api/v1/system/point-rules', async ({ auth }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ADMIN_ROLES);
+    assertRole(auth, ['super_admin']);
     const institutionId = auth.user.institutionId;
 
     const data = await systemService.getPointRules(institutionId);
@@ -251,7 +251,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/point-rules/version',
     async ({ auth, body, set }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.createPointRuleVersion(
@@ -299,7 +299,7 @@ export const systemRoutes = new Elysia()
     '/api/v1/system/audit-logs',
     async ({ auth, query }) => {
       assertAuthenticated(auth);
-      assertRole(auth, ADMIN_ROLES);
+      assertRole(auth, ['super_admin']);
       const institutionId = auth.user.institutionId;
 
       const data = await systemService.getAuditLogs(institutionId, {
@@ -326,7 +326,7 @@ export const systemRoutes = new Elysia()
   // Kesehatan & Telemetri Sistem
   .get('/api/v1/system/health', async ({ auth }) => {
     assertAuthenticated(auth);
-    assertRole(auth, ADMIN_ROLES);
+    assertRole(auth, ['super_admin']);
     const institutionId = auth.user.institutionId;
 
     const data = await systemService.getHealthSummary(institutionId);

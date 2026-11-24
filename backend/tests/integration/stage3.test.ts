@@ -312,44 +312,28 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
     });
   });
 
-  // 3. Algoritma Matching Transparan & Privasi Tanpa PII
-  describe('3. Matching Calon Partner & Privasi PII', () => {
-    it('GET /api/v1/matching/candidates mengembalikan calon partner berdasar target sama & komplementer', async () => {
-      const res = await app.handle(
+  // 3. Penonaktifan rute legacy matching & undangan (K-19 revisi)
+  describe('3. Penonaktifan Rute Legacy Matchmaking & Undangan (K-19)', () => {
+    it('GET /api/v1/matching/candidates dan rute legacy /invites tidak lagi tersedia (404)', async () => {
+      const resMatch = await app.handle(
         new Request('http://localhost/api/v1/matching/candidates', {
           headers: { Authorization: `Bearer ${student1Token}` },
         })
       );
-      expect(res.status).toBe(200);
-      const json = (await res.json()) as any;
-      expect(Array.isArray(json.data)).toBe(true);
+      expect(resMatch.status).toBe(404);
 
-      const candidate2 = json.data.find((c: any) => c.userId === student2Id);
-      expect(candidate2).toBeDefined();
-      expect(candidate2.skorKecocokan).toBeGreaterThanOrEqual(50);
-      expect(candidate2.alasanKecocokan.length).toBeGreaterThan(0);
-      expect(candidate2.labelKesesuaian).toBeDefined();
-    });
-
-    it('Output matching kandidat TIDAK memuat PII sensitif (NIM, email, no HP)', async () => {
-      const res = await app.handle(
-        new Request('http://localhost/api/v1/matching/candidates', {
+      const resInv = await app.handle(
+        new Request('http://localhost/api/v1/me/invites', {
           headers: { Authorization: `Bearer ${student1Token}` },
         })
       );
-      const json = (await res.json()) as any;
-      for (const cand of json.data) {
-        expect(cand.nim).toBeUndefined();
-        expect(cand.email).toBeUndefined();
-        expect(cand.phone).toBeUndefined();
-        expect(cand.whatsappNumber).toBeUndefined();
-      }
+      expect(resInv.status).toBe(404);
     });
   });
 
-  // 4. Pembentukan Tim, Undangan & Limit
-  describe('4. Pembuatan Tim & Manajemen Undangan', () => {
-    let inviteToStudent2Id = '';
+  // 4. Pembentukan Tim, Pengajuan Gabung & Otorisasi Ketua (K-19)
+  describe('4. Pembuatan Tim & Pengajuan Gabung (K-19)', () => {
+    let joinReq2Id = '';
 
     it('POST /api/v1/teams membuat tim baru dengan pembuat otomatis menjadi ketua', async () => {
       const res = await app.handle(
@@ -363,6 +347,7 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
             competitionSlug: 'gemastik-2026',
             teamName: 'Tim Alpha Unida',
             roleInTeam: 'Ketua Tim',
+            recruitmentType: 'terbuka',
           }),
         })
       );
@@ -397,65 +382,64 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
       expect(res.status).toBe(409);
     });
 
-    it('POST /api/v1/teams/:id/invites mengirim undangan ke rekan', async () => {
+    it('POST /api/v1/teams/:id/join-requests mengajukan gabung ke tim terbuka', async () => {
       const res = await app.handle(
-        new Request(`http://localhost/api/v1/teams/${createdTeamId}/invites`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${student1Token}`,
-          },
-          body: JSON.stringify({ receiverId: student2Id }),
-        })
-      );
-      expect(res.status).toBe(200);
-      const json = (await res.json()) as any;
-      inviteToStudent2Id = json.data.id;
-      expect(json.data.status).toBe('diajukan');
-    });
-
-    it('Mengirim undangan duplikat ke mahasiswa yang sama gagal 409', async () => {
-      const res = await app.handle(
-        new Request(`http://localhost/api/v1/teams/${createdTeamId}/invites`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${student1Token}`,
-          },
-          body: JSON.stringify({ receiverId: student2Id }),
-        })
-      );
-      expect(res.status).toBe(409);
-    });
-
-    it('Anti-IDOR: Mahasiswa lain tidak dapat merespon undangan yang bukan miliknya', async () => {
-      const res = await app.handle(
-        new Request(`http://localhost/api/v1/invites/${inviteToStudent2Id}/respond`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${student3Token}`, // Mahasiswa 3 bukan penerima
-          },
-          body: JSON.stringify({ action: 'diterima' }),
-        })
-      );
-      expect(res.status).toBe(404);
-    });
-
-    it('Penerima yang sah dapat menerima undangan dan resmi bergabung ke dalam tim', async () => {
-      const res = await app.handle(
-        new Request(`http://localhost/api/v1/invites/${inviteToStudent2Id}/respond`, {
+        new Request(`http://localhost/api/v1/teams/${createdTeamId}/join-requests`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${student2Token}`,
           },
-          body: JSON.stringify({ action: 'diterima' }),
+          body: JSON.stringify({ preferredRole: 'Hipster (UI/UX Designer)' }),
+        })
+      );
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as any;
+      joinReq2Id = json.data.id;
+      expect(json.data.status).toBe('menunggu');
+    });
+
+    it('Pengajuan gabung duplikat ke tim yang sama gagal 409', async () => {
+      const res = await app.handle(
+        new Request(`http://localhost/api/v1/teams/${createdTeamId}/join-requests`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${student2Token}`,
+          },
+          body: JSON.stringify({ preferredRole: 'Hipster (UI/UX Designer)' }),
+        })
+      );
+      expect(res.status).toBe(409);
+    });
+
+    it('Anti-IDOR: Non-ketua tidak dapat memutuskan pengajuan bergabung (403)', async () => {
+      const res = await app.handle(
+        new Request(`http://localhost/api/v1/join-requests/${joinReq2Id}/decide`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${student3Token}`,
+          },
+          body: JSON.stringify({ action: 'disetujui' }),
+        })
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('Ketua tim yang sah menyetujui pengajuan sehingga pelamar resmi bergabung ke tim', async () => {
+      const res = await app.handle(
+        new Request(`http://localhost/api/v1/join-requests/${joinReq2Id}/decide`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${student1Token}`,
+          },
+          body: JSON.stringify({ action: 'disetujui' }),
         })
       );
       expect(res.status).toBe(200);
 
-      // Verifikasi student2 sekarang ada di tim
       const member = await prisma.teamMember.findFirst({
         where: { teamId: createdTeamId, userId: student2Id, status: 'active' },
       });
@@ -465,66 +449,59 @@ describe('Stage 3 — Mahasiswa, Kompetisi, Tim & Roadmap Integration Suite', ()
 
   // 5. Concurrency Race Condition Test (At most maxTeamMembers can join)
   describe('5. Concurrency Test — Kapasitas Maksimal Tim', () => {
-    it('Dua mahasiswa merespon undangan secara serentak untuk 1 sisa slot tidak boleh melebihi maxTeamMembers', async () => {
-      // Saat ini tim beranggotakan 2 orang (Student 1 dan Student 2)
-      // Batas maksimal Gemastik adalah 3 orang (sisa 1 slot)
+    it('Dua persetujuan serentak untuk 1 sisa slot tidak boleh melebihi maxTeamMembers', async () => {
       const team = await prisma.team.findUnique({
         where: { id: createdTeamId },
         include: { members: { where: { status: 'active' } } },
       });
       expect(team?.members.length).toBe(2);
 
-      // Kirim undangan ke Mahasiswa 3 dan Mahasiswa 4
-      const resInv3 = await app.handle(
-        new Request(`http://localhost/api/v1/teams/${createdTeamId}/invites`, {
+      const resReq3 = await app.handle(
+        new Request(`http://localhost/api/v1/teams/${createdTeamId}/join-requests`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student1Token}` },
-          body: JSON.stringify({ receiverId: student3Id }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student3Token}` },
+          body: JSON.stringify({ preferredRole: 'Hustler' }),
         })
       );
-      expect(resInv3.status).toBe(200);
-      const inv3 = ((await resInv3.json()) as any).data;
+      expect(resReq3.status).toBe(200);
+      const req3 = ((await resReq3.json()) as any).data;
 
-      const resInv4 = await app.handle(
-        new Request(`http://localhost/api/v1/teams/${createdTeamId}/invites`, {
+      const resReq4 = await app.handle(
+        new Request(`http://localhost/api/v1/teams/${createdTeamId}/join-requests`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student1Token}` },
-          body: JSON.stringify({ receiverId: student4Id }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student4Token}` },
+          body: JSON.stringify({ preferredRole: 'Hustler' }),
         })
       );
-      expect(resInv4.status).toBe(200);
-      const inv4 = ((await resInv4.json()) as any).data;
+      expect(resReq4.status).toBe(200);
+      const req4 = ((await resReq4.json()) as any).data;
 
-      // Jalankan penerimaan undangan secara bersamaan menggunakan Promise.all
       const [res3, res4] = await Promise.all([
         app.handle(
-          new Request(`http://localhost/api/v1/invites/${inv3.id}/respond`, {
+          new Request(`http://localhost/api/v1/join-requests/${req3.id}/decide`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student3Token}` },
-            body: JSON.stringify({ action: 'diterima' }),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student1Token}` },
+            body: JSON.stringify({ action: 'disetujui' }),
           })
         ),
         app.handle(
-          new Request(`http://localhost/api/v1/invites/${inv4.id}/respond`, {
+          new Request(`http://localhost/api/v1/join-requests/${req4.id}/decide`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student4Token}` },
-            body: JSON.stringify({ action: 'diterima' }),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${student1Token}` },
+            body: JSON.stringify({ action: 'disetujui' }),
           })
         ),
       ]);
 
       const statuses = [res3.status, res4.status];
-      // Tepat satu yang berhasil (200), dan satu ditolak karena kapasitas penuh (409)
       expect(statuses).toContain(200);
       expect(statuses).toContain(409);
 
-      // Verifikasi final di basis data: anggota aktif tepat 3 orang (tidak pernah tembus 4)
       const updatedMembers = await prisma.teamMember.findMany({
         where: { teamId: team!.id, status: 'active' },
       });
       expect(updatedMembers.length).toBe(3);
 
-      // Status tim harus menjadi 'terbentuk' karena telah memenuhi minTeamMembers (3)
       const updatedTeam = await prisma.team.findUnique({
         where: { id: team!.id },
       });

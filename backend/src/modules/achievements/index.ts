@@ -10,6 +10,65 @@ import type {
   ParticipationType,
 } from '@prisma/client';
 
+function readOptionalString(
+  body: Record<string, unknown>,
+  rawFormData: FormData | null,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined) {
+      const val = body[key];
+      if (val === null) return undefined;
+      if (typeof val !== 'string') {
+        throw new ValidationError(`Kolom '${key}' harus berupa teks`, {
+          [key]: 'Harus berupa teks',
+        });
+      }
+      return val;
+    }
+  }
+  if (rawFormData) {
+    for (const key of keys) {
+      if (rawFormData.has(key)) {
+        const val = rawFormData.get(key);
+        if (typeof val === 'string') return val;
+      }
+    }
+  }
+  return undefined;
+}
+
+function readNullableString(
+  body: Record<string, unknown>,
+  rawFormData: FormData | null,
+  ...keys: string[]
+): string | null | undefined {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined) {
+      const val = body[key];
+      if (val === null) return null;
+      if (typeof val !== 'string') {
+        throw new ValidationError(`Kolom '${key}' harus berupa teks atau kosong`, {
+          [key]: 'Harus berupa teks',
+        });
+      }
+      return val.trim() === '' ? null : val;
+    }
+  }
+  if (rawFormData) {
+    for (const key of keys) {
+      if (rawFormData.has(key)) {
+        const val = rawFormData.get(key);
+        if (val === null) return null;
+        if (typeof val === 'string') {
+          return val.trim() === '' ? null : val;
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
 function parseStringArrayField(
   bodyVal: unknown,
   rawFormData: FormData | null,
@@ -153,22 +212,22 @@ export const achievementRoutes = new Elysia()
       } catch {}
     }
 
-    const name = (b.name || b.nama || rawFormData?.get('nama') || rawFormData?.get('name') || '') as string;
-    const organizer = (b.organizer || b.penyelenggara || rawFormData?.get('penyelenggara') || rawFormData?.get('organizer') || '') as string;
-    const category = (b.category || b.kategori || rawFormData?.get('kategori') || rawFormData?.get('category') || 'kompetisi') as AchievementCategory;
-    const level = (b.level || b.tingkat || rawFormData?.get('tingkat') || rawFormData?.get('level') || 'nasional') as AchievementLevel;
-    const result = (b.result || b.jenisCapaian || rawFormData?.get('jenisCapaian') || rawFormData?.get('result') || 'juara_1') as AchievementResult;
-    const eventDate = (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || '') as string;
-    const description = (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || '') as string;
-    const competitionId = (b.competitionId || rawFormData?.get('competitionId') || '') as string;
-    const competitionSlug = (b.competitionSlug || rawFormData?.get('competitionSlug') || '') as string;
-    const competitionCategoryId = (b.competitionCategoryId || rawFormData?.get('competitionCategoryId') || '') as string;
-    const subCategoryId = (b.subCategoryId || rawFormData?.get('subCategoryId') || '') as string;
-    const subCompetitionName = (b.subCompetitionName || rawFormData?.get('subCompetitionName') || '') as string;
-    const participationTypeRaw = (b.participationType || rawFormData?.get('participationType') || 'individu') as string;
+    const name = readOptionalString(b, rawFormData, 'name', 'nama') ?? '';
+    const organizer = readOptionalString(b, rawFormData, 'organizer', 'penyelenggara') ?? '';
+    const category = (readOptionalString(b, rawFormData, 'category', 'kategori') || 'kompetisi') as AchievementCategory;
+    const level = (readOptionalString(b, rawFormData, 'level', 'tingkat') || 'nasional') as AchievementLevel;
+    const result = (readOptionalString(b, rawFormData, 'result', 'jenisCapaian') || 'juara_1') as AchievementResult;
+    const eventDate = readOptionalString(b, rawFormData, 'eventDate', 'tanggal') ?? '';
+    const description = readOptionalString(b, rawFormData, 'description', 'deskripsi') ?? '';
+    const competitionId = readOptionalString(b, rawFormData, 'competitionId') ?? '';
+    const competitionSlug = readOptionalString(b, rawFormData, 'competitionSlug') ?? '';
+    const competitionCategoryId = readOptionalString(b, rawFormData, 'competitionCategoryId') ?? '';
+    const subCategoryId = readOptionalString(b, rawFormData, 'subCategoryId') ?? '';
+    const subCompetitionName = readOptionalString(b, rawFormData, 'subCompetitionName') ?? '';
+    const participationTypeRaw = readOptionalString(b, rawFormData, 'participationType') || 'individu';
     const participationType: ParticipationType =
       participationTypeRaw === 'kelompok' ? 'kelompok' : 'individu';
-    const teamId = (b.teamId || rawFormData?.get('teamId') || '') as string;
+    const teamId = readOptionalString(b, rawFormData, 'teamId') ?? '';
     const participantUserIds = parseStringArrayField(
       b.participantUserIds,
       rawFormData,
@@ -242,9 +301,7 @@ export const achievementRoutes = new Elysia()
         } catch {}
       }
 
-      const participationTypeRaw = (b.participationType || rawFormData?.get('participationType') || undefined) as
-        | string
-        | undefined;
+      const participationTypeRaw = readOptionalString(b, rawFormData, 'participationType');
       const replaceEvidenceIds = parseStringArrayField(
         b.replaceEvidenceIds,
         rawFormData,
@@ -259,31 +316,25 @@ export const achievementRoutes = new Elysia()
       );
 
       const payload: achService.RevisionInput = {
-        name: (b.name || b.nama || rawFormData?.get('nama') || rawFormData?.get('name') || undefined) as string | undefined,
-        organizer: (b.organizer || b.penyelenggara || rawFormData?.get('penyelenggara') || rawFormData?.get('organizer') || undefined) as string | undefined,
-        category: (b.category || b.kategori || rawFormData?.get('kategori') || rawFormData?.get('category') || undefined) as AchievementCategory | undefined,
-        level: (b.level || b.tingkat || rawFormData?.get('tingkat') || rawFormData?.get('level') || undefined) as AchievementLevel | undefined,
-        result: (b.result || b.jenisCapaian || rawFormData?.get('jenisCapaian') || rawFormData?.get('result') || undefined) as AchievementResult | undefined,
-        eventDate: (b.eventDate || b.tanggal || rawFormData?.get('tanggal') || rawFormData?.get('eventDate') || undefined) as string | undefined,
-        description: (b.description || b.deskripsi || rawFormData?.get('deskripsi') || rawFormData?.get('description') || undefined) as string | undefined,
-        note: (b.note || b.catatan || rawFormData?.get('catatan') || rawFormData?.get('note') || undefined) as string | undefined,
+        name: readOptionalString(b, rawFormData, 'name', 'nama'),
+        organizer: readOptionalString(b, rawFormData, 'organizer', 'penyelenggara'),
+        category: readOptionalString(b, rawFormData, 'category', 'kategori') as AchievementCategory | undefined,
+        level: readOptionalString(b, rawFormData, 'level', 'tingkat') as AchievementLevel | undefined,
+        result: readOptionalString(b, rawFormData, 'result', 'jenisCapaian') as AchievementResult | undefined,
+        eventDate: readOptionalString(b, rawFormData, 'eventDate', 'tanggal'),
+        description: readOptionalString(b, rawFormData, 'description', 'deskripsi'),
+        note: readOptionalString(b, rawFormData, 'note', 'catatan'),
         participationType:
           participationTypeRaw === 'kelompok'
             ? 'kelompok'
             : participationTypeRaw === 'individu'
               ? 'individu'
               : undefined,
-        teamId: (b.teamId !== undefined ? b.teamId : rawFormData?.get('teamId')) as string | null | undefined,
+        teamId: readNullableString(b, rawFormData, 'teamId'),
         participantUserIds,
-        competitionCategoryId: (b.competitionCategoryId !== undefined
-          ? b.competitionCategoryId
-          : rawFormData?.get('competitionCategoryId')) as string | null | undefined,
-        subCategoryId: (b.subCategoryId !== undefined
-          ? b.subCategoryId
-          : rawFormData?.get('subCategoryId')) as string | null | undefined,
-        subCompetitionName: (b.subCompetitionName !== undefined
-          ? b.subCompetitionName
-          : rawFormData?.get('subCompetitionName')) as string | null | undefined,
+        competitionCategoryId: readNullableString(b, rawFormData, 'competitionCategoryId'),
+        subCategoryId: readNullableString(b, rawFormData, 'subCategoryId'),
+        subCompetitionName: readNullableString(b, rawFormData, 'subCompetitionName'),
         replaceEvidenceIds,
       };
 

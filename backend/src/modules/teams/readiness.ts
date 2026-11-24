@@ -83,26 +83,58 @@ export function evaluateTeamReadiness(params: {
   const crossStudyProgramSatisfied = uniqueStudyPrograms.length >= 2;
 
   const requiredRoles = normalizeStringList(competition.requiredRoles);
-  const filledRoleSet = new Set<string>();
-  for (const m of members) {
+  const memberRoleSets = members.map((m) => {
+    const s = new Set<string>();
     if (m.roleInTeam && m.roleInTeam.trim()) {
-      filledRoleSet.add(m.roleInTeam.trim().toLowerCase());
+      s.add(m.roleInTeam.trim().toLowerCase());
     }
     for (const r of normalizeStringList(m.rolesCapable)) {
-      filledRoleSet.add(r.toLowerCase());
+      s.add(r.toLowerCase());
+    }
+    return s;
+  });
+
+  // Pisahkan peran generik (ketua/anggota) dari peran spesifik agar 1 orang tidak bisa menutup semua peran spesifik sekaligus
+  const specificRoles: string[] = [];
+  const missingGenericRoles: string[] = [];
+  for (const reqRole of requiredRoles) {
+    const lower = reqRole.toLowerCase();
+    if (lower === 'ketua tim' || lower === 'ketua') {
+      if (activeMemberCount === 0) missingGenericRoles.push(reqRole);
+    } else if (lower === 'anggota' || lower === 'anggota tim') {
+      if (activeMemberCount < 2) missingGenericRoles.push(reqRole);
+    } else {
+      specificRoles.push(reqRole);
     }
   }
 
-  const missingRequiredRoles = requiredRoles.filter((reqRole) => {
-    const lower = reqRole.toLowerCase();
-    if (lower === 'ketua tim' || lower === 'ketua') {
-      return activeMemberCount === 0;
+  // Maximum bipartite matching: setiap anggota dapat menutup maksimal 1 peran spesifik wajib
+  const assignedMemberToRole = new Map<number, number>();
+  const tryMatchRole = (roleIdx: number, visitedMembers: Set<number>): boolean => {
+    const targetLower = specificRoles[roleIdx].toLowerCase();
+    for (let mIdx = 0; mIdx < memberRoleSets.length; mIdx++) {
+      if (visitedMembers.has(mIdx) || !memberRoleSets[mIdx].has(targetLower)) continue;
+      visitedMembers.add(mIdx);
+      const prevRole = assignedMemberToRole.get(mIdx);
+      if (prevRole === undefined || tryMatchRole(prevRole, visitedMembers)) {
+        assignedMemberToRole.set(mIdx, roleIdx);
+        return true;
+      }
     }
-    if (lower === 'anggota' || lower === 'anggota tim') {
-      return activeMemberCount < 2;
+    return false;
+  };
+
+  const matchedRoleIndices = new Set<number>();
+  for (let rIdx = 0; rIdx < specificRoles.length; rIdx++) {
+    if (tryMatchRole(rIdx, new Set<number>())) {
+      matchedRoleIndices.add(rIdx);
     }
-    return !filledRoleSet.has(lower);
-  });
+  }
+
+  const missingRequiredRoles = [
+    ...missingGenericRoles,
+    ...specificRoles.filter((_, idx) => !matchedRoleIndices.has(idx)),
+  ];
 
   const requireRoles = Boolean(competition.requireRoles);
   const requireCrossStudyProgram = Boolean(competition.requireCrossStudyProgram);

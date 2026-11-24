@@ -120,6 +120,30 @@ describe('evaluateTeamReadiness — 3 Lapis Kesiapan Tim (K-23)', () => {
     expect(res.unmetCriteria).toHaveLength(0);
   });
 
+  it('Level 2 (anggota_cukup): satu anggota tidak dapat menutup 2 peran spesifik wajib sekaligus', () => {
+    const res = evaluateTeamReadiness({
+      teamStatus: 'terbentuk',
+      competition: {
+        ...baseCompetition,
+        requireRoles: true,
+      },
+      members: [
+        {
+          userId: 'u1',
+          roleInTeam: 'Ketua Tim',
+          studyProgram: 'Informatika',
+          rolesCapable: ['Penulis Proposal', 'Analis Data'],
+        },
+        { userId: 'u2', roleInTeam: 'Anggota', studyProgram: 'Farmasi', rolesCapable: ['Desain'] },
+        { userId: 'u3', roleInTeam: 'Anggota', studyProgram: 'Manajemen', rolesCapable: ['Presentasi'] },
+      ],
+    });
+
+    expect(res.level).toBe('anggota_cukup');
+    expect(res.missingRequiredRoles.length).toBe(1);
+    expect(res.isSelectionReady).toBe(false);
+  });
+
   it('Status terkunci_seleksi tidak lagi bisa mendaftar ulang', () => {
     const res = evaluateTeamReadiness({
       teamStatus: 'terkunci_seleksi',

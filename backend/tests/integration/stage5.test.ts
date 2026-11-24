@@ -186,13 +186,20 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
       expect(res.status).toBe(403);
     });
 
-    it('Seluruh akun pengelola (validator & super_admin) tergabung sebagai Admin dan dapat mengakses API sistem (/api/v1/system/health) -> 200', async () => {
-      const res = await app.handle(
+    it('Validator dilarang mengakses API sistem super admin (/api/v1/system/health & /system/users) -> 403', async () => {
+      const resHealth = await app.handle(
         new Request('http://localhost/api/v1/system/health', {
           headers: { Authorization: `Bearer ${validatorToken}` },
         })
       );
-      expect(res.status).toBe(200);
+      expect(resHealth.status).toBe(403);
+
+      const resUsers = await app.handle(
+        new Request('http://localhost/api/v1/system/users', {
+          headers: { Authorization: `Bearer ${validatorToken}` },
+        })
+      );
+      expect(resUsers.status).toBe(403);
     });
 
     it('Mahasiswa dilarang mengakses dashboard analitik admin (/api/v1/admin/dashboard) -> 403', async () => {
@@ -233,7 +240,7 @@ describe('Stage 5 — Operasi Admin, Dashboard Terpadu & Ekspor CSV Integration 
     it('Filter ?role=admin mengembalikan seluruh pengelola (validator & super_admin) tanpa mahasiswa', async () => {
       const res = await app.handle(
         new Request('http://localhost/api/v1/system/users?role=admin&limit=50', {
-          headers: { Authorization: `Bearer ${validatorToken}` },
+          headers: { Authorization: `Bearer ${superAdminToken}` },
         })
       );
       expect(res.status).toBe(200);

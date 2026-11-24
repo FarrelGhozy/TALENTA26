@@ -1,7 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { recordAuditEvent } from '../../lib/audit';
 import { ConflictError, NotFoundError, ValidationError } from '../../app/middleware/error';
-import type { AchievementCategory, AchievementLevel, AchievementResult } from '@prisma/client';
+import type { AchievementCategory, AchievementLevel, AchievementResult, Prisma } from '@prisma/client';
 
 const VALID_LEVELS = new Set<string>(['lokal', 'nasional', 'internasional']);
 const VALID_RESULTS = new Set<string>([
@@ -13,6 +13,28 @@ const VALID_RESULTS = new Set<string>([
   'penghargaan_khusus',
 ]);
 
+function validateRuleMatrix(
+  rules: Array<{ level: string; result: string; points: number; subCategoryId?: string | null }>,
+  allowSubCategoryKey = false
+) {
+  const seen = new Set<string>();
+  for (const r of rules) {
+    if (!VALID_LEVELS.has(r.level) || !VALID_RESULTS.has(r.result)) {
+      throw new ValidationError('Level atau hasil capaian pada aturan poin tidak valid');
+    }
+    if (!Number.isInteger(r.points) || r.points < 0 || r.points > 10000) {
+      throw new ValidationError('Nilai poin harus berupa bilangan bulat antara 0 hingga 10000');
+    }
+    const key = allowSubCategoryKey
+      ? `${r.subCategoryId || 'ALL'}::${r.level}::${r.result}`
+      : `${r.level}::${r.result}`;
+    if (seen.has(key)) {
+      throw new ValidationError(`Terdapat aturan poin duplikat untuk kombinasi ${r.level} / ${r.result}`);
+    }
+    seen.add(key);
+  }
+}
+
 export interface PointResolution {
   calculatedPoints: number;
   pointSource: 'sub_competition_rule' | 'competition_rule' | 'template' | 'non_competition';
@@ -20,14 +42,17 @@ export interface PointResolution {
   explanation: string;
 }
 
-export async function resolveAchievementPoints(input: {
-  institutionId: string;
-  category: AchievementCategory;
-  level: AchievementLevel;
-  result: AchievementResult;
-  competitionId?: string | null;
-  subCategoryId?: string | null;
-}): Promise<PointResolution> {
+export async function resolveAchievementPoints(
+  input: {
+    institutionId: string;
+    category: AchievementCategory;
+    level: AchievementLevel;
+    result: AchievementResult;
+    competitionId?: string | null;
+    subCategoryId?: string | null;
+  },
+  db: Prisma.TransactionClient | typeof prisma = prisma
+): Promise<PointResolution> {
   if (input.category !== 'kompetisi') {
     return {
       calculatedPoints: 0,
@@ -39,7 +64,7 @@ export async function resolveAchievementPoints(input: {
 
   // Lapis 2A: Cek aturan poin spesifik perlombaan + sub-lomba
   if (input.competitionId && input.subCategoryId) {
-    const subCompRule = await prisma.competitionPointRule.findFirst({
+    const subCompRule = await db.competitionPointRule.findFirst({
       where: {
         institutionId: input.institutionId,
         competitionId: input.competitionId,
@@ -65,7 +90,7 @@ export async function resolveAchievementPoints(input: {
 
   // Lapis 2B: Cek aturan poin spesifik perlombaan (semua sub-lomba pada lomba tsb)
   if (input.competitionId) {
-    const compRule = await prisma.competitionPointRule.findFirst({
+    const compRule = await db.competitionPointRule.findFirst({
       where: {
         institutionId: input.institutionId,
         competitionId: input.competitionId,
@@ -91,7 +116,7 @@ export async function resolveAchievementPoints(input: {
 
   // Lapis 2C: Cek aturan poin default pada sub-lomba (lintas lomba)
   if (input.subCategoryId) {
-    const subRule = await prisma.competitionPointRule.findFirst({
+    const subRule = await db.competitionPointRule.findFirst({
       where: {
         institutionId: input.institutionId,
         competitionId: null,
@@ -117,7 +142,7 @@ export async function resolveAchievementPoints(input: {
 
   // Lapis 1A: Cek template poin yang ditautkan pada kompetisi (jika ada)
   if (input.competitionId) {
-    const comp = await prisma.competition.findUnique({
+    const comp = await db.competition.findUnique({
       where: { id: input.competitionId },
       select: {
         name: true,
@@ -150,7 +175,7 @@ export async function resolveAchievementPoints(input: {
   }
 
   // Lapis 1B: Fallback ke PointRule aktif terbaru tingkat institusi
-  const activeRule = await prisma.pointRule.findFirst({
+  const activeRule = await db.pointRule.findFirst({
     where: {
       institutionId: input.institutionId,
       level: input.level,
@@ -198,29 +223,23 @@ export async function createPointTemplate(
     rules: Array<{ level: AchievementLevel; result: AchievementResult; points: number }>;
   }
 ) {
-  if (!dto.name || dto.name.trim().length < 3) {
-    throw new ValidationError('Nama template poin minimal 3 karakter');
+  if (!dto.name || dto.name.trim().length < 3 || dto.name.trim().length > 150) {
+    throw new ValidationError('Nama template poin harus 3–150 karakter');
   }
   if (!Array.isArray(dto.rules) || dto.rules.length === 0) {
     throw new ValidationError('Daftar aturan bobot template wajib diisi');
   }
-  for (const r of dto.rules) {
-    if (!VALID_LEVELS.has(r.level) || !VALID_RESULTS.has(r.result)) {
-      throw new ValidationError('Level atau hasil capaian pada template tidak valid');
-    }
-    if (typeof r.points !== 'number' || r.points < 0) {
-      throw new ValidationError('Nilai poin template tidak boleh negatif');
-    }
-  }
-
-  const latest = await prisma.pointRule.findFirst({
-    where: { institutionId },
-    orderBy: { version: 'desc' },
-    select: { version: true },
-  });
-  const nextVersion = (latest?.version ?? 0) + 1;
+  validateRuleMatrix(dto.rules, false);
 
   const created = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
+    const latest = await tx.pointRule.findFirst({
+      where: { institutionId },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    const nextVersion = (latest?.version ?? 0) + 1;
+
     if (dto.activateAsDefault) {
       await tx.pointRule.updateMany({ where: { institutionId }, data: { isActive: false } });
       await tx.pointTemplate.updateMany({ where: { institutionId }, data: { isActive: false } });
@@ -260,7 +279,11 @@ export async function createPointTemplate(
     action: 'POINT_TEMPLATE_CREATED',
     targetType: 'PointTemplate',
     targetId: created?.id || null,
-    metadata: { name: dto.name.trim(), version: nextVersion, activateAsDefault: Boolean(dto.activateAsDefault) },
+    metadata: {
+      name: dto.name.trim(),
+      version: created?.version ?? null,
+      activateAsDefault: Boolean(dto.activateAsDefault),
+    },
   });
 
   return created;
@@ -279,12 +302,17 @@ export async function activatePointTemplate(
     throw new NotFoundError('Template poin tidak ditemukan');
   }
 
-  await prisma.$transaction([
-    prisma.pointTemplate.updateMany({ where: { institutionId }, data: { isActive: false } }),
-    prisma.pointRule.updateMany({ where: { institutionId }, data: { isActive: false } }),
-    prisma.pointTemplate.update({ where: { id: templateId }, data: { isActive: true } }),
-    prisma.pointRule.updateMany({ where: { pointTemplateId: templateId }, data: { isActive: true } }),
-  ]);
+  const activated = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM institutions WHERE id = ${institutionId} FOR UPDATE`;
+    await tx.pointTemplate.updateMany({ where: { institutionId }, data: { isActive: false } });
+    await tx.pointRule.updateMany({ where: { institutionId }, data: { isActive: false } });
+    await tx.pointTemplate.update({ where: { id: templateId }, data: { isActive: true } });
+    await tx.pointRule.updateMany({ where: { pointTemplateId: templateId }, data: { isActive: true } });
+    return tx.pointTemplate.findUniqueOrThrow({
+      where: { id: templateId },
+      include: { rules: true },
+    });
+  });
 
   await recordAuditEvent({
     institutionId,
@@ -292,10 +320,10 @@ export async function activatePointTemplate(
     action: 'POINT_TEMPLATE_ACTIVATED',
     targetType: 'PointTemplate',
     targetId: templateId,
-    metadata: { name: tpl.name, version: tpl.version },
+    metadata: { name: activated.name, version: activated.version },
   });
 
-  return tpl;
+  return activated;
 }
 
 // ==========================================
@@ -424,11 +452,7 @@ export async function createCompetitionSubCategory(
     });
 
     if (dto.rules && dto.rules.length > 0) {
-      for (const r of dto.rules) {
-        if (!VALID_LEVELS.has(r.level) || !VALID_RESULTS.has(r.result) || r.points < 0) {
-          throw new ValidationError('Aturan poin sub-lomba tidak valid');
-        }
-      }
+      validateRuleMatrix(dto.rules, false);
       await tx.competitionPointRule.createMany({
         data: dto.rules.map((r) => ({
           institutionId,
@@ -479,6 +503,10 @@ export async function updateCompetitionSubCategory(
   });
   if (!sub || sub.category.institutionId !== institutionId) {
     throw new NotFoundError('Sub-lomba tidak ditemukan');
+  }
+
+  if (dto.rules && dto.rules.length > 0) {
+    validateRuleMatrix(dto.rules, false);
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -533,11 +561,15 @@ export async function updateCompetitionSubCategory(
 // ==========================================
 // 3. Pengaturan Poin Per Perlombaan
 // ==========================================
-export async function getCompetitionPointConfig(competitionIdOrSlug: string, bySlug = false) {
+export async function getCompetitionPointConfig(
+  competitionIdOrSlug: string,
+  bySlug = false,
+  institutionId?: string
+) {
   const comp = await prisma.competition.findFirst({
     where: bySlug
       ? { slug: competitionIdOrSlug, status: 'published' }
-      : { id: competitionIdOrSlug },
+      : { id: competitionIdOrSlug, ...(institutionId ? { institutionId } : {}) },
     include: {
       competitionCategory: {
         include: { subCategories: { where: { isActive: true } } },
@@ -591,10 +623,34 @@ export async function saveCompetitionPointConfig(
     throw new NotFoundError('Kompetisi tidak ditemukan');
   }
 
+  if (dto.pointTemplateId) {
+    const tpl = await prisma.pointTemplate.findUnique({ where: { id: dto.pointTemplateId } });
+    if (!tpl || tpl.institutionId !== institutionId) {
+      throw new ValidationError('Template poin tidak ditemukan di institusi Anda');
+    }
+  }
+
+  if (dto.competitionCategoryId) {
+    const cat = await prisma.competitionCategory.findUnique({
+      where: { id: dto.competitionCategoryId },
+    });
+    if (!cat || cat.institutionId !== institutionId) {
+      throw new ValidationError('Jenis lomba tidak ditemukan di institusi Anda');
+    }
+  }
+
   if (dto.customRules) {
-    for (const r of dto.customRules) {
-      if (!VALID_LEVELS.has(r.level) || !VALID_RESULTS.has(r.result) || r.points < 0) {
-        throw new ValidationError('Aturan poin perlombaan tidak valid');
+    validateRuleMatrix(dto.customRules, true);
+    const subIds = Array.from(
+      new Set(dto.customRules.map((r) => r.subCategoryId).filter((s): s is string => Boolean(s)))
+    );
+    if (subIds.length > 0) {
+      const validSubs = await prisma.competitionSubCategory.findMany({
+        where: { id: { in: subIds }, category: { institutionId } },
+        select: { id: true },
+      });
+      if (validSubs.length !== subIds.length) {
+        throw new ValidationError('Sebagian sub-lomba pada aturan poin tidak ditemukan di institusi Anda');
       }
     }
   }
@@ -648,5 +704,5 @@ export async function saveCompetitionPointConfig(
     },
   });
 
-  return getCompetitionPointConfig(competitionId, false);
+  return getCompetitionPointConfig(competitionId, false, institutionId);
 }

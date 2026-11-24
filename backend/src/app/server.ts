@@ -8,7 +8,6 @@ import { authRoutes } from '../modules/auth';
 import { profileRoutes, userRoutes } from '../modules/profile';
 import { competitionRoutes } from '../modules/competitions';
 import { targetRoutes } from '../modules/targets';
-import { matchingRoutes } from '../modules/matching';
 import { teamRoutes } from '../modules/teams';
 import { roadmapRoutes } from '../modules/roadmaps';
 import { achievementRoutes } from '../modules/achievements';
@@ -49,7 +48,6 @@ export function createServer() {
     .use(userRoutes)
     .use(competitionRoutes)
     .use(targetRoutes)
-    .use(matchingRoutes)
     .use(teamRoutes)
     .use(roadmapRoutes)
     .use(achievementRoutes)

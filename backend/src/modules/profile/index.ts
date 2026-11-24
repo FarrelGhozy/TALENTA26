@@ -142,6 +142,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
             enrollmentYear: true,
             avatarUrl: true,
             avatarObjectKey: true,
+            updatedAt: true,
             phone: true,
             bio: true,
             skills: true,
@@ -161,6 +162,12 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
     const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
 
     if (!isSelf && !isStaff) {
+      if (user.status !== 'active' || user.role !== 'mahasiswa') {
+        throw new NotFoundError('Pengguna tidak ditemukan');
+      }
+      const safeAvatarUrl = user.studentProfile?.avatarObjectKey
+        ? `/api/v1/users/${user.id}/avatar?v=${user.studentProfile.updatedAt.getTime()}`
+        : null;
       return {
         data: {
           id: user.id,
@@ -174,6 +181,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
                 studyProgram: user.studentProfile.studyProgram,
                 faculty: user.studentProfile.faculty,
                 enrollmentYear: user.studentProfile.enrollmentYear,
+                avatarUrl: safeAvatarUrl,
                 skills: user.studentProfile.skills,
                 interests: user.studentProfile.interests,
                 availability: user.studentProfile.availability,
@@ -184,7 +192,24 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
       };
     }
 
-    return { data: user };
+    const sanitizedProfile = user.studentProfile
+      ? (() => {
+          const { avatarObjectKey, updatedAt, ...rest } = user.studentProfile;
+          return {
+            ...rest,
+            avatarUrl: avatarObjectKey
+              ? `/api/v1/users/${user.id}/avatar?v=${updatedAt.getTime()}`
+              : rest.avatarUrl,
+          };
+        })()
+      : null;
+
+    return {
+      data: {
+        ...user,
+        studentProfile: sanitizedProfile,
+      },
+    };
   })
   .get('/users', async ({ auth }) => {
     assertAuthenticated(auth);
@@ -213,6 +238,7 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
       take: 100,
     });
     const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
