@@ -10,7 +10,6 @@ tests/e2e/
 │   └── sertifikat-lomba.pdf    # Berkas bukti nyata (PDF valid) untuk uji pengajuan prestasi
 ├── screenshots/                # Tangkapan layar otomatis jika terjadi kegagalan (git-ignored)
 ├── specs/
-│   ├── 00-landing-page.ts     # Sub-suite landing sintetis: state data, retry mandiri, privasi, keyboard, responsif
 │   ├── 01-public-flows.ts      # Alur publik: Landing page, Katalog lomba, Leaderboard & Non-AI check
 │   ├── 02-mahasiswa-flows.ts   # Alur mahasiswa: Registrasi akun baru, Beranda, Roadmap, Unggah prestasi
 │   ├── 03-validator-flows.ts   # Alur validator: Login, Antrean telaah berkas, Persetujuan, Update ranking
@@ -49,8 +48,6 @@ HEADLESS=false ./run-e2e.sh
 ```
 
 ## Cakupan Validasi
-
-Sub-suite `00-landing-page.ts` dipanggil dari suite publik. Respons katalog, ranking, dan bootstrap sesi diintersep dengan fixture sintetis selama pengujian landing, lalu intersepsi dilepas sebelum navigasi katalog/ranking memakai API nyata. Kasus mencakup loading/sukses/kosong/gagal/pemulihan masing-masing sumber, periode tidak aktif, batas tiga sorotan, payload privat tidak dirender, tanggal Asia/Jakarta, FAQ keyboard, CTA pada layar pertama, target sentuh 44 px, serta nama panjang tanpa spasi pada mobile/tablet/desktop. Tidak menulis database.
 
 1. **Integritas Antarmuka & Kepatuhan Non-AI**:
    - Memastikan tidak ada icon kecerdasan buatan (`Sparkles`, `Bot`, `Wand`, dll.) di seluruh antarmuka.

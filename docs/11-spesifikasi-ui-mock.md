@@ -20,13 +20,8 @@ Identitas UNIDA yang sudah ada menjadi bahan awal, bukan persetujuan brand resmi
 
 ## Pola halaman
 ### Landing dan ranking
-Landing memakai hero statis bertema navy/biru dengan satu pesan utama, CTA Jelajahi Lomba, dan Buat Akun Mahasiswa (Buka Portal sesuai peran bila sudah masuk). Ringkasan alur visual hanya tampil di desktop agar CTA tetap terlihat pada layar pertama mobile/tablet. Tidak ada carousel otomatis atau deskripsi hero yang dipotong.
-
-Urutan isi: pratinjau tiga lomba dari layanan katalog publik → empat langkah pembinaan → penjelasan individu dan tiga jalur tim → sorotan ranking periode aktif → FAQ akses/privasi → CTA penutup dan footer. Kartu lomba membedakan format individu/beregu, komposisi anggota, status pendaftaran, serta tenggat seleksi internal jika tersedia. Tidak ada angka total katalog yang diturunkan dari respons API berhalaman.
-
-Sorotan ranking mengambil maksimal tiga mahasiswa dari endpoint ranking yang sama dengan halaman ranking: nama tampilan, prodi, posisi, poin, dan jumlah prestasi lomba disetujui, disertai label periode dari respons. Tidak merender avatar, NIM, email, kontak, atau bukti, termasuk ketika payload sesi masuk menyertakannya. Tidak menjumlahkan jumlah prestasi antar mahasiswa sebagai jumlah prestasi unik. Periode tidak aktif, periode aktif tanpa ranking, serta katalog kosong memiliki pesan berbeda.
-
-Katalog dan ranking memiliki loading, gagal, serta tombol coba lagi yang bekerja mandiri. FAQ menggunakan `details`/`summary` native untuk keyboard; aksi pada isi landing minimal 44 px, dan nama panjang membungkus tanpa overflow. Footer menjelaskan pembinaan, roadmap, dan pemeriksaan validator; tidak mempromosikan matching/rekomendasi tim otomatis. Bukti pemeriksaan: `docs/25-validasi-landing.md`.
+Hero satu pesan utama dan dua CTA; di bawahnya langkah proses nyata, kompetisi terbaru, ranking per tahun akademik, capaian terverifikasi, penjelasan asal data, footer bantuan/kebijakan. Ranking tidak menampilkan NIM, kontak, atau foto default. Jika data kosong, jelaskan belum ada prestasi terverifikasi.
+Tampilkan sorotan tiga mahasiswa teratas berupa nama tampilan, poin, posisi, dan ringkasan capaian lomba sah, dengan tautan ke ranking lengkap. Jangan memakai foto dari akun pribadi secara otomatis.
 
 ### Katalog dan detail kompetisi
 Filter yang mudah dibersihkan, jumlah hasil, kartu dengan tahun, tingkat, format individu/beregu, tenggat dan status sumber. Detail punya info, syarat, jadwal, komposisi tim, roadmap terbit, dan kontak. Bedakan jadwal resmi dengan internal.
