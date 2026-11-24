@@ -9,6 +9,11 @@
   "scripts": {
     "dev": "vite frontend --config frontend/vite.config.ts",
     "dev:backend": "bun --watch backend/src/index.ts",
+    "db:generate": "bunx prisma generate",
+    "db:migrate": "bunx prisma migrate deploy",
+    "db:migrate:dev": "bunx prisma migrate dev",
+    "db:seed": "bun backend/prisma/seed.ts",
+    "db:seed:demo": "bun backend/prisma/seed-simulation.ts",
     "seed:simulasi": "bun backend/prisma/seed-simulation.ts",
     "build": "tsc -p frontend && vite build frontend --config frontend/vite.config.ts --mode production",
     "build:demo": "tsc -p frontend && vite build frontend --config frontend/vite.config.ts --mode demo",

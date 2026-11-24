@@ -4,7 +4,14 @@ import { hashPassword } from '../src/lib/password';
 import { loadConfig } from '../src/lib/config';
 import { getStorageService } from '../src/lib/storage';
 import { uploadStudentAvatar } from '../src/modules/profile/service';
+import { runBaseSeed } from './seed';
 import type { AchievementLevel, AchievementResult, ParticipationType } from '@prisma/client';
+
+// Fallback PNG 1x1 valid apabila lingkungan seeding sedang offline (tidak dapat mengunduh potret)
+const FALLBACK_AVATAR_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64'
+);
 
 const VALID_PDF_BYTES = Buffer.from(
   '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000052 00000 n \n0000000108 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n182\n%%EOF'
@@ -943,7 +950,11 @@ async function main() {
     throw new Error('[SIMULASI_ERROR] Skrip simulasi dilarang dijalankan pada NODE_ENV=production.');
   }
 
-  console.log('[SIMULASI] Memulai pembersihan & pengisian data simulasi TALENTA lokal...');
+  console.log('[SIMULASI] Memulai seed dasar + pembersihan & pengisian data simulasi TALENTA...');
+
+  // Pastikan data fondasi (institusi, 4 lomba, roadmap, konsultan, template poin v1, master jenis/sub-lomba)
+  // selalu terpasang lebih dulu agar skrip ini dapat langsung dijalankan mandiri pada DB kosong.
+  await runBaseSeed();
 
   const institution = await prisma.institution.upsert({
     where: { code: 'unida-gontor' },
@@ -1118,15 +1129,25 @@ async function main() {
     }
 
     // Unduh potret random dari internet dan unggah melalui pipeline uploadStudentAvatar ke RustFS privat
-    const jpegBuffer = await downloadPortraitJpeg(s.portraitUrl);
-    await uploadStudentAvatar(userId, institution.id, {
-      name: `${s.key}.jpg`,
-      type: 'image/jpeg',
-      buffer: jpegBuffer,
-    });
+    // Jika sedang offline atau timeout, gunakan fallback PNG valid agar proses seed tetap selesai mulus.
+    try {
+      const jpegBuffer = await downloadPortraitJpeg(s.portraitUrl);
+      await uploadStudentAvatar(userId, institution.id, {
+        name: `${s.key}.jpg`,
+        type: 'image/jpeg',
+        buffer: jpegBuffer,
+      });
+      console.log(`[SIMULASI] ✓ ${s.fullName} (${s.studyProgram}) — foto profil diunggah (${jpegBuffer.byteLength} B)`);
+    } catch {
+      await uploadStudentAvatar(userId, institution.id, {
+        name: `${s.key}.png`,
+        type: 'image/png',
+        buffer: FALLBACK_AVATAR_PNG,
+      });
+      console.log(`[SIMULASI] ✓ ${s.fullName} (${s.studyProgram}) — memakai avatar fallback offline`);
+    }
 
     userByKey.set(s.key, { id: userId, fullName: s.fullName, email: s.email });
-    console.log(`[SIMULASI] ✓ ${s.fullName} (${s.studyProgram}) — foto profil diunggah ke RustFS (${jpegBuffer.byteLength} B)`);
   }
 
   // Ambil referensi kompetisi & kategori/sub-kategori
