@@ -1,6 +1,6 @@
 # PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.3, 24 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-24`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
+Versi rancangan: 2.4, 24 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-25`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
 
 ## 1. Masalah dan tujuan
 
@@ -75,7 +75,7 @@ Super admin menambah/mengelola staf dengan nama asli, mengatur template poin, je
 
 ## 6. Aturan domain utama
 - Satu target lomba aktif per mahasiswa per periode akademik; pergantian target maupun aktivasi periode baru mengarsipkan target dan tim lama secara logis/atomik, bukan menghapus riwayat.
-- Peraturan tim berasal dari konfigurasi masing-masing kompetisi (`format`, `minTeamMembers`–`maxTeamMembers`, `registrationStatus`, `internalSelectionDeadline`, toggle wajib/opsional `requireRoles` & `requireCrossStudyProgram`, `singleTeamPerCompetition`). Status `terbentuk` menandai anggota cukup, sedangkan kesiapan mengikuti seleksi mengevaluasi seluruh syarat wajib lomba tersebut; mahasiswa tetap boleh membuka roadmap saat tim masih mencari anggota. Persetujuan anggota tim sepenuhnya di tangan ketua tim (`leaderId`), bukan validator prestasi.
+- Peraturan tim berasal dari konfigurasi masing-masing kompetisi (`format`, `minTeamMembers`–`maxTeamMembers`, `registrationStatus`, `internalSelectionDeadline`, toggle wajib/opsional `requireRoles` & `requireCrossStudyProgram`). Pada rilis pertama, batas satu tim aktif per kompetisi (`singleTeamPerCompetition`) dikunci aktif agar konsisten dengan aturan domain. Status `terbentuk` menandai anggota cukup, sedangkan kesiapan mengikuti seleksi mengevaluasi seluruh syarat wajib lomba tersebut (termasuk pencocokan peran 1-ke-1); mahasiswa tetap boleh membuka roadmap saat tim masih mencari anggota. Persetujuan anggota tim sepenuhnya di tangan ketua tim (`leaderId`), bukan validator prestasi.
 - Mahasiswa bebas mengajukan prestasi di luar target lombanya, baik individu maupun kelompok (memilih tim pembinaan atau rekan mahasiswa satu institusi). Hanya prestasi berjenis lomba yang masuk ranking; kategori lain tetap tercatat dan dapat masuk statistik sesuai definisi.
 - Status pengajuan aktif rilis pertama: `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`, `dibatalkan` (status `draft` ditunda ke pasca-rilis awal). Transisi, alasan, override poin, aktor, dan waktu dicatat. Pengajuan yang disetujui tidak diedit langsung; koreksi memakai tindakan khusus yang membalik poin seluruh anggota terkait.
 - Bukti prestasi dan avatar mahasiswa adalah objek privat RustFS; database menyimpan metadata dan kunci objek, bukan Base64 atau URL publik permanen. Avatar tidak ditampilkan pada halaman ranking publik.
@@ -84,9 +84,9 @@ Super admin menambah/mengelola staf dengan nama asli, mengatur template poin, je
 
 ## 7. Nonfungsional dan kesiapan produksi
 - API memakai Elysia di Bun, Prisma/MySQL, serta storage S3 compatible RustFS. Frontend React/Vite terpisah.
-- Sesi aman, password di-hash, rate limit, validasi input, kontrol akses objek, audit, dan pencegahan upload berbahaya adalah syarat go-live.
+- Sesi aman, password di-hash (Argon2id dengan batas konkurensi), rate limit berlapis (Nginx edge + aplikasi), validasi input, kontrol akses objek, kuota & pembersihan berkala anti-bloat MySQL/RustFS (`K-25`), audit, dan pencegahan upload berbahaya adalah syarat go-live.
 - Aplikasi melayani satu origin HTTPS melalui proxy/tunnel; koneksi backend ke MySQL/RustFS tidak diekspos publik.
-- GitHub Actions menghasilkan image frontend dan backend GHCR public. Kode dan image tidak mengandung rahasia. Root .env di server mengisi koneksi, domain, kunci sesi, dan tag image.
+- GitHub Actions menghasilkan image frontend dan backend GHCR public. Kode dan image tidak mengandung rahasia. `infra/.env` di server mengisi koneksi, domain, kunci sesi, batas kuota/retensi, dan tag image.
 - Backup MySQL dan RustFS, pemantauan, prosedur rollback dan restore diuji sebelum data nyata dipakai.
 - Antarmuka responsif, dapat dipakai dengan keyboard dan pembaca layar dasar, serta jelas untuk loading, kosong, error, dan keberhasilan.
 - Uji performa dan kapasitas memakai target terukur pada staging; angka SLA dan retensi final masih perlu disahkan operasional kampus.

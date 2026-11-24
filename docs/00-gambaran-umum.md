@@ -3,8 +3,8 @@
 TALENTA adalah platform satu kampus untuk pembinaan lomba dan pencatatan prestasi mahasiswa. Rilis pertama menghubungkan katalog lomba, profil, tim, roadmap, pengajuan prestasi, validasi, dashboard, dan ranking publik. Tujuannya adalah operasi berulang lintas tahun akademik dengan riwayat tetap utuh.
 
 ## Pembedaan status
-- Saat ini: frontend React/Vite dan backend Bun/Elysia + Prisma/MySQL + integrasi RustFS sudah ada di repo, namun masih memerlukan penutupan patch kritis keamanan/bug, kelengkapan fitur keputusan `K-15`–`K-22`, serta penutupan Gate Stage 5 sebelum masuk Stage 6 (Compose & GHCR).
-- Target: frontend dan backend terpisah (build produksi fail-safe tanpa mock/demo), Bun/Elysia, Prisma/MySQL, RustFS, image GHCR public, Compose di home server melalui Cloudflare Tunnel.
+- Saat ini: implementasi full-stack (frontend React/Vite, backend Bun/Elysia + Prisma 7/MySQL + RustFS + proteksi DDoS & anti-bloat `K-25`, serta artefak Docker Compose/Nginx/backup/CI GHCR) telah selesai dan lulus seluruh gate teknis lokal (`TODO.md`).
+- Target operasional: aktivasi staging/produksi di home server melalui Cloudflare Tunnel & `infra/.env`, serta pengesahan kebijakan kampus (`O-01`–`O-06`) sebagai tahap rilis terpisah.
 - Berikutnya: verifikasi email saat daftar, simpan draft prestasi, SSO kampus, dan kemungkinan multi-kampus setelah pilot; AI dan beasiswa bukan bagian rilis awal.
 
 ## Prinsip

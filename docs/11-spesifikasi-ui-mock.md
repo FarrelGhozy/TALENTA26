@@ -3,7 +3,7 @@
 Nama file dipertahankan agar tautan lama tidak putus; isi ini menggantikan spesifikasi UI mock. Desain akhir dapat merombak tampilan saat Stage 1 selama kebutuhan dan akses tetap terpenuhi.
 
 ## Baseline Stage 1
-Fondasi UI telah diterapkan dan diuji pada 390×844, 768×1024, dan viewport desktop. Halaman `/super-admin/design-system` memperlihatkan aksi, status, form valid/invalid, informasi, sukses, peringatan, loading, dan empty state. Ini baseline yang harus dikembangkan, bukan klaim bahwa semua komponen produksi telah selesai.
+Fondasi UI telah diterapkan dan diuji pada 390×844, 768×1024, dan viewport desktop (token & komponen antarmuka dasar bersama berada di `frontend/src/components/` dan `frontend/src/index.css`). Ini baseline yang dikembangkan menjadi antarmuka produksi penuh.
 
 Semua ikon produk berasal dari Lucide React. Emoji, SVG ikon buatan tangan, dan pustaka ikon kedua tidak dipakai tanpa keputusan proyek. Ikon dekoratif memakai `aria-hidden`; kontrol icon-only wajib memiliki nama aksesibel. Token dasar warna, radius, bayangan, tipografi, dan focus ring berada di `frontend/src/index.css`.
 
@@ -15,7 +15,7 @@ Identitas UNIDA yang sudah ada menjadi bahan awal, bukan persetujuan brand resmi
 ## Struktur navigasi
 - Publik: Beranda, Katalog Lomba, Ranking, Masuk/Daftar. CTA utama Jelajahi Lomba atau Masuk Portal.
 - Mahasiswa: Top bar dengan Beranda, Ruang Persiapan, Tim, Katalog Lomba, Prestasi, Ranking (paling belakang); profil/target di dropdown akun. Pada mobile gunakan menu ringkas dengan posisi jelas.
-- Admin (`/admin/*`, peran validator & super admin): Sidebar Kiri Accordion (desktop tetap kiri dengan opsi collapse + top breadcrumb bar; mobile/tablet memakai slide-over sidebar drawer dari kiri) berisi Dashboard, Validasi Prestasi (sub-status + badge angka live), Kelola Lomba (Kompetisi, Poin, Roadmap, Konsultan, Seleksi), dan Pengaturan Sistem (Akun, Periode, Template Poin, Audit, Kesehatan).
+- Admin (`/admin/*`, peran validator & super admin): Sidebar Kiri Accordion (desktop tetap kiri dengan opsi collapse + top breadcrumb bar; mobile/tablet memakai slide-over sidebar drawer dari kiri) berisi Dashboard, Validasi Prestasi (sub-status + badge angka live), Kelola Lomba (hub kartu lomba → ruang kelola 5 tab: Profil & Aturan, Roadmap, Aturan Poin, Konsultan, Seleksi), dan khusus **`super_admin`**: Pengaturan Sistem (`/admin/sistem`: Akun, Periode, Template Poin, Audit, Kesehatan). Menu Pengaturan Sistem disembunyikan dari `validator` dan dijaga ketat oleh guard `/403` + backend `403`.
 - Breadcrumb pada top utility bar admin serta halaman detail/edit; peran dan institusi terlihat di area akun. Tidak ada role switcher pada akun produksi.
 
 ## Pola halaman
@@ -29,8 +29,8 @@ Filter yang mudah dibersihkan, jumlah hasil, kartu dengan tahun, tingkat, format
 ### Onboarding mahasiswa
 Form bertahap: akun, identitas/profil dasar, minat/skill, target. NIM/email dicek unik; beri pemberitahuan bahwa identitas belum terverifikasi kampus. Simpan draft dan tampilkan progres. Alur prestasi mandiri tidak diblokir oleh target lomba.
 
-### Partner, tim, persiapan
-Kartu partner menampilkan alasan rekomendasi dan data minimum. Undangan masuk/keluar dan status tim terpisah. Perubahan target/tim memakai dialog yang menyebut dampak. Roadmap menunjukkan aksi pekan ini, keseluruhan fase, progres, dan keterlambatan tanpa menyalahkan pengguna.
+### Rekrutmen tim dan persiapan
+Halaman `/app/tim` menyajikan 3 jalur lomba beregu (*Buat Tim Baru*, *Cari Tim Terbuka*, *Sudah Punya Tim* via kode undangan acak), tab *Pengajuan Saya*, dan *Ruang Tim Saya* lengkap dengan kesiapan 3 lapis (`dibuat`, `anggota_cukup`, `siap_seleksi`), panel pelamar tertunda serta manajemen kode undangan khusus ketua (`leaderId`). Perubahan target/tim memakai dialog yang menyebut dampak. Lomba individu mengarah langsung ke ruang persiapan. Roadmap menunjukkan fase, progres, tenggat, dan kontak konsultan WA terbit tanpa menyalahkan pengguna.
 
 ### Pengajuan dan verifikasi
 Form prestasi menyajikan ringkasan aturan, upload progres, pratinjau bukti, validasi inline, review sebelum kirim. Riwayat memakai timeline status dan alasan. Validator melihat antrean padat tetapi terbaca; detail membandingkan revisi, bukti, keputusan dan audit. Tombol keputusan tidak berdekatan tanpa pembeda visual.

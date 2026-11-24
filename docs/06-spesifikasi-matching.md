@@ -1,6 +1,6 @@
 # 06 — Rekrutmen tim, kode undangan, dan kesiapan seleksi
 
-Diselaraskan dengan Keputusan `K-19` (revisi) dan `K-23` (23 November 2026).
+Diselaraskan dengan Keputusan `K-19` (revisi) dan `K-23` (24 November 2026).
 
 ## Tujuan
 Menyediakan alur pembentukan tim yang sederhana, realistis, dan bebas jalan buntu untuk lomba beregu melalui **rekrutmen berbasis pengajuan (*open recruitment*)** dan **kode undangan acak**, sementara lomba individu langsung menuju ruang persiapan tanpa melewati fitur tim. Algoritma *automatic matchmaking* dan AI ditunda dari alur wajib rilis pertama.
@@ -13,14 +13,14 @@ Setelah melengkapi profil dan memilih target lomba beregu (`format === 'beregu'`
 
 ## Otorisasi dan pemisahan tugas
 - **Ketua Tim (`team.leaderId === auth.user.id`)** adalah satu-satunya aktor yang berhak: menyetujui/menolak `TeamJoinRequest`, mengubah pengaturan tim (`terbuka`/`privat`, `isRecruiting`, deskripsi, kebutuhan peran, target maksimal), memutar ulang `inviteCode`, mengeluarkan anggota sebelum `terkunci_seleksi`, dan mengajukan *Daftar Seleksi Internal*.
-- **Pengelola Lomba (`/validator/konten?tab=kompetisi`)** mengatur aturan tiap lomba (`format`, `minTeamMembers`, `maxTeamMembers`, `registrationStatus`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, `singleTeamPerCompetition`, tautan pedoman).
-- **Verifikator Prestasi (`/validator/prestasi`)** fokus memeriksa bukti prestasi, tidak ikut campur persetujuan anggota tim.
+- **Pengelola Lomba (`/admin/konten/:id?tab=info`)** mengatur aturan tiap lomba (`format`, `minTeamMembers`, `maxTeamMembers`, `registrationStatus`, `internalSelectionDeadline`, `requireRoles`, `requireCrossStudyProgram`, tautan pedoman). Batas satu tim aktif per cabang (`singleTeamPerCompetition`) dikunci aktif pada rilis pertama.
+- **Verifikator Prestasi (`/admin/prestasi`)** fokus memeriksa bukti prestasi, tidak ikut campur persetujuan anggota tim.
 
 ## Tiga lapis kesiapan tim (`evaluateTeamReadiness`)
 Sistem membedakan secara tegas tiga keadaan tim:
 1. **Tim Dibuat (`dibuat`)**: memiliki minimal 1 anggota aktif. Mahasiswa **tetap dapat membuka roadmap dan materi persiapan**, tetapi belum dinyatakan siap mengikuti seleksi.
 2. **Anggota Cukup (`anggota_cukup`)**: jumlah anggota aktif memenuhi `[minTeamMembers, effectiveMax]` (`Team.status = 'terbentuk'`). Sistem tetap memeriksa syarat tambahan kompetisi (tidak otomatis siap seleksi).
-3. **Siap Seleksi (`siap_seleksi`)**: `hasEnoughMembers` terpenuhi, `registrationStatus === 'buka'` (dan belum lewat `internalSelectionDeadline` bila diisi), serta seluruh syarat wajib yang diaktifkan admin pada lomba tersebut terpenuhi (`requireRoles`, `requireCrossStudyProgram`). Pada level ini ketua dapat klik *Daftar Seleksi Internal* (`InternalSelection` status `menunggu`).
+3. **Siap Seleksi (`siap_seleksi`)**: `hasEnoughMembers` terpenuhi, `registrationStatus === 'buka'` (dan belum lewat `internalSelectionDeadline` bila diisi), serta seluruh syarat wajib yang diaktifkan admin pada lomba tersebut terpenuhi (`requireRoles` dengan pencocokan 1-ke-1 bipartite antar anggota, `requireCrossStudyProgram`). Pada level ini ketua dapat klik *Daftar Seleksi Internal* (`InternalSelection` status `menunggu`).
 
 ## Transaksi, konkurensi, dan siklus hidup
 - **Buat tim (`POST /teams`)**: cek format `beregu`, `registrationStatus === 'buka'`, belum ada tim aktif pada kompetisi sama, `targetMaxMembers` dalam `[minTeamMembers, maxTeamMembers]`. Generate `inviteCode` acak kriptografis (`crypto.randomBytes`). Otomatis batalkan `TeamJoinRequest` berstatus `menunggu` milik pembuat pada kompetisi sama.

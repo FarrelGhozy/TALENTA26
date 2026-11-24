@@ -22,7 +22,7 @@
     "typecheck:backend": "tsc -p backend --noEmit",
     "typecheck": "tsc -p frontend --noEmit && tsc -p backend --noEmit",
     "test": "bun test backend/tests/unit && bun backend/tests/run-integration.ts",
-    "test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage backend/tests/unit backend/tests/integration/*.test.ts",
+    "test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage --preload ./backend/tests/preload-coverage.ts backend/tests/unit backend/tests/integration/*.test.ts",
     "test:integration": "bun backend/tests/run-integration.ts",
     "test:e2e": "bash run-e2e.sh",
     "lint": "oxlint frontend/src backend/src",

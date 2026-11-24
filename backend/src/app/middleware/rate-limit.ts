@@ -182,3 +182,22 @@ export const mutationUserLimiter = new InMemoryRateLimiter(60, 60 * 1000, {
 export const healthReadyIpLimiter = new InMemoryRateLimiter(15, 60 * 1000, {
   maxEntries: 5_000,
 });
+
+/**
+ * Mengosongkan seluruh bucket rate limiter singleton.
+ * Digunakan oleh harness uji integrasi multi-file agar akumulasi permintaan antar suite
+ * tidak saling memicu 429 palsu saat berjalan dalam satu proses (`bun run test:coverage`).
+ */
+export function resetAllRateLimiters(): void {
+  globalApiLimiter.clear();
+  authRateLimiter.clear();
+  authLoginEmailLimiter.clear();
+  authRegisterIpLimiter.clear();
+  authForgotEmailLimiter.clear();
+  uploadUserLimiter.clear();
+  uploadIpLimiter.clear();
+  joinCodeUserLimiter.clear();
+  heavyExportUserLimiter.clear();
+  mutationUserLimiter.clear();
+  healthReadyIpLimiter.clear();
+}

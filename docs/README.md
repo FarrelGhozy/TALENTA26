@@ -10,7 +10,7 @@ Dokumen ini menggambarkan target produk dan implementasi bertahap. Status aplika
 | 03-alur-pengguna.md | perjalanan, status dan kegagalan |
 | 04-sitemap.md | rute dan struktur folder tujuan |
 | 05-spesifikasi-fungsional.md | kebutuhan dan penerimaan per modul |
-| 06-spesifikasi-matching.md | rekomendasi, undangan dan tim |
+| 06-spesifikasi-matching.md | rekrutmen tim, kode undangan, dan kesiapan seleksi |
 | 07-spesifikasi-roadmap.md | konten persiapan dan konsultasi |
 | 08-spesifikasi-prestasi.md | submission, bukti, verifikasi |
 | 09-spesifikasi-dashboard.md | metrik dan ranking publik |

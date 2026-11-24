@@ -7,9 +7,9 @@ TALENTA adalah aplikasi web untuk membantu mahasiswa menemukan perlombaan, membe
 ## Status Implementasi & Arsitektur
 
 - **Frontend (`frontend/`)**: React 19, TypeScript, Vite 8, React Router 7, Tailwind CSS 4, Lucide React. Mendukung adapter API produksi (`factory.api.ts`, dikunci otomatis pada `bun run build`) dan adapter mock khusus pratinjau/demo (`bun run build:demo`).
-- **Backend (`backend/`)**: Bun 1.4, Elysia, Prisma 7 (`@prisma/adapter-mariadb`) dengan MySQL/MariaDB, autentikasi Argon2id + sesi cookie `HttpOnly` (hash HMAC-SHA256 di DB), proteksi CSRF/Origin, RBAC, SMTP reset password, serta integrasi object storage S3-compatible (**RustFS / MinIO**) dengan validasi magic-byte.
-- **Container & Operasi (`infra/`)**: `frontend/Dockerfile` (multi-stage build produksi + Nginx same-origin proxy `/` dan `/api/`), `backend/Dockerfile`, `infra/docker-compose.yaml` (pull image GHCR), skrip backup/restore MySQL & RustFS, serta workflow CI/CD `.github/workflows/ci-publish.yml`.
-- **Pengujian**: 22 unit test, 10 suite integration test backend, dan 4 suite Playwright E2E lintas peran.
+- **Backend (`backend/`)**: Bun 1.4, Elysia, Prisma 7 (`@prisma/adapter-mariadb`) dengan MySQL/MariaDB, autentikasi Argon2id (dengan semaphore konkurensi) + sesi cookie `HttpOnly` (hash HMAC-SHA256 di DB), proteksi CSRF/Origin, rate limiting berjenjang, RBAC ketat (`/admin/sistem` & `/api/v1/system/*` khusus `super_admin`), SMTP reset password (fail-closed `K-13`), integrasi object storage S3-compatible (**RustFS / MinIO**) dengan streaming + `ETag`/`304` + validasi magic-byte, serta worker & CLI pemeliharaan anti-bloat MySQL/RustFS (`K-25`).
+- **Container & Operasi (`infra/`)**: `frontend/Dockerfile` (multi-stage build produksi + Nginx same-origin proxy `/` dan `/api/` dengan proteksi edge DDoS & CSP), `backend/Dockerfile` (multi-stage non-root `USER bun`), `infra/docker-compose.yaml` (pull image GHCR, rotasi log, limit memori/CPU/PID, loopback bind default), skrip backup/restore MySQL & RustFS atomik ber-retensi, serta workflow CI/CD `.github/workflows/ci-publish.yml`.
+- **Pengujian**: 33 unit test, 11 suite integration test backend, dan 4 suite Playwright E2E lintas peran.
 - **Catatan Rilis**: Gate teknis lokal telah lulus (`TODO.md`). Pengesahan kebijakan kampus (`O-01`–`O-06` di `docs/14-keputusan-terbuka.md`), uji pembaca layar manusia, serta deployment produksi/staging ke home server dilakukan sebagai tahap operasional terpisah. Fitur di luar rilis awal (AI, login Google, SSO, verifikasi email registrasi, simpan draft prestasi, beasiswa, SKPI/klaim BAAK, multi-kampus) tidak aktif.
 
 ---
@@ -167,10 +167,11 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
 - **Image & Origin**:
   - `GHCR_OWNER=farrelghozy` (huruf kecil)
   - `IMAGE_TAG=latest` *(atau sematkan tag rilis spesifik seperti `v1.0.0` / `sha-<commit>`)*
+  - `WEB_BIND_HOST=127.0.0.1` *(default loopback aman di belakang Cloudflare Tunnel; ubah ke `0.0.0.0` hanya jika sengaja mengekspos LAN)*
   - `WEB_PORT=8080`
-  - `NODE_ENV=production`
   - `PUBLIC_ORIGIN=https://domain-anda.example.com`
   - `TRUST_PROXY=true` *(set `true` jika berada di balik Cloudflare Tunnel / reverse proxy HTTPS)*
+  - *(Opsional sesuai `O-03`/`O-06`)*: `DB_POOL_LIMIT`, `USER_STORAGE_QUOTA_MB`, `MAX_REVISIONS_PER_ACHIEVEMENT`, `MAX_ACHIEVEMENTS_PER_PERIOD`, `MAX_SESSIONS_PER_USER`, `AUDIT_RETENTION_DAYS`, `STORAGE_RETENTION_INACTIVE_DAYS`, `MAINTENANCE_INTERVAL_MINUTES`, `BACKUP_RETENTION_DAYS`
 - **Keamanan Sesi (Wajib acak minimal 32 karakter — jalankan `openssl rand -base64 32`)**:
   - `SESSION_SECRET=...`
   - `COOKIE_SECRET=...`
@@ -192,7 +193,7 @@ docker compose up -d
 ```
 Urutan eksekusi otomatis Docker Compose:
 1. Container `migrate` berjalan terlebih dahulu mengeksekusi `bunx prisma migrate deploy`.
-2. Setelah migrasi selesai sukses (`service_completed_successfully`), container `api` menyala dan melewati health check `/health/live`.
+2. Setelah migrasi selesai sukses (`service_completed_successfully`), container `api` menyala dan melewati health check `/health/ready`.
 3. Setelah `api` berstatus `healthy`, container `web` (Nginx) menyala dan melayani aplikasi pada `http://127.0.0.1:${WEB_PORT:-8080}` (siap diteruskan oleh Cloudflare Tunnel / reverse proxy HTTPS).
 
 Jika ingin menjalankan ulang migrasi secara eksplisit:
@@ -223,8 +224,13 @@ docker compose logs -f api web
   ```
 - **Backup & Uji Restore MySQL**:
   ```bash
-  ./infra/scripts/backup-db.sh
-  ./infra/scripts/backup-db.sh --test-restore talenta_restore_check
+  ./infra/scripts/backup-db.sh --env-file infra/.env
+  ./infra/scripts/backup-db.sh --env-file infra/.env --test-restore talenta_restore_check
+  ```
+- **Pemeliharaan Anti-Bloat MySQL & RustFS (Dry-run / Eksekusi Manual)**:
+  ```bash
+  bun --env-file=infra/.env backend/src/scripts/maintenance.ts --dry-run
+  bun --env-file=infra/.env backend/src/scripts/maintenance.ts
   ```
 - **Backup & Restore Object Storage (RustFS)**:
   Lihat panduan operasional lengkap di `docs/17-runbook-operasi.md` dan `infra/README.md`.
@@ -244,7 +250,7 @@ docker compose logs -f api web
 | `bun run db:seed:demo` | Alias `seed:simulasi` — menjalankan seed dasar + data simulasi lengkap lokal |
 | `bun run typecheck` | Pemeriksaan TypeScript pada `frontend` dan `backend` |
 | `bun run lint` | Pemeriksaan lint (`oxlint`) pada `frontend/src` dan `backend/src` |
-| `bun run test` | Menjalankan seluruh unit test (22) & 10 suite integration test backend |
+| `bun run test` | Menjalankan seluruh unit test (33) & 11 suite integration test backend |
 | `bun run test:coverage` | Menjalankan tes backend dengan laporan coverage (`text` & `lcov`) |
 | `bun run test:e2e` | Menjalankan seluruh 4 suite Playwright E2E (membutuhkan FE `:5173` & BE `:3001` aktif) |
 | `bun run build` | Build produksi fail-safe (mengunci adapter API, bebas mock/kartu demo) |
@@ -267,7 +273,7 @@ prisma.config.ts   Konfigurasi Prisma 7 (schema, migrations, seed)
 ### Dokumen Acuan Utama
 - **`PRD_TALENTA.md`**: Tujuan produk, aktor, alur utama, dan batasan rilis pertama.
 - **`docs/README.md`**: Indeks lengkap seluruh dokumen spesifikasi (`docs/00`–`docs/24`).
-- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-23`) dan poin kebijakan terbuka (`O-01`–`O-06`).
+- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-25`) dan poin kebijakan terbuka (`O-01`–`O-06`).
 - **`docs/17-runbook-operasi.md`** & **`infra/README.md`**: Prosedur rilis CI/CD GHCR, migrasi, backup, restore, dan rollback.
 - **`TODO.md`**: Status pekerjaan bertahap dan bukti verifikasi gate.
 - **`AGENTS.md`**: Panduan kerja, arsitektur, dan aturan kualitas repositori.

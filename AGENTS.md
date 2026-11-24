@@ -2,7 +2,7 @@
 
 ## Status dan sumber keputusan
 - Produk yang dituju: sistem pembinaan lomba dan pengelolaan prestasi mahasiswa UNIDA Gontor, rilis pertama satu kampus.
-- Implementasi saat ini adalah frontend React/Vite di frontend/ dengan mock dan localStorage. Backend, database, storage, container, serta autentikasi produksi belum ada.
+- Implementasi saat ini mencakup full-stack monorepo nyata: frontend React/Vite (`frontend/`), backend Bun/Elysia + Prisma 7/MySQL + RustFS + autentikasi Argon2id/HMAC-SHA256 + proteksi DDoS/anti-bloat (`backend/`), serta artefak container produksi, Nginx edge, dan backup (`infra/`). Mode mock hanya untuk dev/demo (`build:demo`). Aktivasi staging/produksi home server dan pengesahan kebijakan kampus (`O-01`–`O-06`) tetap menjadi tahap/gate terpisah.
 - Urutan acuan: keputusan pemilik produk di docs/14-keputusan-terbuka.md, PRD_TALENTA.md, spesifikasi docs/, lalu perilaku kode saat ini sebagai bukti implementasi. Bila bertentangan, catat selisih dan minta keputusan; jangan menganggap mock sebagai aturan bisnis final.
 - TODO.md adalah rencana kerja dan gate. README.md menjelaskan kondisi yang benar-benar bisa dijalankan sekarang.
 - Keputusan produk yang belum disahkan tidak boleh ditulis sebagai fitur aktif atau klaim resmi kampus.

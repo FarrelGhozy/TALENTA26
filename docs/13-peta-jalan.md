@@ -4,13 +4,13 @@ Tidak ada tanggal janji rilis. Setiap stage berakhir dengan bukti yang dapat dip
 
 | Stage | Hasil | Dependensi | Gate |
 |---|---|---|---|
-| D0 Dokumentasi | PRD, keputusan (`K-01`–`K-22`), kontrak API, model data, operasi, QA, dan TODO selaras | jawaban pemilik produk | review silang tanpa kontradiksi |
+| D0 Dokumentasi | PRD, keputusan (`K-01`–`K-25`), kontrak API, model data, operasi, QA, dan TODO selaras | jawaban pemilik produk | review silang tanpa kontradiksi |
 | 1 Repo + desain | frontend/ dipindah aman, kerangka backend/, design system dan prototipe | D0 | build demo tetap jalan, UI prototipe diuji |
 | 2 Fondasi | Elysia/Prisma/MySQL, akun manual, RBAC, seed, health | 1 | migrasi, auth, IDOR, reset, audit lulus |
-| 3 Pembinaan | konten validator, target, matching, tim, roadmap, seleksi, kontak WA | 2 | J1 dan J3 lintas perangkat/periode lulus |
+| 3 Pembinaan | konten validator, target, rekrutmen tim, roadmap, seleksi, kontak WA | 2 | J1 dan J3 lintas perangkat/periode lulus |
 | 4 Prestasi | RustFS, submission/revisi, verifikasi, ledger poin, ranking | 3 | J2 dan J4 serta kasus serentak lulus |
-| 5 Kematangan & Penutupan Audit (Fase 1–3) | patch kritis keamanan/poin/crash, fitur `K-15`–`K-22` (poin 3 lapis, sub-lomba, override validator, tim, avatar RustFS, nama staf, pergantian periode), UI bersih & aksesibilitas, backup/restore | 4 + D0 v2.1 | seluruh kriteria docs/18 lulus; nol temuan kritis terbuka |
-| 6 Distribusi (Fase 4) | GHCR public, Compose (`web`/`api`/`migrate`), proxy same-origin, staging, runbook, rollback | 5 | deploy dari root `.env` + `docker compose pull` + `up -d` berhasil; rollback teruji |
+| 5 Kematangan & Penutupan Audit (Fase 1–3 + Wave 1–6) | patch kritis keamanan/poin/crash, fitur `K-15`–`K-25` (poin 3 lapis, sub-lomba, override validator, rekrutmen tim, avatar RustFS, nama staf, pergantian periode, DDoS berlapis & anti-bloat MySQL/RustFS), UI bersih & aksesibilitas, backup/restore | 4 + D0 v2.4 | seluruh kriteria docs/18 lulus; nol temuan kritis terbuka |
+| 6 Distribusi (Fase 4) | GHCR public, Compose (`web`/`api`/`migrate`), proxy same-origin, staging, runbook, rollback | 5 | deploy dari `infra/.env` + `docker compose pull` + `up -d` berhasil; rollback teruji |
 | 7 Pilot | uji kampus, isi data resmi, alih operasi | 6 | pemilik produk menerima pilot, insiden/backup siap |
 
 ## Ketergantungan rinci
