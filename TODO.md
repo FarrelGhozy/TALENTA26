@@ -222,6 +222,12 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-26` di 
 
 ---
 
+## Tugas mandiri — Penyelarasan seluruh parameter sistem ke `.env.example` (25 November 2026)
+- [x] Audit seluruh referensi parameter environment di kode sistem (`frontend/vite.config.ts`, `frontend/src/config/env.ts`, `backend/src/lib/*`, `backend/src/app/middleware/*`, `prisma.config.ts`, `infra/docker-compose.yaml`, `infra/scripts/backup-db.sh`, `infra/scripts/backup-storage.ts`, dan `tests/e2e/helpers.ts`) serta lengkapi `.env.example` menjadi 55 parameter aktif/opsional tanpa menambah parameter baru di kode aplikasi (menambahkan 9 parameter yang sebelumnya belum tercantum: `VITE_BASE_PATH`, `PROD_BASE_PATH`, `MAINTENANCE_SCHEDULER_DISABLED`, `# LOCAL_STORAGE_DIR`, `E2E_BASE_URL`, `E2E_API_URL`, `HEADLESS`, `RATE_LIMIT_DISABLED`, dan `READ_CACHE_ENABLED`, serta melengkapi keterangan batas valid & perilaku default pada seluruh seksi).
+- Verifikasi: inventaris 55/55 variabel terkonfirmasi cocok (`Missing: []`, `Extra: []`), `loadConfig()` membaca `.env.example` tanpa error, `docker compose config -q` (baik `--env-file .env.example` maupun simulasi salinan `.env` di direktori terpisah seperti CI), `bash -n infra/scripts/backup-db.sh`, `bun infra/scripts/backup-storage.ts --help`, `bun run typecheck`, `bun run lint` (0 error/warning pada 157 file), 33 unit test (`bun test backend/tests/unit`), dan `git diff --check` lulus 100%.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).
