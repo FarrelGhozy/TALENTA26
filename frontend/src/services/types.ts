@@ -196,11 +196,49 @@ export interface CompetitionParticipantOption {
   individuals: Array<{ userId: string; fullName: string; nim: string; studyProgram: string }>;
 }
 
+export interface CompetitionDeletePreview {
+  competition: {
+    id: string;
+    name: string;
+    slug: string;
+    status: 'draft' | 'published' | 'archived';
+  };
+  counts: {
+    targets: number;
+    activeTargets: number;
+    teams: number;
+    lockedSelectionTeams: number;
+    teamMembers: number;
+    teamJoinRequests: number;
+    teamInvites: number;
+    roadmaps: number;
+    roadmapPhases: number;
+    roadmapTasks: number;
+    roadmapProgress: number;
+    consultants: number;
+    selections: number;
+    customPointRules: number;
+    preservedAchievements: number;
+  };
+  requiresTypedConfirmation: boolean;
+}
+
+export interface CompetitionDeleteResult {
+  deletedId: string;
+  name: string;
+  slug: string;
+  previousStatus: 'draft' | 'published' | 'archived';
+  deletedSummary: Omit<CompetitionDeletePreview['counts'], 'preservedAchievements'>;
+  preservedAchievementsCount: number;
+}
+
 export interface IValidatorContentService {
   getCompetitions(): Promise<ValidatorCompetitionItem[]>;
   createCompetition(data: Partial<ValidatorCompetitionItem> & { name: string; organizer: string; category: string; level: string; format: 'individu' | 'beregu'; minTeamMembers: number; maxTeamMembers: number; description: string }): Promise<ValidatorCompetitionItem>;
   updateCompetition?(id: string, data: Partial<ValidatorCompetitionItem>): Promise<ValidatorCompetitionItem>;
   setCompetitionStatus(id: string, status: 'published' | 'archived'): Promise<ValidatorCompetitionItem>;
+  getCompetitionDeletePreview?(id: string): Promise<CompetitionDeletePreview>;
+  deleteCompetition?(id: string): Promise<CompetitionDeleteResult>;
   getRoadmap?(competitionSlug: string): Promise<ValidatorRoadmapDetail>;
   saveRoadmap(competitionSlug: string, phases: ValidatorRoadmapDetail['phases']): Promise<unknown>;
   getConsultants?(): Promise<ValidatorConsultantItem[]>;

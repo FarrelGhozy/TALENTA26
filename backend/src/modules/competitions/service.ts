@@ -53,6 +53,42 @@ export interface UpdateCompetitionDto extends Partial<CreateCompetitionDto> {
   status?: CompetitionStatus;
 }
 
+export interface CompetitionDeletePreview {
+  competition: {
+    id: string;
+    name: string;
+    slug: string;
+    status: CompetitionStatus;
+  };
+  counts: {
+    targets: number;
+    activeTargets: number;
+    teams: number;
+    lockedSelectionTeams: number;
+    teamMembers: number;
+    teamJoinRequests: number;
+    teamInvites: number;
+    roadmaps: number;
+    roadmapPhases: number;
+    roadmapTasks: number;
+    roadmapProgress: number;
+    consultants: number;
+    selections: number;
+    customPointRules: number;
+    preservedAchievements: number;
+  };
+  requiresTypedConfirmation: boolean;
+}
+
+export interface CompetitionDeleteResult {
+  deletedId: string;
+  name: string;
+  slug: string;
+  previousStatus: CompetitionStatus;
+  deletedSummary: Omit<CompetitionDeletePreview['counts'], 'preservedAchievements'>;
+  preservedAchievementsCount: number;
+}
+
 export async function getDefaultInstitutionId(): Promise<string> {
   const inst = await prisma.institution.upsert({
     where: { code: 'unida-gontor' },
@@ -424,4 +460,197 @@ export async function getCompetitionParticipantsAdmin(competitionId: string, ins
     individuals: mappedStudents,
     students: mappedStudents,
   };
+}
+
+async function collectCompetitionImpact(
+  db: Prisma.TransactionClient | typeof prisma,
+  competitionId: string,
+  institutionId: string
+): Promise<{
+  teamIds: string[];
+  counts: CompetitionDeletePreview['counts'];
+}> {
+  const [teamRows, roadmapRows] = await Promise.all([
+    db.team.findMany({
+      where: { competitionId },
+      select: { id: true, status: true },
+    }),
+    db.roadmap.findMany({
+      where: { competitionId },
+      select: { id: true },
+    }),
+  ]);
+
+  const teamIds = teamRows.map((t) => t.id);
+  const lockedSelectionTeams = teamRows.filter((t) => t.status === 'terkunci_seleksi').length;
+  const roadmapIds = roadmapRows.map((r) => r.id);
+
+  const phaseIds =
+    roadmapIds.length > 0
+      ? (
+          await db.roadmapPhase.findMany({
+            where: { roadmapId: { in: roadmapIds } },
+            select: { id: true },
+          })
+        ).map((p) => p.id)
+      : [];
+
+  const taskIds =
+    phaseIds.length > 0
+      ? (
+          await db.roadmapTask.findMany({
+            where: { phaseId: { in: phaseIds } },
+            select: { id: true },
+          })
+        ).map((t) => t.id)
+      : [];
+
+  const [
+    targets,
+    activeTargets,
+    teamMembers,
+    teamJoinRequests,
+    teamInvites,
+    roadmapProgress,
+    consultants,
+    selections,
+    customPointRules,
+    preservedAchievements,
+  ] = await Promise.all([
+    db.studentTarget.count({ where: { competitionId } }),
+    db.studentTarget.count({ where: { competitionId, status: 'active' } }),
+    teamIds.length > 0 ? db.teamMember.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
+    teamIds.length > 0 ? db.teamJoinRequest.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
+    teamIds.length > 0 ? db.teamInvite.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
+    taskIds.length > 0 ? db.roadmapProgress.count({ where: { taskId: { in: taskIds } } }) : Promise.resolve(0),
+    db.consultantContact.count({ where: { competitionId } }),
+    db.internalSelection.count({ where: { competitionId } }),
+    db.competitionPointRule.count({ where: { competitionId } }),
+    db.achievement.count({
+      where: {
+        institutionId,
+        OR: [
+          { competitionId },
+          ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
+        ],
+      },
+    }),
+  ]);
+
+  return {
+    teamIds,
+    counts: {
+      targets,
+      activeTargets,
+      teams: teamIds.length,
+      lockedSelectionTeams,
+      teamMembers,
+      teamJoinRequests,
+      teamInvites,
+      roadmaps: roadmapIds.length,
+      roadmapPhases: phaseIds.length,
+      roadmapTasks: taskIds.length,
+      roadmapProgress,
+      consultants,
+      selections,
+      customPointRules,
+      preservedAchievements,
+    },
+  };
+}
+
+export async function getCompetitionDeletePreview(
+  id: string,
+  institutionId: string
+): Promise<CompetitionDeletePreview> {
+  const comp = await prisma.competition.findUnique({
+    where: { id },
+    select: { id: true, institutionId: true, name: true, slug: true, status: true },
+  });
+
+  if (!comp || comp.institutionId !== institutionId) {
+    throw new NotFoundError('Kompetisi tidak ditemukan');
+  }
+
+  const { counts } = await collectCompetitionImpact(prisma, id, institutionId);
+  const requiresTypedConfirmation =
+    comp.status === 'published' ||
+    counts.activeTargets > 0 ||
+    counts.teams > 0 ||
+    counts.selections > 0;
+
+  return {
+    competition: {
+      id: comp.id,
+      name: comp.name,
+      slug: comp.slug,
+      status: comp.status,
+    },
+    counts,
+    requiresTypedConfirmation,
+  };
+}
+
+export async function deleteCompetition(
+  id: string,
+  actorId: string,
+  institutionId: string
+): Promise<CompetitionDeleteResult> {
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.competition.findUnique({
+      where: { id },
+      select: { id: true, institutionId: true, name: true, slug: true, status: true },
+    });
+
+    if (!existing || existing.institutionId !== institutionId) {
+      throw new NotFoundError('Kompetisi tidak ditemukan');
+    }
+
+    const { teamIds, counts } = await collectCompetitionImpact(tx, id, institutionId);
+
+    // Pastikan seluruh input prestasi mahasiswa (termasuk berkas bukti, keputusan, & buku poin)
+    // tetap utuh dengan melepas tautan ke kompetisi dan tim sebelum menghapus kompetisi.
+    await tx.achievement.updateMany({
+      where: { institutionId, competitionId: id },
+      data: { competitionId: null },
+    });
+
+    if (teamIds.length > 0) {
+      await tx.achievement.updateMany({
+        where: { institutionId, teamId: { in: teamIds } },
+        data: { teamId: null },
+      });
+    }
+
+    // Hapus kompetisi; Prisma/MySQL cascade menghapus target, tim + anggota/undangan/permohonan,
+    // roadmap + fase/tugas/progres, kontak konsultasi, seleksi internal, dan aturan poin khusus lomba.
+    await tx.competition.delete({ where: { id } });
+
+    const { preservedAchievements, ...deletedSummary } = counts;
+    return {
+      deletedId: existing.id,
+      name: existing.name,
+      slug: existing.slug,
+      previousStatus: existing.status,
+      deletedSummary,
+      preservedAchievementsCount: preservedAchievements,
+    };
+  });
+
+  await recordAuditEvent({
+    institutionId,
+    actorId,
+    action: 'COMPETITION_DELETED',
+    targetType: 'Competition',
+    targetId: result.deletedId,
+    metadata: {
+      name: result.name,
+      slug: result.slug,
+      previousStatus: result.previousStatus,
+      deletedSummary: result.deletedSummary,
+      preservedAchievementsCount: result.preservedAchievementsCount,
+    },
+  });
+
+  return result;
 }

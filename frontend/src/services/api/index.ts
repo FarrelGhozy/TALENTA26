@@ -854,6 +854,10 @@ export const validatorContentApiService: IValidatorContentService = {
     apiFetch<ValidatorCompetitionItem>(`/admin/competitions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   setCompetitionStatus: (id, status) =>
     apiFetch<ValidatorCompetitionItem>(`/admin/competitions/${id}/${status === 'published' ? 'publish' : 'archive'}`, { method: 'POST' }),
+  getCompetitionDeletePreview: (id) =>
+    apiFetch(`/admin/competitions/${id}/delete-preview`),
+  deleteCompetition: (id) =>
+    apiFetch(`/admin/competitions/${id}`, { method: 'DELETE' }),
   getRoadmap: (competitionSlug) =>
     apiFetch<ValidatorRoadmapDetail>(`/admin/roadmaps/${competitionSlug}`),
   saveRoadmap: (competitionSlug, phases) =>

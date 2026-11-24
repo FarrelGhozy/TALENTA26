@@ -20,6 +20,64 @@ export const validatorContentMockService: IValidatorContentService = {
     if (!item) throw new Error('Kompetisi tidak ditemukan');
     return item;
   },
+  async getCompetitionDeletePreview(id) {
+    const item = competitions.find((entry) => entry.id === id);
+    if (!item) throw new Error('Kompetisi tidak ditemukan');
+    return {
+      competition: {
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        status: item.status,
+      },
+      counts: {
+        targets: 0,
+        activeTargets: 0,
+        teams: 0,
+        lockedSelectionTeams: 0,
+        teamMembers: 0,
+        teamJoinRequests: 0,
+        teamInvites: 0,
+        roadmaps: 0,
+        roadmapPhases: 0,
+        roadmapTasks: 0,
+        roadmapProgress: 0,
+        consultants: 0,
+        selections: 0,
+        customPointRules: 0,
+        preservedAchievements: 0,
+      },
+      requiresTypedConfirmation: item.status === 'published',
+    };
+  },
+  async deleteCompetition(id) {
+    const item = competitions.find((entry) => entry.id === id);
+    if (!item) throw new Error('Kompetisi tidak ditemukan');
+    competitions = competitions.filter((entry) => entry.id !== id);
+    return {
+      deletedId: item.id,
+      name: item.name,
+      slug: item.slug,
+      previousStatus: item.status,
+      deletedSummary: {
+        targets: 0,
+        activeTargets: 0,
+        teams: 0,
+        lockedSelectionTeams: 0,
+        teamMembers: 0,
+        teamJoinRequests: 0,
+        teamInvites: 0,
+        roadmaps: 0,
+        roadmapPhases: 0,
+        roadmapTasks: 0,
+        roadmapProgress: 0,
+        consultants: 0,
+        selections: 0,
+        customPointRules: 0,
+      },
+      preservedAchievementsCount: 0,
+    };
+  },
   async saveRoadmap() { return { ok: true }; },
   async createConsultant(data) {
     return {

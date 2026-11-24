@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   Award,
   BookOpenCheck,
   CheckCircle2,
   Contact,
   Edit3,
+  Loader2,
   Plus,
   Send,
+  ShieldCheck,
   Trash2,
   Trophy,
 } from 'lucide-react';
 import { validatorContentService } from '@talenta/services';
 import type {
+  CompetitionDeletePreview,
   CompetitionParticipantOption,
   PointTemplateItem,
   ValidatorCompetitionItem,
@@ -103,9 +107,15 @@ export const ValidatorContentPage: React.FC = () => {
     }>
   >([]);
 
-  // Kompetisi create/edit
+  // Kompetisi create/edit/delete
   const [editingCompId, setEditingCompId] = useState<string | null>(null);
   const [compForm, setCompForm] = useState(emptyCompForm);
+  const [deleteCompTarget, setDeleteCompTarget] = useState<ValidatorCompetitionItem | null>(null);
+  const [deleteCompPreview, setDeleteCompPreview] = useState<CompetitionDeletePreview | null>(null);
+  const [deleteCompLoading, setDeleteCompLoading] = useState(false);
+  const [deleteCompError, setDeleteCompError] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingComp, setDeletingComp] = useState(false);
 
   // Poin & Master Jenis/Sub-Lomba
   const [selectedPointCompId, setSelectedPointCompId] = useState('');
@@ -425,6 +435,83 @@ export const ValidatorContentPage: React.FC = () => {
     }
   };
 
+  const openDeleteCompetitionModal = async (item: ValidatorCompetitionItem) => {
+    setDeleteCompTarget(item);
+    setDeleteCompPreview(null);
+    setDeleteCompError('');
+    setDeleteConfirmText('');
+
+    if (!validatorContentService.getCompetitionDeletePreview) return;
+    setDeleteCompLoading(true);
+    try {
+      const preview = await validatorContentService.getCompetitionDeletePreview(item.id);
+      setDeleteCompPreview(preview);
+    } catch (err: any) {
+      setDeleteCompError(err?.message || 'Gagal memuat pratinjau dampak penghapusan lomba.');
+    } finally {
+      setDeleteCompLoading(false);
+    }
+  };
+
+  const closeDeleteCompetitionModal = () => {
+    if (deletingComp) return;
+    setDeleteCompTarget(null);
+    setDeleteCompPreview(null);
+    setDeleteCompError('');
+    setDeleteConfirmText('');
+  };
+
+  const handleConfirmDeleteCompetition = async () => {
+    if (!deleteCompTarget || !validatorContentService.deleteCompetition) return;
+    if (deleteCompPreview?.requiresTypedConfirmation && deleteConfirmText.trim().toUpperCase() !== 'HAPUS') {
+      return;
+    }
+
+    setDeletingComp(true);
+    try {
+      const result = await validatorContentService.deleteCompetition(deleteCompTarget.id);
+
+      if (editingCompId === deleteCompTarget.id) {
+        setEditingCompId(null);
+        setCompForm(emptyCompForm);
+      }
+      if (selectedPointCompId === deleteCompTarget.id) {
+        setSelectedPointCompId('');
+      }
+      if (roadmapSlug === deleteCompTarget.slug) {
+        setRoadmapSlug('');
+        setPhases([]);
+      }
+      if (selectionForm.competitionId === deleteCompTarget.id) {
+        setSelectionForm({
+          competitionId: '',
+          teamId: '',
+          userId: '',
+          stage: '',
+          result: 'menunggu',
+          organizerVerified: false,
+          notes: '',
+        });
+      }
+
+      setDeleteCompTarget(null);
+      setDeleteCompPreview(null);
+      setDeleteConfirmText('');
+      setDeleteCompError('');
+
+      const preservedNote =
+        result.preservedAchievementsCount > 0
+          ? ` ${result.preservedAchievementsCount} input prestasi mahasiswa tetap dipertahankan.`
+          : '';
+      notify(`Kompetisi "${result.name}" berhasil dihapus.${preservedNote}`, 'success');
+      await loadAll();
+    } catch (err: any) {
+      notify(err?.message || 'Gagal menghapus kompetisi.', 'error');
+    } finally {
+      setDeletingComp(false);
+    }
+  };
+
   const handleSaveSelection = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -728,6 +815,18 @@ export const ValidatorContentPage: React.FC = () => {
                           }}
                         >
                           Arsipkan
+                        </Button>
+                      )}
+                      {validatorContentService.deleteCompetition && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => void openDeleteCompetitionModal(item)}
+                          leftIcon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                          aria-label={`Hapus kompetisi ${item.name}`}
+                        >
+                          Hapus
                         </Button>
                       )}
                     </div>
@@ -1306,6 +1405,171 @@ export const ValidatorContentPage: React.FC = () => {
         <p className="text-sm text-slate-600">
           Apakah Anda yakin ingin menghapus kontak <strong>{deleteConsultantTarget?.name}</strong>?
         </p>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(deleteCompTarget)}
+        onClose={closeDeleteCompetitionModal}
+        title="Hapus Perlombaan Permanen"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={closeDeleteCompetitionModal} disabled={deletingComp}>
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              isLoading={deletingComp}
+              disabled={
+                deleteCompLoading ||
+                Boolean(deleteCompError) ||
+                !deleteCompPreview ||
+                (deleteCompPreview.requiresTypedConfirmation &&
+                  deleteConfirmText.trim().toUpperCase() !== 'HAPUS')
+              }
+              onClick={handleConfirmDeleteCompetition}
+              leftIcon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+            >
+              Hapus Permanen
+            </Button>
+          </div>
+        }
+      >
+        {deleteCompTarget && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-slate-900 truncate">{deleteCompTarget.name}</p>
+                <p className="text-[11px] text-slate-500">{deleteCompTarget.organizer}</p>
+              </div>
+              <Badge
+                color={
+                  deleteCompTarget.status === 'published'
+                    ? 'emerald'
+                    : deleteCompTarget.status === 'archived'
+                    ? 'slate'
+                    : 'amber'
+                }
+                size="sm"
+              >
+                {deleteCompTarget.status}
+              </Badge>
+            </div>
+
+            {deleteCompLoading && (
+              <div className="flex items-center gap-2.5 py-6 justify-center text-slate-500">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" aria-hidden="true" />
+                <span>Menghitung data terkait yang terdampak...</span>
+              </div>
+            )}
+
+            {deleteCompError && (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-rose-800 space-y-2">
+                <p className="font-semibold">{deleteCompError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => deleteCompTarget && void openDeleteCompetitionModal(deleteCompTarget)}
+                >
+                  Coba Muat Ulang
+                </Button>
+              </div>
+            )}
+
+            {deleteCompPreview && !deleteCompLoading && (
+              <>
+                <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-3.5 space-y-2">
+                  <div className="flex items-start gap-2 text-rose-800">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" aria-hidden="true" />
+                    <div>
+                      <p className="font-bold text-xs">Data terkait lomba yang akan ikut terhapus permanen:</p>
+                      <p className="text-[11px] text-rose-700/90">
+                        Tindakan ini tidak dapat dibatalkan. Gunakan tombol <strong>Arsipkan</strong> jika hanya ingin menyembunyikan lomba dari katalog.
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px] text-rose-900">
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Target mahasiswa</span>
+                      <strong>
+                        {deleteCompPreview.counts.targets}
+                        {deleteCompPreview.counts.activeTargets > 0
+                          ? ` (${deleteCompPreview.counts.activeTargets} aktif)`
+                          : ''}
+                      </strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Tim &amp; keanggotaan</span>
+                      <strong>
+                        {deleteCompPreview.counts.teams} tim / {deleteCompPreview.counts.teamMembers} org
+                      </strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Pengajuan &amp; undangan tim</span>
+                      <strong>
+                        {deleteCompPreview.counts.teamJoinRequests + deleteCompPreview.counts.teamInvites}
+                      </strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Roadmap &amp; tugas persiapan</span>
+                      <strong>
+                        {deleteCompPreview.counts.roadmaps} ({deleteCompPreview.counts.roadmapTasks} tugas)
+                      </strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Progres checklist mahasiswa</span>
+                      <strong>{deleteCompPreview.counts.roadmapProgress}</strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Kontak konsultan</span>
+                      <strong>{deleteCompPreview.counts.consultants}</strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Catatan seleksi internal</span>
+                      <strong>{deleteCompPreview.counts.selections}</strong>
+                    </li>
+                    <li className="rounded-lg bg-white/80 border border-rose-100 px-2.5 py-1.5 flex items-center justify-between">
+                      <span>Aturan poin khusus lomba</span>
+                      <strong>{deleteCompPreview.counts.customPointRules}</strong>
+                    </li>
+                  </ul>
+                  {deleteCompPreview.counts.lockedSelectionTeams > 0 && (
+                    <p className="text-[11px] font-semibold text-rose-800 bg-rose-100/80 rounded-lg px-2.5 py-1.5">
+                      Perhatian: Terdapat {deleteCompPreview.counts.lockedSelectionTeams} tim berstatus terkunci seleksi internal yang akan ikut terhapus.
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-start gap-2.5 text-emerald-900">
+                  <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-xs">
+                      Input Prestasi Mahasiswa Tetap Aman ({deleteCompPreview.counts.preservedAchievements} pengajuan)
+                    </p>
+                    <p className="text-[11px] text-emerald-800">
+                      Seluruh input prestasi mahasiswa, berkas bukti, riwayat verifikasi, catatan poin, dan papan peringkat <strong>tidak akan terhapus</strong>. Tautan katalog lomba/tim pada prestasi tersebut hanya dilepas secara otomatis.
+                    </p>
+                  </div>
+                </div>
+
+                {deleteCompPreview.requiresTypedConfirmation && (
+                  <div className="space-y-1.5 pt-1">
+                    <Input
+                      label='Ketik "HAPUS" untuk mengonfirmasi penghapusan permanen'
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="HAPUS"
+                      autoComplete="off"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      Konfirmasi ketik diwajibkan karena perlombaan ini berstatus terbit atau memiliki target/tim/seleksi terkait.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

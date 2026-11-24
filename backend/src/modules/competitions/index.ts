@@ -159,4 +159,23 @@ export const competitionRoutes = new Elysia()
       auth.user.institutionId
     );
     return { data: updated };
+  })
+  .get('/api/v1/admin/competitions/:id/delete-preview', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const data = await compService.getCompetitionDeletePreview(
+      params.id,
+      auth.user.institutionId
+    );
+    return { data };
+  })
+  .delete('/api/v1/admin/competitions/:id', async ({ auth, params }) => {
+    assertAuthenticated(auth);
+    assertRole(auth, ['validator', 'super_admin']);
+    const data = await compService.deleteCompetition(
+      params.id,
+      auth.user.id,
+      auth.user.institutionId
+    );
+    return { data };
   });
