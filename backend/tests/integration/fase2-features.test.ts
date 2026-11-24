@@ -633,6 +633,64 @@ describe('Fase 2 — Fitur Utama, Sistem Poin 3 Lapis, Prestasi Kelompok, Avatar
     const authLifeJson = (await authLifeRes.json()) as any;
     const authLifeMhs1 = authLifeJson.data.ranking.find((r: any) => r.userId === mhs1Id);
     expect(authLifeMhs1?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    // 3. Endpoint internal terotorisasi mengekspos avatarUrl aman & bebas kebocoran avatarObjectKey
+    const adminAchListRes = await app.handle(
+      new Request('http://localhost/api/v1/admin/achievements', {
+        headers: { Authorization: `Bearer ${validatorToken}` },
+      })
+    );
+    expect(adminAchListRes.status).toBe(200);
+    const adminAchListText = await adminAchListRes.text();
+    expect(adminAchListText).not.toContain('avatarObjectKey');
+    const adminAchRow = JSON.parse(adminAchListText).data.find((a: any) => a.id === groupAchId);
+    expect(adminAchRow?.user?.studentProfile?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    const adminAchDetailRes = await app.handle(
+      new Request(`http://localhost/api/v1/admin/achievements/${groupAchId}`, {
+        headers: { Authorization: `Bearer ${validatorToken}` },
+      })
+    );
+    expect(adminAchDetailRes.status).toBe(200);
+    const adminAchDetailText = await adminAchDetailRes.text();
+    expect(adminAchDetailText).not.toContain('avatarObjectKey');
+    const adminAchDetail = JSON.parse(adminAchDetailText).data;
+    expect(adminAchDetail.user?.studentProfile?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+    const adminPart1 = adminAchDetail.participants.find((p: any) => p.userId === mhs1Id);
+    expect(adminPart1?.user?.studentProfile?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    const meAchDetailRes = await app.handle(
+      new Request(`http://localhost/api/v1/me/achievements/${groupAchId}`, {
+        headers: { Authorization: `Bearer ${mhs2Token}` },
+      })
+    );
+    expect(meAchDetailRes.status).toBe(200);
+    const meAchDetailText = await meAchDetailRes.text();
+    expect(meAchDetailText).not.toContain('avatarObjectKey');
+    const mePart1 = JSON.parse(meAchDetailText).data.participants.find((p: any) => p.userId === mhs1Id);
+    expect(mePart1?.user?.studentProfile?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    const dirRes = await app.handle(
+      new Request('http://localhost/api/v1/students/directory?q=Ketua', {
+        headers: { Authorization: `Bearer ${mhs2Token}` },
+      })
+    );
+    expect(dirRes.status).toBe(200);
+    const dirText = await dirRes.text();
+    expect(dirText).not.toContain('avatarObjectKey');
+    const dirMhs1 = JSON.parse(dirText).data.find((s: any) => s.userId === mhs1Id);
+    expect(dirMhs1?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
+
+    const sysUsersRes = await app.handle(
+      new Request(`http://localhost/api/v1/system/users?search=F2NIM1_${timeId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
+    );
+    expect(sysUsersRes.status).toBe(200);
+    const sysUsersText = await sysUsersRes.text();
+    expect(sysUsersText).not.toContain('avatarObjectKey');
+    const sysMhs1 = JSON.parse(sysUsersText).data.users.find((u: any) => u.id === mhs1Id);
+    expect(sysMhs1?.avatarUrl).toContain(`/api/v1/users/${mhs1Id}/avatar`);
   });
 
   it('6. Roadmap non-destruktif mempertahankan progres mahasiswa & Seleksi Internal mendukung peserta individu', async () => {

@@ -308,6 +308,56 @@ async function resolveCategoryAndSubCategory(
   return { competitionCategoryId: validCatId, subCategoryId: validSubId };
 }
 
+function resolveSafeAvatarUrl(
+  userId: string,
+  profile?: { avatarObjectKey?: string | null; updatedAt?: Date | null } | null
+): string | null {
+  if (!profile?.avatarObjectKey) return null;
+  const version = profile.updatedAt ? profile.updatedAt.getTime() : 1;
+  return `/api/v1/users/${userId}/avatar?v=${version}`;
+}
+
+function sanitizeAchievementUser<
+  T extends {
+    id: string;
+    studentProfile?: {
+      avatarObjectKey?: string | null;
+      updatedAt?: Date | null;
+      [key: string]: any;
+    } | null;
+  },
+>(user?: T | null) {
+  if (!user) return user;
+  if (!user.studentProfile) return user;
+  const { avatarObjectKey, updatedAt, ...safeProfile } = user.studentProfile;
+  return {
+    ...user,
+    studentProfile: {
+      ...safeProfile,
+      avatarUrl: resolveSafeAvatarUrl(user.id, { avatarObjectKey, updatedAt }),
+    },
+  };
+}
+
+function sanitizeAchievementParticipants<
+  T extends {
+    user?: {
+      id: string;
+      studentProfile?: {
+        avatarObjectKey?: string | null;
+        updatedAt?: Date | null;
+        [key: string]: any;
+      } | null;
+    } | null;
+  },
+>(participants?: T[]) {
+  if (!Array.isArray(participants)) return participants;
+  return participants.map((p) => ({
+    ...p,
+    user: sanitizeAchievementUser(p.user),
+  }));
+}
+
 // 1. Ambil daftar prestasi milik mahasiswa login (termasuk anggota kelompok)
 export async function getStudentAchievements(userId: string, status?: string) {
   const whereClause: Prisma.AchievementWhereInput = {
@@ -317,7 +367,7 @@ export async function getStudentAchievements(userId: string, status?: string) {
     whereClause.status = status as AchievementStatus;
   }
 
-  return prisma.achievement.findMany({
+  const rows = await prisma.achievement.findMany({
     where: whereClause,
     include: {
       competition: {
@@ -339,7 +389,13 @@ export async function getStudentAchievements(userId: string, status?: string) {
               id: true,
               fullName: true,
               studentProfile: {
-                select: { fullName: true, nim: true, studyProgram: true },
+                select: {
+                  fullName: true,
+                  nim: true,
+                  studyProgram: true,
+                  avatarObjectKey: true,
+                  updatedAt: true,
+                },
               },
             },
           },
@@ -367,6 +423,11 @@ export async function getStudentAchievements(userId: string, status?: string) {
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return rows.map((row) => ({
+    ...row,
+    participants: sanitizeAchievementParticipants(row.participants),
+  }));
 }
 
 // 2. Ambil detail prestasi
@@ -390,6 +451,8 @@ export async function getAchievementById(
               nim: true,
               studyProgram: true,
               faculty: true,
+              avatarObjectKey: true,
+              updatedAt: true,
             },
           },
         },
@@ -418,7 +481,13 @@ export async function getAchievementById(
               id: true,
               fullName: true,
               studentProfile: {
-                select: { fullName: true, nim: true, studyProgram: true },
+                select: {
+                  fullName: true,
+                  nim: true,
+                  studyProgram: true,
+                  avatarObjectKey: true,
+                  updatedAt: true,
+                },
               },
             },
           },
@@ -476,6 +545,8 @@ export async function getAchievementById(
 
   return {
     ...achievement,
+    user: sanitizeAchievementUser(achievement.user),
+    participants: sanitizeAchievementParticipants(achievement.participants),
     pointRecommendation,
   };
 }
@@ -1011,7 +1082,7 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
     ];
   }
 
-  return prisma.achievement.findMany({
+  const rows = await prisma.achievement.findMany({
     where: whereClause,
     include: {
       user: {
@@ -1025,6 +1096,8 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
               nim: true,
               studyProgram: true,
               faculty: true,
+              avatarObjectKey: true,
+              updatedAt: true,
             },
           },
         },
@@ -1048,7 +1121,13 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
               id: true,
               fullName: true,
               studentProfile: {
-                select: { fullName: true, nim: true, studyProgram: true },
+                select: {
+                  fullName: true,
+                  nim: true,
+                  studyProgram: true,
+                  avatarObjectKey: true,
+                  updatedAt: true,
+                },
               },
             },
           },
@@ -1077,6 +1156,12 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  return rows.map((row) => ({
+    ...row,
+    user: sanitizeAchievementUser(row.user),
+    participants: sanitizeAchievementParticipants(row.participants),
+  }));
 }
 
 // 7. Keputusan validator (approve, request_changes, reject) dengan Concurrency Lock, 3-Lapis Poin, & Kelompok

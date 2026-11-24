@@ -4,6 +4,7 @@ import { AlertCircle, ChevronRight, FileText, Edit3, Users, XCircle } from 'luci
 import { Achievement } from '../../../types';
 import { formatDate, formatAchievementCategory, formatAchievementLevel } from '../../../lib/format';
 import { AchievementStatusBadge, AchievementTypeBadge } from './StatusBadge';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 
 export const AchievementTable: React.FC<{
   achievements: Achievement[];
@@ -91,10 +92,17 @@ export const AchievementTable: React.FC<{
                         : ''}
                     </div>
                     {showSubmitter && item.submitterName && (
-                      <div className="text-[11px] text-slate-600 font-semibold mt-1">
-                        Pengaju: {item.submitterName}
-                        {item.submitterNim ? ` (${item.submitterNim})` : ''}
-                        {item.submitterProdi ? ` · ${item.submitterProdi}` : ''}
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <UserAvatar
+                          src={item.submitterAvatarUrl}
+                          name={item.submitterName}
+                          size="xs"
+                        />
+                        <div className="text-[11px] text-slate-600 font-semibold leading-tight min-w-0 truncate">
+                          {item.submitterName}
+                          {item.submitterNim ? ` (${item.submitterNim})` : ''}
+                          {item.submitterProdi ? ` · ${item.submitterProdi}` : ''}
+                        </div>
                       </div>
                     )}
                     {item.catatan && (

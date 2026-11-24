@@ -271,6 +271,7 @@ export interface AchievementParticipantItem {
   fullName: string;
   nim?: string;
   studyProgram?: string;
+  avatarUrl?: string | null;
   roleInTeam?: string | null;
   isSubmitter: boolean;
 }
@@ -348,9 +349,11 @@ export interface CompetitionPointRuleItem {
 export interface StudentDirectoryItem {
   userId: string;
   fullName: string;
-  nim: string;
+  nim?: string;
   studyProgram: string;
   faculty: string;
+  enrollmentYear?: number | null;
+  avatarUrl?: string | null;
 }
 
 export type AchievementCategory =
@@ -409,6 +412,7 @@ export interface Achievement {
   submitterName?: string;
   submitterNim?: string;
   submitterProdi?: string;
+  submitterAvatarUrl?: string | null;
 }
 
 export interface RankingItem {

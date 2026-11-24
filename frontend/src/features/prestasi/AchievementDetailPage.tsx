@@ -28,6 +28,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { AchievementStatusBadge, AchievementTypeBadge } from './components/StatusBadge';
 import { formatAchievementCategory, formatAchievementLevel, formatDate } from '../../lib/format';
 
@@ -284,10 +285,15 @@ export const AchievementDetailPage: React.FC = () => {
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {item.participants.map((p) => (
-              <div key={p.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
-                <div>
-                  <div className="font-bold text-slate-900">{p.fullName}</div>
-                  <div className="text-[11px] text-slate-500">{p.nim || '-'} • {p.studyProgram || '-'}</div>
+              <div key={p.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <UserAvatar src={p.avatarUrl} name={p.fullName} size="sm" />
+                  <div className="min-w-0">
+                    <div className="font-bold text-slate-900 truncate">{p.fullName}</div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {p.nim || '-'} • {p.studyProgram || '-'}
+                    </div>
+                  </div>
                 </div>
                 {p.isSubmitter && <Badge color="blue" size="sm">Pengaju</Badge>}
               </div>

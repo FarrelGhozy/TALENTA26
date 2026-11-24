@@ -318,6 +318,8 @@ export async function searchStudentDirectory(institutionId: string, query?: stri
           studyProgram: true,
           faculty: true,
           enrollmentYear: true,
+          avatarObjectKey: true,
+          updatedAt: true,
         },
       },
     },
@@ -327,11 +329,18 @@ export async function searchStudentDirectory(institutionId: string, query?: stri
 
   return students
     .filter((s) => s.studentProfile)
-    .map((s) => ({
-      userId: s.id,
-      fullName: s.studentProfile!.fullName,
-      studyProgram: s.studentProfile!.studyProgram,
-      faculty: s.studentProfile!.faculty,
-      enrollmentYear: s.studentProfile!.enrollmentYear,
-    }));
+    .map((s) => {
+      const profile = s.studentProfile!;
+      const avatarUrl = profile.avatarObjectKey
+        ? `/api/v1/users/${s.id}/avatar?v=${profile.updatedAt ? profile.updatedAt.getTime() : 1}`
+        : null;
+      return {
+        userId: s.id,
+        fullName: profile.fullName,
+        studyProgram: profile.studyProgram,
+        faculty: profile.faculty,
+        enrollmentYear: profile.enrollmentYear,
+        avatarUrl,
+      };
+    });
 }

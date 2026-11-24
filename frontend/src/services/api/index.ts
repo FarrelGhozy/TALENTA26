@@ -648,6 +648,7 @@ function mapBackendAchievementToFrontend(raw: any): Achievement {
           fullName: p.user?.studentProfile?.fullName || p.user?.fullName || 'Mahasiswa',
           nim: p.user?.studentProfile?.nim,
           studyProgram: p.user?.studentProfile?.studyProgram,
+          avatarUrl: p.user?.studentProfile?.avatarUrl ?? null,
           roleInTeam: p.roleInTeam,
           isSubmitter: Boolean(p.isSubmitter),
         }))
@@ -678,6 +679,7 @@ function mapBackendAchievementToFrontend(raw: any): Achievement {
     submitterName: raw.user?.studentProfile?.fullName || raw.user?.fullName || undefined,
     submitterNim: raw.user?.studentProfile?.nim || undefined,
     submitterProdi: raw.user?.studentProfile?.studyProgram || undefined,
+    submitterAvatarUrl: raw.user?.studentProfile?.avatarUrl ?? null,
   };
 }
 

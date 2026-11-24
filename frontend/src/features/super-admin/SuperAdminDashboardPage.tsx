@@ -23,6 +23,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { useToast } from '../../components/ui/Toast';
 import { useAdminNav } from '../admin/AdminNavContext';
 import { systemService } from '@talenta/services';
@@ -526,9 +527,19 @@ export const SuperAdminDashboardPage: React.FC = () => {
                         return (
                           <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="p-3.5">
-                              <div className="font-bold text-slate-900">{displayName}</div>
-                              <div className="text-[11px] text-slate-500 mt-0.5">
-                                {u.email} {u.studentProfile?.nim ? `• NIM: ${u.studentProfile.nim}` : ''}
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <UserAvatar
+                                  src={u.avatarUrl || u.studentProfile?.avatarUrl}
+                                  name={displayName}
+                                  size="sm"
+                                  tone={isAdminUser ? 'blue' : 'slate'}
+                                />
+                                <div className="min-w-0">
+                                  <div className="font-bold text-slate-900 truncate">{displayName}</div>
+                                  <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                                    {u.email} {u.studentProfile?.nim ? `• NIM: ${u.studentProfile.nim}` : ''}
+                                  </div>
+                                </div>
                               </div>
                             </td>
                             <td className="p-3.5">

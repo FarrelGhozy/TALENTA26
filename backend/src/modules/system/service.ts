@@ -67,14 +67,34 @@ export async function getUsers(institutionId: string, params: UserFilterParams) 
             studyProgram: true,
             faculty: true,
             phone: true,
+            avatarObjectKey: true,
+            updatedAt: true,
           },
         },
       },
     }),
   ]);
 
+  const sanitizedUsers = users.map((u) => {
+    if (!u.studentProfile) {
+      return { ...u, avatarUrl: null };
+    }
+    const { avatarObjectKey, updatedAt, ...safeProfile } = u.studentProfile;
+    const avatarUrl = avatarObjectKey
+      ? `/api/v1/users/${u.id}/avatar?v=${updatedAt ? updatedAt.getTime() : 1}`
+      : null;
+    return {
+      ...u,
+      avatarUrl,
+      studentProfile: {
+        ...safeProfile,
+        avatarUrl,
+      },
+    };
+  });
+
   return {
-    users,
+    users: sanitizedUsers,
     total,
     page,
     limit,

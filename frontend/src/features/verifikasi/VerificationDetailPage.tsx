@@ -23,6 +23,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PageLoading } from '../../components/ui/Skeleton';
+import { UserAvatar } from '../../components/ui/UserAvatar';
 import { useAdminNav } from '../admin/AdminNavContext';
 
 export const VerificationDetailPage: React.FC = () => {
@@ -300,7 +301,7 @@ export const VerificationDetailPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">
                   Mahasiswa Pengaju:
@@ -309,12 +310,21 @@ export const VerificationDetailPage: React.FC = () => {
                   {achievement.participationType === 'kelompok' ? 'Prestasi Kelompok' : 'Individu'}
                 </Badge>
               </div>
-              <strong className="text-slate-900 text-sm block">
-                {achievement.submitterName || achievement.userId}
-              </strong>
-              <div className="text-[11px] text-slate-500">
-                {achievement.submitterNim ? `NIM ${achievement.submitterNim} • ` : ''}
-                {achievement.submitterProdi || 'Data prodi tidak tercatat'}
+              <div className="flex items-center gap-3">
+                <UserAvatar
+                  src={achievement.submitterAvatarUrl}
+                  name={achievement.submitterName || achievement.userId}
+                  size="md"
+                />
+                <div className="min-w-0">
+                  <strong className="text-slate-900 text-sm block truncate">
+                    {achievement.submitterName || achievement.userId}
+                  </strong>
+                  <div className="text-[11px] text-slate-500">
+                    {achievement.submitterNim ? `NIM ${achievement.submitterNim} • ` : ''}
+                    {achievement.submitterProdi || 'Data prodi tidak tercatat'}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -329,13 +339,16 @@ export const VerificationDetailPage: React.FC = () => {
                   {achievement.participants.map((p) => (
                     <li
                       key={p.id}
-                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-[11px]"
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 text-[11px]"
                     >
-                      <div>
-                        <strong className="text-slate-900">{p.fullName}</strong>
-                        <span className="text-slate-500 block">
-                          {p.nim || '-'} • {p.studyProgram || '-'}
-                        </span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <UserAvatar src={p.avatarUrl} name={p.fullName} size="sm" />
+                        <div className="min-w-0">
+                          <strong className="text-slate-900 block truncate">{p.fullName}</strong>
+                          <span className="text-slate-500 block truncate">
+                            {p.nim || '-'} • {p.studyProgram || '-'}
+                          </span>
+                        </div>
                       </div>
                       {p.isSubmitter && <Badge color="blue" size="sm">Pengaju</Badge>}
                     </li>

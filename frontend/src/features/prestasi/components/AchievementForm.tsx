@@ -28,6 +28,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
+import { UserAvatar } from '../../../components/ui/UserAvatar';
 
 interface AchievementFormProps {
   userId: string;
@@ -502,7 +503,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
 
           <div className="space-y-2">
             <label className="block text-[11px] font-bold text-slate-700">
-              Cari & Tambahkan Anggota Mahasiswa Lain (Nama atau NIM)
+              Cari &amp; Tambahkan Anggota Mahasiswa Lain (Nama atau Program Studi)
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -510,20 +511,24 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
                 type="search"
                 value={memberSearchQuery}
                 onChange={(e) => setMemberSearchQuery(e.target.value)}
-                placeholder="Ketik nama mahasiswa atau NIM..."
+                placeholder="Ketik nama mahasiswa atau program studi..."
                 className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-xs"
               />
             </div>
 
             {directoryResults.length > 0 && (
-              <div className="max-h-36 overflow-y-auto bg-white border border-slate-200 rounded-xl divide-y divide-slate-100">
+              <div className="max-h-44 overflow-y-auto bg-white border border-slate-200 rounded-xl divide-y divide-slate-100">
                 {directoryResults.slice(0, 6).map((s) => {
                   const alreadyAdded = selectedMembers.some((m) => m.userId === s.userId);
+                  const subtitle = [s.nim, s.studyProgram, s.faculty].filter(Boolean).join(' • ');
                   return (
-                    <div key={s.userId} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
-                      <div className="min-w-0">
-                        <div className="font-bold text-slate-800 truncate">{s.fullName}</div>
-                        <div className="text-[10px] text-slate-400">{s.nim} • {s.studyProgram}</div>
+                    <div key={s.userId} className="px-3 py-2 flex items-center justify-between gap-2.5 text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <UserAvatar src={s.avatarUrl} name={s.fullName} size="xs" />
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-800 truncate">{s.fullName}</div>
+                          <div className="text-[10px] text-slate-400 truncate">{subtitle || '-'}</div>
+                        </div>
                       </div>
                       <Button
                         type="button"
@@ -546,9 +551,19 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
                 {selectedMembers.map((m) => (
                   <span
                     key={m.userId}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold"
+                    className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold"
                   >
-                    {m.fullName} ({m.nim})
+                    <UserAvatar
+                      src={m.avatarUrl}
+                      name={m.fullName}
+                      size="xs"
+                      className="h-5! w-5! text-[9px]!"
+                      decorative
+                    />
+                    <span>
+                      {m.fullName}
+                      {m.nim ? ` (${m.nim})` : m.studyProgram ? ` · ${m.studyProgram}` : ''}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(m.userId)}
