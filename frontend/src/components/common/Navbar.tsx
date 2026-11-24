@@ -19,7 +19,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
-import { TalentaMark } from './TalentaMark';
+import { UscBrand } from './UscBrand';
 import { UserAvatar } from '../ui/UserAvatar';
 
 interface NavItem {
@@ -157,26 +157,14 @@ export const Navbar: React.FC = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        {/* Identitas aplikasi Simpul Talenta */}
+        {/* Identitas aplikasi UNIDA Student Championship (USC) */}
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex min-h-[44px] items-center gap-3 group">
-            <TalentaMark tone={isLanding ? 'light' : 'color'} />
-            <div>
-              <span
-                className={`font-black tracking-tight block text-base leading-none ${
-                  isLanding ? 'text-white' : 'text-blue-950'
-                }`}
-              >
-                TALENTA
-              </span>
-              <span
-                className={`text-[10px] font-semibold block leading-tight mt-1 ${
-                  isLanding ? 'text-slate-300' : 'text-slate-500'
-                }`}
-              >
-                Universitas Darussalam Gontor
-              </span>
-            </div>
+          <Link to="/" className="flex min-h-[44px] items-center group">
+            <UscBrand
+              variant="responsive-nav"
+              tone={isLanding ? 'light' : 'dark'}
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation - Clean Text with Underline Indicator */}

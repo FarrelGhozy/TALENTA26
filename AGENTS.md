@@ -1,4 +1,4 @@
-# AGENTS — Panduan kerja TALENTA
+# AGENTS — Panduan kerja UNIDA STUDENT CHAMPIONSHIP (USC)
 
 ## Status dan sumber keputusan
 - Produk yang dituju: sistem pembinaan lomba dan pengelolaan prestasi mahasiswa UNIDA Gontor, rilis pertama satu kampus.

@@ -11,7 +11,7 @@ export const DemoBanner: React.FC = () => {
       <div className="max-w-6xl mx-auto w-full flex items-center justify-center gap-2">
         <Info className="w-3.5 h-3.5 text-blue-300 shrink-0" />
         <span className="font-extrabold uppercase tracking-wider text-[10px] bg-blue-950/60 text-blue-200 px-2 py-0.5 rounded-full border border-blue-700/50">
-          Mode Simulasi UNIDA Gontor
+          Mode Simulasi USC — UNIDA Gontor
         </span>
         <span className="text-blue-100 font-medium hidden sm:inline">
           Data simulasi (Mock: {USE_MOCK ? 'Aktif' : 'Nonaktif'}).

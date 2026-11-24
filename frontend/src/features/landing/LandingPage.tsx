@@ -29,6 +29,7 @@ import { Card, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { UserAvatar } from '../../components/ui/UserAvatar';
+import { UscBrand } from '../../components/common/UscBrand';
 import { assetUrl } from '../../lib/asset';
 
 const heroSlides = [
@@ -426,7 +427,7 @@ export const LandingPage: React.FC = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm"
         >
           <h2 id="ringkasan-title" className="sr-only">
-            Ringkasan Ekosistem TALENTA Periode Aktif
+            Ringkasan Ekosistem USC Periode Aktif
           </h2>
 
           <div className="flex items-center gap-3.5 p-2 rounded-xl bg-slate-50/70 border border-slate-100">
@@ -949,11 +950,14 @@ export const LandingPage: React.FC = () => {
           aria-labelledby="cta-title"
           className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-950 rounded-3xl p-8 sm:p-10 text-white text-center space-y-4 shadow-xl"
         >
+          <div className="flex justify-center">
+            <UscBrand variant="emblem" tone="light" size="md" />
+          </div>
           <h2 id="cta-title" className="text-2xl sm:text-3xl font-black tracking-tight">
             Mulai Perjalanan Prestasimu di UNIDA Gontor
           </h2>
           <p className="text-xs sm:text-sm text-blue-100 max-w-xl mx-auto leading-relaxed">
-            Pilih target kompetisi, bangun tim yang solid, ikuti roadmap persiapan, dan catat setiap capaianmu secara terstruktur bersama TALENTA.
+            Pilih target kompetisi, bangun tim yang solid, ikuti roadmap persiapan, dan catat setiap capaianmu secara terstruktur bersama UNIDA Student Championship (USC).
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-3">
             {currentUser ? (
@@ -962,7 +966,7 @@ export const LandingPage: React.FC = () => {
                   to={portalTarget}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[46px] rounded-xl border border-white/85 bg-white text-blue-900 hover:bg-blue-50 text-sm sm:text-base font-bold shadow-sm transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
                 >
-                  <span>Buka Portal TALENTA</span>
+                  <span>Buka Portal USC</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
                 <Link

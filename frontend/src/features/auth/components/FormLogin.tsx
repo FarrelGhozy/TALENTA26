@@ -35,7 +35,7 @@ export const FormLogin: React.FC<FormLoginProps> = ({ onSubmit, isLoading }) => 
         className="space-y-4 bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs"
       >
         <div className="text-center mb-3">
-          <h3 className="text-lg font-black text-slate-900 tracking-tight">Masuk dengan akun TALENTA</h3>
+          <h3 className="text-lg font-black text-slate-900 tracking-tight">Masuk dengan akun USC</h3>
           <p className="text-sm text-slate-500 mt-1">Peran akses ditentukan oleh akun, bukan dipilih saat login.</p>
         </div>
 

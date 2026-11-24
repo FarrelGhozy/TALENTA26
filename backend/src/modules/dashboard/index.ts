@@ -54,7 +54,7 @@ export const dashboardRoutes = new Elysia()
       );
 
       const todayStr = new Date().toISOString().split('T')[0];
-      const filename = `rekap-prestasi-talenta-${todayStr}.csv`;
+      const filename = `rekap-prestasi-usc-${todayStr}.csv`;
 
       return new Response(csvContent, {
         headers: {

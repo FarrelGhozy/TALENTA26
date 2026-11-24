@@ -1,4 +1,4 @@
-// Prisma Schema untuk TALENTA — Tahap 3: Domain Mahasiswa & Pembinaan Kompetisi
+// Prisma Schema untuk UNIDA Student Championship (USC) — Domain Mahasiswa & Pembinaan Kompetisi
 // Menyesuaikan docs/10-model-data-mock.md, docs/05, docs/06, docs/07
 
 generator client {

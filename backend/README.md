@@ -1,4 +1,4 @@
-# Backend TALENTA
+# Backend UNIDA Student Championship (USC)
 
 Backend Bun/Elysia, Prisma 7 (`@prisma/adapter-mariadb` / MySQL), migrasi database, integrasi S3 compatible (RustFS/MinIO) dengan streaming + `ETag`/`304`, proteksi DDoS berlapis (rate limiter bounded LRU, Argon2id concurrency semaphore, validasi payload ketat), serta worker & CLI pemeliharaan anti-bloat MySQL/RustFS (`src/scripts/maintenance.ts`) berada di direktori ini.
 

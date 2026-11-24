@@ -712,7 +712,7 @@ export const AchievementForm: React.FC<AchievementFormProps> = ({
         />
         <div className="space-y-0.5">
           <span className="font-bold text-slate-900 block">
-            Capaian Berasal dari Seleksi Internal Kampus TALENTA
+            Capaian Berasal dari Seleksi Internal Kampus USC
           </span>
           <span className="text-[11px] text-slate-500 block leading-relaxed">
             Centang opsi ini jika prestasi diperoleh melalui jalur seleksi internal.

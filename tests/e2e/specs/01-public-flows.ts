@@ -10,13 +10,50 @@ export async function runPublicFlows(page: Page): Promise<void> {
   await page.waitForLoadState('domcontentloaded');
 
   const title = await page.title();
-  if (!title.includes('TALENTA UNIDA Gontor')) {
+  if (!title.includes('UNIDA Student Championship') || !title.includes('USC')) {
     throw new Error(`Judul landing page tidak sesuai: ${title}`);
   }
 
-  // Periksa elemen utama landing
-  const brandLogo = page.locator('text=TALENTA UNIDA GONTOR');
-  await brandLogo.first().waitFor({ state: 'visible', timeout: 5000 });
+  // Periksa aset logo USC termuat (Emblem & Wordmark pada navbar desktop) serta footer aktif
+  await page.locator('header a[href="/"]').first().waitFor({ state: 'visible', timeout: 8000 });
+  await page.waitForFunction(
+    () => {
+      const imgs = Array.from(document.querySelectorAll('header a[href="/"] img'));
+      const visibleImgs = imgs.filter((img) => {
+        const el = img as HTMLImageElement;
+        return el.offsetWidth > 0 && el.offsetHeight > 0;
+      });
+      return (
+        visibleImgs.length > 0 &&
+        visibleImgs.every((img) => {
+          const el = img as HTMLImageElement;
+          return el.complete && el.naturalWidth > 0;
+        })
+      );
+    },
+    { timeout: 8000 }
+  );
+
+  const footerBrand = page.locator('footer').getByText(/UNIDA Student Championship \(USC\)/i).first();
+  await footerBrand.waitFor({ state: 'visible', timeout: 5000 });
+
+  // Verifikasi semua tautan favicon, apple-touch-icon, dan manifest mengembalikan HTTP 200
+  const assetLinks = await page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')
+    )
+      .map((el) => (el as HTMLLinkElement).href)
+      .filter(Boolean)
+  );
+  if (assetLinks.length < 5) {
+    throw new Error(`Tautan favicon/manifest tidak lengkap (ditemukan ${assetLinks.length})`);
+  }
+  for (const url of assetLinks) {
+    const res = await page.request.get(url);
+    if (res.status() !== 200) {
+      throw new Error(`Aset identitas ${url} gagal dimuat (HTTP ${res.status()})`);
+    }
+  }
 
   // Verifikasi tidak ada icon AI atau klaim AI
   const sparklesIcon = await page.locator('svg.lucide-sparkles').count();

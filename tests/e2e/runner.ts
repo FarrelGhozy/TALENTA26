@@ -34,7 +34,7 @@ async function verifyServers(): Promise<boolean> {
 
 async function main() {
   console.log('\n\x1b[1m\x1b[34m================================================================');
-  console.log('   TALENTA UNIDA GONTOR — PLAYWRIGHT END-TO-END TEST SUITE');
+  console.log('   UNIDA STUDENT CHAMPIONSHIP (USC) — PLAYWRIGHT E2E TEST SUITE');
   console.log('================================================================\x1b[0m\n');
 
   const startTime = Date.now();

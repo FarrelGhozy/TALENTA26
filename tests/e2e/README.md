@@ -1,4 +1,4 @@
-# TALENTA — Dokumentasi Pengujian Otomatis End-to-End (Playwright)
+# UNIDA Student Championship (USC) — Dokumentasi Pengujian Otomatis End-to-End (Playwright)
 
 Direktori ini berisi rangkaian pengujian end-to-end (E2E) otomatis menggunakan Playwright dan Bun. Pengujian memvalidasi integrasi nyata antara Frontend React dan Backend Elysia/Bun/MySQL tanpa mock.
 

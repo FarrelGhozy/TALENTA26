@@ -1,5 +1,5 @@
 # ==============================================================================
-# TALENTA UNIDA Gontor — Docker Compose Khusus Production (GHCR)
+# UNIDA Student Championship (USC) — Docker Compose Khusus Production (GHCR)
 # ==============================================================================
 # Konsep:
 # - Docker Compose ini HANYA untuk runtime production di server (tidak melakukan build).

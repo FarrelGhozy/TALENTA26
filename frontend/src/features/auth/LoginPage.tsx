@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap, KeyRound, Info, ShieldCheck, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { FormLogin } from './components/FormLogin';
+import { UscBrand } from '../../components/common/UscBrand';
 import { USE_MOCK, APP_ENV } from '../../config/env';
 import { Role } from '../../types';
 
@@ -107,15 +108,20 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-10 space-y-7">
-      {/* Institution Banner / Subtitle */}
-      <div className="text-center space-y-1">
-        <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 px-3 py-0.5 rounded-full border border-blue-200/60 uppercase tracking-widest">
-          <GraduationCap className="w-3.5 h-3.5 text-blue-700" />
-          Universitas Darussalam Gontor
+      {/* Institution Banner / Brand Header */}
+      <div className="text-center space-y-3">
+        <div className="flex justify-center">
+          <UscBrand variant="stacked" size="md" priority />
         </div>
-        <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
-          Portal Pembinaan dan Prestasi Mahasiswa
-        </h1>
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 px-3 py-0.5 rounded-full border border-blue-200/60 uppercase tracking-widest">
+            <GraduationCap className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
+            Universitas Darussalam Gontor
+          </div>
+          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
+            Portal Pembinaan Lomba dan Prestasi Mahasiswa
+          </h1>
+        </div>
       </div>
 
       {reason === 'session_expired' ? (

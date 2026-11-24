@@ -2,7 +2,7 @@
 set -uo pipefail
 
 # ==============================================================================
-# TALENTA UNIDA Gontor — Automated End-to-End Test Runner
+# UNIDA Student Championship (USC) — Automated End-to-End Test Runner
 # Menjalankan rangkaian pengujian Playwright lintas alur (Publik, Mhs, Validator, Admin)
 # ==============================================================================
 
@@ -11,7 +11,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "======================================================================"
-echo " [TALENTA E2E] Memulai pemeriksaan dan eksekusi pengujian Playwright..."
+echo " [USC E2E] Memulai pemeriksaan dan eksekusi pengujian Playwright..."
 echo "======================================================================"
 
 # 1. Pastikan Bun terpasang
@@ -31,9 +31,9 @@ bun tests/e2e/runner.ts
 EXIT_CODE=$?
 
 if [ "$EXIT_CODE" -eq 0 ]; then
-  echo "✔ [TALENTA E2E] Seluruh alur end-to-end terverifikasi sukses!"
+  echo "✔ [USC E2E] Seluruh alur end-to-end terverifikasi sukses!"
 else
-  echo "✖ [TALENTA E2E] Pengujian end-to-end mendeteksi kesalahan (exit ${EXIT_CODE}). Periksa log & screenshot di tests/e2e/screenshots."
+  echo "✖ [USC E2E] Pengujian end-to-end mendeteksi kesalahan (exit ${EXIT_CODE}). Periksa log & screenshot di tests/e2e/screenshots."
 fi
 
 exit "$EXIT_CODE"

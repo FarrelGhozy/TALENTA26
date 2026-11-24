@@ -17,7 +17,7 @@ app.listen(
     idleTimeout: 30,
   },
   () => {
-    logger.info('SERVER', 'TALENTA API server started', {
+    logger.info('SERVER', 'USC API server started', {
       port: currentConfig.port,
       env: currentConfig.nodeEnv,
       maxRequestBodySizeBytes: maxRequestBodySize,

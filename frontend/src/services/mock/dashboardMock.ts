@@ -145,7 +145,7 @@ export const dashboardMockService: IDashboardService = {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rekap-prestasi-talenta-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `rekap-prestasi-usc-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

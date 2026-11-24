@@ -1,12 +1,12 @@
-# PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
+# PRD UNIDA STUDENT CHAMPIONSHIP (USC) — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.4, 24 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-25`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
+Versi rancangan: 2.5, 24 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-26`, termasuk rebranding dari nama kode lama *TALENTA* ke **UNIDA Student Championship / USC**); nama file `PRD_TALENTA.md` dipertahankan agar tautan lintas dokumen tetap utuh. Lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
 
 ## 1. Masalah dan tujuan
 
 Mahasiswa perlu satu tempat untuk menemukan lomba, membentuk tim, mempersiapkan diri, dan melaporkan capaian. Pengelola perlu menjaga informasi lomba tetap mutakhir, memeriksa bukti, serta melihat data yang dapat dipertanggungjawabkan. Produk harus dapat berlanjut lintas tahun akademik, bukan berhenti pada satu demo atau satu kompetisi.
 
-TALENTA rilis pertama ditujukan untuk satu kampus, UNIDA Gontor. Produk dapat diakses publik untuk informasi lomba dan ranking prestasi yang sudah disetujui. Fitur kerja memerlukan akun. Penggunaan di server kampus dan integrasi SSO adalah tahap berikutnya; home server dan domain pribadi dipakai lebih dulu untuk pilot.
+UNIDA Student Championship (USC) rilis pertama ditujukan untuk satu kampus, UNIDA Gontor. Produk dapat diakses publik untuk informasi lomba dan ranking prestasi yang sudah disetujui. Fitur kerja memerlukan akun. Penggunaan di server kampus dan integrasi SSO adalah tahap berikutnya; home server dan domain pribadi dipakai lebih dulu untuk pilot.
 
 ### Hasil yang diinginkan
 1. Mahasiswa dapat mendaftar, melengkapi profil, memilih lomba, mencari tim atau menjalani lomba individu, mengikuti roadmap, dan mengajukan prestasi.
@@ -16,7 +16,7 @@ TALENTA rilis pertama ditujukan untuk satu kampus, UNIDA Gontor. Produk dapat di
 5. Setiap periode akademik baru dapat dibuat tanpa menghapus riwayat periode sebelumnya.
 
 ## 2. Prinsip produk
-- Identitas aplikasi memakai **Simpul Talenta**, konsep ketiga yang disetujui pemilik produk (`K-24`), dengan biru/navy, versi putih pada latar gelap, dan tipografi Plus Jakarta Sans. Ini identitas aplikasi, bukan klaim lambang resmi kampus.
+- Identitas aplikasi memakai **UNIDA Student Championship (USC)** (`K-26`) dengan Emblem 3D Navy (`#142432`/`#1F3442`) & Gold (`#B89669`/`#EACA97`) serta Wordmark grafis transparan gelap/putih yang dikelola terpusat pada komponen `UscBrand`. Ini identitas aplikasi, bukan klaim lambang resmi kampus.
 - Data riil dibedakan jelas dari demo/mock. Tidak ada klaim AI, beasiswa, SKPI, atau verifikasi BAAK dalam rilis awal.
 - Identitas mahasiswa rilis awal bersumber dari isian sendiri, belum diverifikasi kampus. NIM unik mencegah duplikat teknis tetapi tidak membuktikan identitas.
 - Hanya keputusan validator yang membuat prestasi menjadi terverifikasi dan layak dihitung.

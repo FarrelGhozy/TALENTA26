@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { useAdminNav } from '../../features/admin/AdminNavContext';
-import { TalentaMark } from './TalentaMark';
+import { UscBrand } from './UscBrand';
 import { UserAvatar } from '../ui/UserAvatar';
 
 type BadgeTone = 'amber' | 'orange' | 'emerald' | 'rose' | 'slate' | 'blue';
@@ -330,22 +330,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <Link
           to="/admin"
           onClick={() => onNavigate?.()}
-          className="flex min-h-[44px] items-center gap-2.5 min-w-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xl"
+          className="flex min-h-[44px] items-center min-w-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xl"
         >
-          <TalentaMark />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-black tracking-tight text-sm text-blue-950 leading-none">
-                TALENTA
-              </span>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/70">
-                Admin
-              </span>
-            </div>
-            <span className="text-[10px] font-semibold text-slate-500 block truncate mt-1">
-              UNIDA Gontor
-            </span>
-          </div>
+          <UscBrand
+            variant="compact"
+            size="sm"
+            badge="Admin"
+            subtitle="UNIDA Student Championship"
+          />
         </Link>
 
         {showCloseButton && (

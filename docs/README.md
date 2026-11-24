@@ -1,4 +1,4 @@
-# Peta dokumentasi TALENTA
+# Peta dokumentasi UNIDA Student Championship (USC)
 
 Dokumen ini menggambarkan target produk dan implementasi bertahap. Status aplikasi yang bisa dijalankan hari ini ada di README root. Keputusan pemilik produk berada di 14-keputusan-terbuka.md; item terbuka tidak boleh dianggap final.
 

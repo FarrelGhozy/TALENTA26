@@ -1,6 +1,6 @@
-# TALENTA — Sistem Pembinaan Lomba dan Pengelolaan Prestasi Mahasiswa
+# UNIDA STUDENT CHAMPIONSHIP (USC) — Sistem Pembinaan Lomba dan Pengelolaan Prestasi Mahasiswa
 
-TALENTA adalah aplikasi web untuk membantu mahasiswa menemukan perlombaan, membentuk tim melalui rekrutmen berbasis pengajuan & kode undangan, mengikuti roadmap persiapan, berkonsultasi dengan dosen/konsultan, mengajukan prestasi beserta bukti privat, dan melihat papan peringkat berbasis capaian sah. Rilis pertama ditujukan untuk satu kampus, **Universitas Darussalam (UNIDA) Gontor**, dengan portal publik, portal mahasiswa (`/app/*`), dan portal admin terpadu (`/admin/*`).
+**UNIDA Student Championship (USC)** *(sebelumnya dikenal dengan nama kode TALENTA)* adalah aplikasi web untuk membantu mahasiswa menemukan perlombaan, membentuk tim melalui rekrutmen berbasis pengajuan & kode undangan, mengikuti roadmap persiapan, berkonsultasi dengan dosen/konsultan, mengajukan prestasi beserta bukti privat, dan melihat papan peringkat berbasis capaian sah. Rilis pertama ditujukan untuk satu kampus, **Universitas Darussalam (UNIDA) Gontor**, dengan portal publik, portal mahasiswa (`/app/*`), dan portal admin terpadu (`/admin/*`).
 
 ---
 
@@ -79,7 +79,7 @@ bun run db:migrate
 *(Khusus saat mengembangkan perubahan skema Prisma baru di lokal, gunakan `bun run db:migrate:dev` untuk membuat file migrasi baru).*
 
 ### Langkah 5 — Isi Data Awal (Seed Database)
-TALENTA menyediakan **2 skrip seed** yang idempotent sesuai kebutuhan:
+USC menyediakan **2 skrip seed** yang idempotent sesuai kebutuhan:
 
 | Perintah | Target Lingkungan | Isi Data yang Dibuat |
 |---|---|---|

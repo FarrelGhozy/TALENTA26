@@ -1,6 +1,6 @@
 # Infrastruktur & Deployment Production (GHCR + Docker Compose)
 
-Konsep kontainerisasi TALENTA **khusus untuk lingkungan production** (pengembangan lokal tetap berjalan langsung memakai `bun run dev` dan `bun run dev:backend` tanpa Docker).
+Konsep kontainerisasi UNIDA Student Championship (USC) **khusus untuk lingkungan production** (pengembangan lokal tetap berjalan langsung memakai `bun run dev` dan `bun run dev:backend` tanpa Docker).
 
 ## Berkas di Direktori Ini
 - `infra/docker-compose.yaml`: Orkestrasi container **production** (`migrate` job satu kali, `api` Bun/Elysia non-root, dan `web` Nginx same-origin proxy). Seluruh image ditarik langsung dari GHCR (`ghcr.io/<owner>/talenta-frontend` dan `talenta-backend`) dengan rotasi log (`json-file` 10 MB × 5), batas `mem_limit`/`cpus`/`pids_limit`, `init: true`, `no-new-privileges:true`, dan bind loopback default (`WEB_BIND_HOST:-127.0.0.1`). Database MySQL dan object storage RustFS tetap memakai layanan existing yang dikonfigurasi lewat `infra/.env`.

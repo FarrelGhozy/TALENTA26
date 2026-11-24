@@ -1,0 +1,30 @@
+{
+  "name": "UNIDA Student Championship (USC)",
+  "short_name": "USC",
+  "description": "Platform pembinaan lomba dan pendataan prestasi mahasiswa Universitas Darussalam Gontor.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#142432",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "images/usc-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/usc-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/usc-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

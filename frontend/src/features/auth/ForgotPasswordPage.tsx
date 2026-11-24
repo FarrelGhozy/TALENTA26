@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { UscBrand } from '../../components/common/UscBrand';
 import { userService } from '@talenta/services';
 
 export const ForgotPasswordPage: React.FC = () => {
@@ -36,14 +37,14 @@ export const ForgotPasswordPage: React.FC = () => {
   return (
     <div className="max-w-md mx-auto py-12 space-y-6">
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
-          <KeyRound className="w-6 h-6" />
+        <div className="flex justify-center mb-1">
+          <UscBrand variant="emblem" size="lg" />
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
           Lupa Kata Sandi
         </h1>
         <p className="text-sm text-slate-600">
-          Masukkan alamat email yang terdaftar untuk menerima instruksi pemulihan kata sandi.
+          Masukkan alamat email akun USC yang terdaftar untuk menerima instruksi pemulihan kata sandi.
         </p>
       </div>
 

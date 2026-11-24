@@ -1,6 +1,6 @@
 # 00 — Gambaran umum
 
-TALENTA adalah platform satu kampus untuk pembinaan lomba dan pencatatan prestasi mahasiswa. Rilis pertama menghubungkan katalog lomba, profil, tim, roadmap, pengajuan prestasi, validasi, dashboard, dan ranking publik. Tujuannya adalah operasi berulang lintas tahun akademik dengan riwayat tetap utuh.
+UNIDA Student Championship (USC) adalah platform satu kampus untuk pembinaan lomba dan pencatatan prestasi mahasiswa. Rilis pertama menghubungkan katalog lomba, profil, tim, roadmap, pengajuan prestasi, validasi, dashboard, dan ranking publik. Tujuannya adalah operasi berulang lintas tahun akademik dengan riwayat tetap utuh.
 
 ## Pembedaan status
 - Saat ini: implementasi full-stack (frontend React/Vite, backend Bun/Elysia + Prisma 7/MySQL + RustFS + proteksi DDoS & anti-bloat `K-25`, serta artefak Docker Compose/Nginx/backup/CI GHCR) telah selesai dan lulus seluruh gate teknis lokal (`TODO.md`).

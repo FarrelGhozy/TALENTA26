@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { KeyRound, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { UscBrand } from '../../components/common/UscBrand';
 import { userService } from '@talenta/services';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -56,14 +57,14 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <div className="max-w-md mx-auto py-12 space-y-6">
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 bg-blue-50 text-blue-700 rounded-2xl flex items-center justify-center mx-auto border border-blue-100">
-          <KeyRound className="w-6 h-6" />
+        <div className="flex justify-center mb-1">
+          <UscBrand variant="emblem" size="lg" />
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
           Atur Ulang Kata Sandi
         </h1>
         <p className="text-sm text-slate-600">
-          Masukkan kata sandi baru untuk akun TALENTA Anda.
+          Masukkan kata sandi baru untuk akun UNIDA Student Championship (USC) Anda.
         </p>
       </div>
 

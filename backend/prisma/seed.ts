@@ -4,7 +4,7 @@ import { loadConfig } from '../src/lib/config';
 
 export async function runBaseSeed() {
   const currentConfig = loadConfig();
-  console.log('[SEED] Memulai inisialisasi basis data TALENTA...');
+  console.log('[SEED] Memulai inisialisasi basis data UNIDA Student Championship (USC)...');
 
   // 1. Institusi default UNIDA Gontor
   const institution = await prisma.institution.upsert({
@@ -49,7 +49,7 @@ export async function runBaseSeed() {
       data: {
         institutionId: institution.id,
         email: superAdminEmail,
-        fullName: 'Administrator Utama TALENTA',
+        fullName: 'Administrator Utama USC',
         passwordHash,
         role: 'super_admin',
         status: 'active',

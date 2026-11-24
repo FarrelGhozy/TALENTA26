@@ -10,7 +10,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
-import { TalentaMark } from './TalentaMark';
+import { UscBrand } from './UscBrand';
 
 export const Footer: React.FC = () => {
   const { currentUser, currentRole } = useAuth();
@@ -35,14 +35,11 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
           {/* Brand Col */}
           <div className="space-y-4 md:col-span-2">
-            <div className="flex items-center gap-3">
-              <TalentaMark tone="light" />
-              <span className="font-black text-white tracking-tight text-lg">
-                TALENTA UNIDA Gontor
-              </span>
+            <div className="flex items-center">
+              <UscBrand variant="lockup" tone="light" size="md" />
             </div>
             <p className="text-xs text-slate-300/90 leading-relaxed max-w-md">
-              Platform pembinaan dan pendataan prestasi mahasiswa Universitas Darussalam Gontor. Menghubungkan katalog lomba, rekrutmen tim terbuka &amp; kode undangan, roadmap persiapan mandiri, serta pencatatan capaian prestasi terverifikasi.
+              UNIDA Student Championship (USC) adalah platform pembinaan lomba dan pendataan prestasi mahasiswa Universitas Darussalam Gontor. Menghubungkan katalog lomba, rekrutmen tim terbuka &amp; kode undangan, roadmap persiapan mandiri, serta pencatatan capaian prestasi terverifikasi.
             </p>
             <div className="flex items-center gap-2 text-xs text-sky-200 font-semibold bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-700/50 w-fit backdrop-blur-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
@@ -123,7 +120,7 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-blue-900/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            TALENTA — Pembinaan Mahasiswa. Identitas pendaftar bersifat isian mandiri kampus.
+            UNIDA Student Championship (USC) — Pembinaan Mahasiswa UNIDA Gontor. Identitas pendaftar bersifat isian mandiri kampus.
           </div>
           <div className="flex items-center gap-1.5 text-slate-400">
             <span>Untuk generasi khaira ummah berprestasi</span>

@@ -46,7 +46,7 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
       email: 'admin@unida.gontor.ac.id',
       pass: 'AdminGontor2026!',
       title: 'Admin Kampus',
-      name: 'Admin Pengelola TALENTA',
+      name: 'Admin Pengelola USC',
       subtitle: 'admin@unida.gontor.ac.id • Pengelola Lomba, Verifikator & Sistem',
       badge: 'Pengelola & Verifikator',
       color: 'from-amber-500 to-indigo-900',

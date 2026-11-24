@@ -170,7 +170,7 @@ export const AchievementListPage: React.FC = () => {
             <div className="text-3xl font-black text-emerald-600 mt-1" aria-label={`${verifiedCount} terverifikasi`}>
               {verifiedCount}
             </div>
-            <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">Terverifikasi oleh validator TALENTA</p>
+            <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">Terverifikasi oleh validator USC</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />

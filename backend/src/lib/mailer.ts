@@ -69,8 +69,8 @@ export async function sendPasswordResetEmail(
     const result = await transport.sendMail({
       from: currentConfig.smtp.from,
       to: toEmail,
-      subject: 'Pemulihan kata sandi TALENTA',
-      text: `Gunakan tautan berikut untuk membuat kata sandi baru. Tautan berlaku selama 1 jam:\n\n${resetUrl}\n\nJika Anda tidak meminta perubahan ini, abaikan pesan ini.`,
+      subject: 'Pemulihan kata sandi UNIDA Student Championship (USC)',
+      text: `Gunakan tautan berikut untuk membuat kata sandi baru akun UNIDA Student Championship (USC) Anda. Tautan berlaku selama 1 jam:\n\n${resetUrl}\n\nJika Anda tidak meminta perubahan ini, abaikan pesan ini.`,
     });
     return { success: true, messageId: result.messageId };
   } finally {

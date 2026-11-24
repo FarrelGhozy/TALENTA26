@@ -950,7 +950,7 @@ async function main() {
     throw new Error('[SIMULASI_ERROR] Skrip simulasi dilarang dijalankan pada NODE_ENV=production.');
   }
 
-  console.log('[SIMULASI] Memulai seed dasar + pembersihan & pengisian data simulasi TALENTA...');
+  console.log('[SIMULASI] Memulai seed dasar + pembersihan & pengisian data simulasi UNIDA Student Championship (USC)...');
 
   // Pastikan data fondasi (institusi, 4 lomba, roadmap, konsultan, template poin v1, master jenis/sub-lomba)
   // selalu terpasang lebih dulu agar skrip ini dapat langsung dijalankan mandiri pada DB kosong.
@@ -968,11 +968,11 @@ async function main() {
   );
   const superAdmin = await prisma.user.upsert({
     where: { email: 'admin@unida.gontor.ac.id' },
-    update: { fullName: 'Administrator Utama TALENTA', status: 'active' },
+    update: { fullName: 'Administrator Utama USC', status: 'active' },
     create: {
       institutionId: institution.id,
       email: 'admin@unida.gontor.ac.id',
-      fullName: 'Administrator Utama TALENTA',
+      fullName: 'Administrator Utama USC',
       passwordHash: adminPasswordHash,
       role: 'super_admin',
       status: 'active',
