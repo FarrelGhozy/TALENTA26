@@ -1,8 +1,11 @@
 import { type Page } from 'playwright';
 import { CONFIG, log } from '../helpers';
+import { runLandingPageChecks } from './00-landing-page';
 
 export async function runPublicFlows(page: Page): Promise<void> {
   log.suite('1. Public Flows (Landing, Kompetisi, Ranking)');
+
+  await runLandingPageChecks(page);
 
   // 1. Landing Page
   log.step('Memeriksa halaman landing (/)');

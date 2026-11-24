@@ -199,6 +199,14 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-25` di 
 
 ---
 
+## Tugas mandiri — Penyegaran landing sesuai kondisi proyek (24 November 2026)
+- [x] Ganti hero carousel/foto satu layar dengan pesan statis navy/biru, deskripsi utuh dan CTA katalog + pendaftaran/portal; pratinjau lomba dipindah lebih awal, alur individu/tim dan tiga jalur rekrutmen diperjelas, serta FAQ dan footer diselaraskan dengan fitur terkini tanpa janji matching otomatis atau verifikasi kampus resmi.
+- [x] Sambungkan sorotan tiga mahasiswa ke ranking periode aktif: nama/prodi/posisi/poin/jumlah prestasi disetujui saja, tanpa avatar atau identitas privat. Tangani loading, data kosong, periode tidak aktif, serta gagal/coba lagi secara mandiri untuk katalog dan ranking.
+- [x] Tambah sub-suite Playwright `tests/e2e/specs/00-landing-page.ts` ke suite publik: fixture sintetis loading/sukses/kosong/503/retry, privasi payload, tanggal WIB, FAQ keyboard, target sentuh 44 px, CTA layar pertama, dan nama panjang tanpa overflow pada 390×844 / 768×1024 / 1440×900; suite publik + navigasi katalog/detail/ranking API lokal lulus dengan 0 pageerror. Bukti: `docs/25-validasi-landing.md`.
+- Verifikasi kode: `bun run typecheck`, `bun run lint`, typecheck/lint sub-suite landing, `bun run build:demo`, `bun run build`, dan `git diff --check` lulus. Tidak ada perubahan backend, kontrak API, dependensi, atau deploy; frontend/backend development tetap berjalan untuk peninjauan.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).
