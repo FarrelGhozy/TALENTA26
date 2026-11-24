@@ -334,7 +334,7 @@ export const Navbar: React.FC = () => {
                     : 'bg-blue-700 text-white hover:bg-blue-800 shadow-blue-600/20'
                 }`}
               >
-                <span>Masuk Portal</span>
+                <span>Masuk</span>
                 <ArrowRight className="w-3.5 h-3.5 text-sky-200" aria-hidden="true" />
               </Link>
             </div>
@@ -470,7 +470,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-center text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] shadow-sm bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white"
                 >
-                  Masuk ke Aplikasi
+                  Masuk
                 </Link>
                 <Link
                   to="/daftar"

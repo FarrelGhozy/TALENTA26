@@ -255,7 +255,7 @@ export const RegisterPage: React.FC = () => {
               to="/masuk"
               className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1"
             >
-              Masuk ke Portal
+              Masuk
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

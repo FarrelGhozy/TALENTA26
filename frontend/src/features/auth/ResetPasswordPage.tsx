@@ -77,7 +77,7 @@ export const ResetPasswordPage: React.FC = () => {
           <div className="pt-2">
             <Link to="/masuk">
               <Button className="w-full" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Masuk ke Portal
+                Masuk
               </Button>
             </Link>
           </div>

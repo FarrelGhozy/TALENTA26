@@ -23,7 +23,7 @@ export const Footer: React.FC = () => {
     ? currentRole === 'mahasiswa'
       ? 'Buka Beranda Mahasiswa'
       : 'Buka Portal Admin'
-    : 'Masuk ke Portal TALENTA';
+    : 'Masuk';
 
   return (
     <footer className="bg-gradient-to-b from-[#081226] via-[#060e20] to-[#040814] text-slate-300 border-t border-blue-900/60 mt-20 pt-16 pb-10 relative overflow-hidden">

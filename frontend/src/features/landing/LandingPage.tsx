@@ -327,7 +327,7 @@ export const LandingPage: React.FC = () => {
                   <span className="w-5 h-5 sm:w-7 sm:h-7 rounded-full border border-white/40 flex items-center justify-center bg-white/10 group-hover/demo:bg-white/25 transition-colors shrink-0" aria-hidden="true">
                     <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white ml-0.5" />
                   </span>
-                  <span className="truncate">{currentUser ? 'Buka Portal' : 'Masuk Portal'}</span>
+                  <span className="truncate">{currentUser ? 'Buka Portal' : 'Masuk'}</span>
                 </Link>
               </div>
             </div>
@@ -986,7 +986,7 @@ export const LandingPage: React.FC = () => {
                   to="/masuk"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[46px] rounded-xl border border-white/85 bg-white/10 text-white hover:bg-white hover:text-blue-950 text-sm sm:text-base font-bold shadow-xs backdrop-blur-xs transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-900"
                 >
-                  <span>Masuk ke Portal</span>
+                  <span>Masuk</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </Link>
               </>

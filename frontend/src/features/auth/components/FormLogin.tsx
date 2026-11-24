@@ -76,7 +76,7 @@ export const FormLogin: React.FC<FormLoginProps> = ({ onSubmit, isLoading }) => 
         </div>
 
         <Button type="submit" className="w-full mt-2" isLoading={isLoading} rightIcon={<LogIn className="w-4 h-4" />}>
-          Masuk ke Portal
+          Masuk
         </Button>
 
         <div className="pt-2 text-center text-xs text-slate-500">
