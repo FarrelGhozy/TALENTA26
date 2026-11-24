@@ -2,24 +2,49 @@ import { prisma } from '../../lib/prisma';
 import { NotFoundError, ValidationError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
 
-export async function listSelections(institutionId: string) {
-  return prisma.internalSelection.findMany({
-    where: { institutionId },
-    include: {
-      competition: { select: { id: true, name: true, slug: true, format: true } },
-      team: { select: { id: true, name: true, status: true } },
-      participant: {
-        select: {
-          id: true,
-          studentProfile: { select: { fullName: true, nim: true, studyProgram: true } },
+export async function listSelections(
+  institutionId: string,
+  pagination?: { page?: number; limit?: number }
+) {
+  const page = Number.isFinite(pagination?.page) && (pagination?.page as number) >= 1 ? Math.floor(pagination!.page!) : 1;
+  const limit =
+    Number.isFinite(pagination?.limit) && (pagination?.limit as number) >= 1
+      ? Math.min(100, Math.floor(pagination!.limit!))
+      : 100;
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    prisma.internalSelection.findMany({
+      where: { institutionId },
+      include: {
+        competition: { select: { id: true, name: true, slug: true, format: true } },
+        team: { select: { id: true, name: true, status: true } },
+        participant: {
+          select: {
+            id: true,
+            studentProfile: { select: { fullName: true, nim: true, studyProgram: true } },
+          },
+        },
+        validator: {
+          select: { id: true, fullName: true, email: true },
         },
       },
-      validator: {
-        select: { id: true, fullName: true, email: true },
-      },
+      orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.internalSelection.count({ where: { institutionId } }),
+  ]);
+
+  return {
+    items,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     },
-    orderBy: { updatedAt: 'desc' },
-  });
+  };
 }
 
 export async function saveSelection(

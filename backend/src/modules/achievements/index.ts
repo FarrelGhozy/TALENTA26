@@ -206,15 +206,21 @@ export const achievementRoutes = new Elysia()
     async ({ auth, query }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
-      const data = await achService.getStudentAchievements(
+      const result = await achService.getStudentAchievements(
         auth.user.id,
-        query.status
+        query.status,
+        {
+          page: query.page ? Number(query.page) : undefined,
+          limit: query.limit ? Number(query.limit) : undefined,
+        }
       );
-      return { data };
+      return { data: result.items, meta: result.meta };
     },
     {
       query: t.Object({
         status: t.Optional(t.String()),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
       }),
     }
   )
@@ -421,24 +427,46 @@ export const achievementRoutes = new Elysia()
   })
 
   // ==========================================
-  // Unduh Berkas Bukti Terotorisasi (Anti-IDOR)
+  // Unduh Berkas Bukti Terotorisasi (Anti-IDOR, Streaming + ETag)
   // ==========================================
-  .get('/api/v1/evidence/:id/download', async ({ auth, params }) => {
+  .get('/api/v1/evidence/:id/download', async ({ auth, params, headers }) => {
     assertAuthenticated(auth);
-    const file = await achService.getEvidenceFile(
+    const file = await achService.getEvidenceFileStream(
       params.id,
       auth.user.id,
       auth.user.role,
       auth.user.institutionId
     );
 
-    return new Response(file.buffer, {
-      headers: {
-        'Content-Type': file.contentType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(file.fileName)}"`,
-        'Content-Length': file.buffer.length.toString(),
-      },
-    });
+    const ifNoneMatch = headers['if-none-match']?.trim();
+    if (
+      file.etag &&
+      ifNoneMatch &&
+      (ifNoneMatch === file.etag || ifNoneMatch === `W/${file.etag}` || ifNoneMatch === '*')
+    ) {
+      await file.stream.cancel().catch(() => {});
+      return new Response(null, {
+        status: 304,
+        headers: {
+          ETag: file.etag,
+          'Cache-Control': 'private, max-age=3600',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    const resHeaders: Record<string, string> = {
+      'Content-Type': file.contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(file.fileName)}"`,
+      'Cache-Control': 'private, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (file.etag) resHeaders['ETag'] = file.etag;
+    if (typeof file.contentLength === 'number') {
+      resHeaders['Content-Length'] = file.contentLength.toString();
+    }
+
+    return new Response(file.stream, { headers: resHeaders });
   })
 
   // ==========================================
@@ -450,16 +478,18 @@ export const achievementRoutes = new Elysia()
       assertAuthenticated(auth);
       assertRole(auth, ['validator', 'super_admin']);
 
-      const data = await achService.getAdminAchievements({
+      const result = await achService.getAdminAchievements({
         institutionId: auth.user.institutionId,
         status: query.status,
         periodId: query.periodId,
         category: query.category,
         level: query.level,
         q: query.q,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
       });
 
-      return { data };
+      return { data: result.items, meta: result.meta };
     },
     {
       query: t.Object({
@@ -468,6 +498,8 @@ export const achievementRoutes = new Elysia()
         category: t.Optional(t.String()),
         level: t.Optional(t.String()),
         q: t.Optional(t.String()),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
       }),
     }
   )

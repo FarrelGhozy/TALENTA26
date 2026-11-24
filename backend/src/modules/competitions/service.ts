@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { prisma } from '../../lib/prisma';
 import { ConflictError, NotFoundError, ValidationError } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
+import { appReadCache, invalidateCompetitionCache } from '../../lib/cache';
 import type { Competition, AcademicPeriod, CompetitionFormat, CompetitionStatus, RegistrationStatus, Prisma } from '@prisma/client';
 
 const VALID_COMPETITION_FORMATS = new Set<string>(['individu', 'beregu']);
@@ -25,6 +26,8 @@ export interface CompetitionFilterParams {
   format?: string;
   periodId?: string;
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface CreateCompetitionDto {
@@ -101,7 +104,16 @@ export async function getDefaultInstitutionId(): Promise<string> {
   return inst.id;
 }
 
-export async function getPublishedCompetitions(filters: CompetitionFilterParams = {}): Promise<Competition[]> {
+function normalizePagination(page?: number, limit?: number): { page: number; limit: number; skip: number } {
+  const safePage = Number.isFinite(page) && (page as number) >= 1 ? Math.floor(page as number) : 1;
+  const safeLimit =
+    Number.isFinite(limit) && (limit as number) >= 1
+      ? Math.min(100, Math.floor(limit as number))
+      : 100;
+  return { page: safePage, limit: safeLimit, skip: (safePage - 1) * safeLimit };
+}
+
+export async function getPublishedCompetitions(filters: CompetitionFilterParams = {}) {
   const whereClause: Prisma.CompetitionWhereInput = {
     status: 'published',
   };
@@ -134,16 +146,36 @@ export async function getPublishedCompetitions(filters: CompetitionFilterParams 
     ];
   }
 
-  return prisma.competition.findMany({
-    where: whereClause,
-    include: {
-      academicPeriod: { select: { id: true, name: true, year: true, semester: true } },
-      competitionCategory: {
-        include: { subCategories: { where: { isActive: true } } },
+  const { page, limit, skip } = normalizePagination(filters.page, filters.limit);
+  const cacheKey = `competitions:pub:${filters.category || ''}:${filters.level || ''}:${filters.format || ''}:${filters.periodId || ''}:${(filters.search || '').trim().toLowerCase()}:${page}:${limit}`;
+
+  return appReadCache.getOrSet(cacheKey, async () => {
+    const [items, total] = await Promise.all([
+      prisma.competition.findMany({
+        where: whereClause,
+        include: {
+          academicPeriod: { select: { id: true, name: true, year: true, semester: true } },
+          competitionCategory: {
+            include: { subCategories: { where: { isActive: true } } },
+          },
+          pointTemplate: { select: { id: true, name: true, version: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.competition.count({ where: whereClause }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       },
-      pointTemplate: { select: { id: true, name: true, version: true } },
-    },
-    orderBy: { createdAt: 'desc' },
+    };
   });
 }
 
@@ -184,9 +216,11 @@ export async function getCompetitionBySlug(slug: string): Promise<Competition | 
 
 export async function getCurrentAcademicPeriod(institutionId?: string): Promise<AcademicPeriod | null> {
   const resolvedInstitutionId = institutionId || (await getDefaultInstitutionId());
-  return prisma.academicPeriod.findFirst({
-    where: { institutionId: resolvedInstitutionId, isActive: true },
-  });
+  return appReadCache.getOrSet(`period:current:${resolvedInstitutionId}`, () =>
+    prisma.academicPeriod.findFirst({
+      where: { institutionId: resolvedInstitutionId, isActive: true },
+    })
+  );
 }
 
 const ADMIN_COMPETITION_INCLUDE = {
@@ -215,12 +249,33 @@ const ADMIN_COMPETITION_INCLUDE = {
   },
 } satisfies Prisma.CompetitionInclude;
 
-export async function getAllCompetitionsAdmin(institutionId?: string) {
-  return prisma.competition.findMany({
-    where: institutionId ? { institutionId } : undefined,
-    include: ADMIN_COMPETITION_INCLUDE,
-    orderBy: { createdAt: 'desc' },
-  });
+export async function getAllCompetitionsAdmin(
+  institutionId?: string,
+  pagination?: { page?: number; limit?: number }
+) {
+  const whereClause = institutionId ? { institutionId } : undefined;
+  const { page, limit, skip } = normalizePagination(pagination?.page, pagination?.limit);
+
+  const [items, total] = await Promise.all([
+    prisma.competition.findMany({
+      where: whereClause,
+      include: ADMIN_COMPETITION_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.competition.count({ where: whereClause }),
+  ]);
+
+  return {
+    items,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
+  };
 }
 
 export async function getCompetitionByIdAdmin(id: string, institutionId: string) {
@@ -332,6 +387,7 @@ export async function createCompetition(
     metadata: { name: comp.name, slug: comp.slug },
   });
 
+  invalidateCompetitionCache();
   return comp;
 }
 
@@ -471,6 +527,7 @@ export async function updateCompetition(
     metadata: { updatedFields: Object.keys(dto) },
   });
 
+  invalidateCompetitionCache();
   return updated;
 }
 
@@ -499,6 +556,7 @@ export async function setCompetitionStatus(
     metadata: { previousStatus: existing.status, newStatus: status },
   });
 
+  invalidateCompetitionCache();
   return updated;
 }
 
@@ -574,89 +632,64 @@ async function collectCompetitionImpact(
   competitionId: string,
   institutionId: string
 ): Promise<{
-  teamIds: string[];
   counts: CompetitionDeletePreview['counts'];
 }> {
-  const [teamRows, roadmapRows] = await Promise.all([
-    db.team.findMany({
-      where: { competitionId },
-      select: { id: true, status: true },
-    }),
-    db.roadmap.findMany({
-      where: { competitionId },
-      select: { id: true },
-    }),
-  ]);
-
-  const teamIds = teamRows.map((t) => t.id);
-  const lockedSelectionTeams = teamRows.filter((t) => t.status === 'terkunci_seleksi').length;
-  const roadmapIds = roadmapRows.map((r) => r.id);
-
-  const phaseIds =
-    roadmapIds.length > 0
-      ? (
-          await db.roadmapPhase.findMany({
-            where: { roadmapId: { in: roadmapIds } },
-            select: { id: true },
-          })
-        ).map((p) => p.id)
-      : [];
-
-  const taskIds =
-    phaseIds.length > 0
-      ? (
-          await db.roadmapTask.findMany({
-            where: { phaseId: { in: phaseIds } },
-            select: { id: true },
-          })
-        ).map((t) => t.id)
-      : [];
-
+  // Gunakan relational COUNT langsung di MySQL tanpa memuat ribuan ID ke memori Node
   const [
     targets,
     activeTargets,
+    teams,
+    lockedSelectionTeams,
     teamMembers,
     teamJoinRequests,
     teamInvites,
+  ] = await Promise.all([
+    db.studentTarget.count({ where: { competitionId } }),
+    db.studentTarget.count({ where: { competitionId, status: 'active' } }),
+    db.team.count({ where: { competitionId } }),
+    db.team.count({ where: { competitionId, status: 'terkunci_seleksi' } }),
+    db.teamMember.count({ where: { team: { competitionId } } }),
+    db.teamJoinRequest.count({ where: { team: { competitionId } } }),
+    db.teamInvite.count({ where: { team: { competitionId } } }),
+  ]);
+
+  const [
+    roadmaps,
+    roadmapPhases,
+    roadmapTasks,
     roadmapProgress,
     consultants,
     selections,
     customPointRules,
     preservedAchievements,
   ] = await Promise.all([
-    db.studentTarget.count({ where: { competitionId } }),
-    db.studentTarget.count({ where: { competitionId, status: 'active' } }),
-    teamIds.length > 0 ? db.teamMember.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
-    teamIds.length > 0 ? db.teamJoinRequest.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
-    teamIds.length > 0 ? db.teamInvite.count({ where: { teamId: { in: teamIds } } }) : Promise.resolve(0),
-    taskIds.length > 0 ? db.roadmapProgress.count({ where: { taskId: { in: taskIds } } }) : Promise.resolve(0),
+    db.roadmap.count({ where: { competitionId } }),
+    db.roadmapPhase.count({ where: { roadmap: { competitionId } } }),
+    db.roadmapTask.count({ where: { phase: { roadmap: { competitionId } } } }),
+    db.roadmapProgress.count({ where: { task: { phase: { roadmap: { competitionId } } } } }),
     db.consultantContact.count({ where: { competitionId } }),
     db.internalSelection.count({ where: { competitionId } }),
     db.competitionPointRule.count({ where: { competitionId } }),
     db.achievement.count({
       where: {
         institutionId,
-        OR: [
-          { competitionId },
-          ...(teamIds.length > 0 ? [{ teamId: { in: teamIds } }] : []),
-        ],
+        OR: [{ competitionId }, { team: { competitionId } }],
       },
     }),
   ]);
 
   return {
-    teamIds,
     counts: {
       targets,
       activeTargets,
-      teams: teamIds.length,
+      teams,
       lockedSelectionTeams,
       teamMembers,
       teamJoinRequests,
       teamInvites,
-      roadmaps: roadmapIds.length,
-      roadmapPhases: phaseIds.length,
-      roadmapTasks: taskIds.length,
+      roadmaps,
+      roadmapPhases,
+      roadmapTasks,
       roadmapProgress,
       consultants,
       selections,
@@ -713,7 +746,7 @@ export async function deleteCompetition(
       throw new NotFoundError('Kompetisi tidak ditemukan');
     }
 
-    const { teamIds, counts } = await collectCompetitionImpact(tx, id, institutionId);
+    const { counts } = await collectCompetitionImpact(tx, id, institutionId);
 
     // Pastikan seluruh input prestasi mahasiswa (termasuk berkas bukti, keputusan, & buku poin)
     // tetap utuh dengan melepas tautan ke kompetisi dan tim sebelum menghapus kompetisi.
@@ -722,9 +755,9 @@ export async function deleteCompetition(
       data: { competitionId: null },
     });
 
-    if (teamIds.length > 0) {
+    if (counts.teams > 0) {
       await tx.achievement.updateMany({
-        where: { institutionId, teamId: { in: teamIds } },
+        where: { institutionId, team: { competitionId: id } },
         data: { teamId: null },
       });
     }
@@ -759,5 +792,6 @@ export async function deleteCompetition(
     },
   });
 
+  invalidateCompetitionCache();
   return result;
 }

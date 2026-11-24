@@ -10,13 +10,20 @@ export function getPrisma(): PrismaClient {
   const currentConfig = loadConfig();
   const db = currentConfig.database;
 
+  const connectionLimit = currentConfig.dbPoolLimit;
   const adapter = new PrismaMariaDb({
     host: db.host,
     port: db.port,
     user: db.user,
     ...(db.password ? { password: db.password } : {}),
     database: db.name,
-    connectionLimit: currentConfig.nodeEnv === 'test' ? 5 : 15,
+    connectionLimit,
+    minimumIdle: Math.min(2, connectionLimit),
+    acquireTimeout: 10_000,
+    connectTimeout: 5_000,
+    socketTimeout: 30_000,
+    // Catatan driver mariadb: idleTimeout dalam satuan DETIK (60 detik)
+    idleTimeout: 60,
   });
 
   prismaInstance = new PrismaClient({ adapter });

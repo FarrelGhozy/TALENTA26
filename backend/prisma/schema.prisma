@@ -218,7 +218,6 @@ model StudentProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([nim])
   @@map("student_profiles")
 }
 
@@ -324,8 +323,8 @@ model Competition {
   competitionPointRules CompetitionPointRule[]
 
   @@index([institutionId, status])
+  @@index([institutionId, status, registrationDeadline])
   @@index([academicPeriodId])
-  @@index([slug])
   @@map("competitions")
 }
 
@@ -343,6 +342,7 @@ model StudentTarget {
   academicPeriod AcademicPeriod? @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
+  @@index([userId, status, createdAt])
   @@index([competitionId, status])
   @@index([academicPeriodId, status])
   @@map("student_targets")
@@ -415,6 +415,8 @@ model TeamInvite {
 
   @@index([teamId, status])
   @@index([receiverId, status])
+  @@index([senderId, status])
+  @@index([status, expiresAt])
   @@map("team_invites")
 }
 
@@ -436,6 +438,7 @@ model TeamJoinRequest {
 
   @@index([teamId, status])
   @@index([userId, status])
+  @@index([status, updatedAt])
   @@map("team_join_requests")
 }
 
@@ -545,6 +548,8 @@ model InternalSelection {
   @@unique([competitionId, teamId, stage])
   @@unique([competitionId, userId, stage])
   @@index([institutionId, result])
+  @@index([institutionId, updatedAt])
+  @@index([teamId, updatedAt])
   @@map("internal_selections")
 }
 
@@ -561,6 +566,8 @@ model AuthSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt, revokedAt])
+  @@index([expiresAt])
+  @@index([revokedAt])
   @@map("auth_sessions")
 }
 
@@ -575,6 +582,7 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+  @@index([expiresAt])
   @@map("password_reset_tokens")
 }
 
@@ -594,6 +602,8 @@ model AuditEvent {
   actor       User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([institutionId, createdAt])
+  @@index([institutionId, action, createdAt])
+  @@index([institutionId, targetType, createdAt])
   @@index([actorId, action])
   @@map("audit_events")
 }
@@ -638,6 +648,9 @@ model Achievement {
   pointLedgers        PointLedger[]
 
   @@index([institutionId, status])
+  @@index([institutionId, status, createdAt])
+  @@index([institutionId, academicPeriodId, status])
+  @@index([institutionId, name, eventDate])
   @@index([userId, status])
   @@index([academicPeriodId])
   @@index([competitionId])
@@ -677,6 +690,7 @@ model AchievementEvidence {
   uploader    User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
   @@index([achievementId, isActive])
+  @@index([isActive, uploadedAt])
   @@index([uploaderId])
   @@map("achievement_evidences")
 }
@@ -782,6 +796,8 @@ model PointLedger {
   academicPeriod AcademicPeriod? @relation(fields: [academicPeriodId], references: [id], onDelete: SetNull)
 
   @@index([institutionId, userId])
+  @@index([institutionId, academicPeriodId])
+  @@index([userId, academicPeriodId])
   @@index([achievementId])
   @@index([academicPeriodId])
   @@map("point_ledgers")

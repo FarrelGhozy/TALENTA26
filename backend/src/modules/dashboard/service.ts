@@ -172,35 +172,31 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       })
     : null;
 
-  // 4. Progres roadmap untuk target kompetisi (jika ada)
+  // 4. Progres roadmap untuk target kompetisi (jika ada) — gunakan count langsung tanpa muat seluruh task
   let roadmapSummary = null;
   if (target?.competition?.id) {
     const roadmap = await prisma.roadmap.findFirst({
       where: { competitionId: target.competition.id, status: 'published' },
-      include: {
-        phases: {
-          include: {
-            tasks: true,
-          },
-        },
-      },
+      select: { id: true, version: true },
     });
 
     if (roadmap) {
-      const allTasks = roadmap.phases.flatMap((p) => p.tasks);
-      const totalTasks = allTasks.length;
-
-      const completedCount = await prisma.roadmapProgress.count({
-        where: {
-          userId,
-          completed: true,
-          task: {
-            phase: {
-              roadmapId: roadmap.id,
+      const [totalTasks, completedCount] = await Promise.all([
+        prisma.roadmapTask.count({
+          where: { phase: { roadmapId: roadmap.id } },
+        }),
+        prisma.roadmapProgress.count({
+          where: {
+            userId,
+            completed: true,
+            task: {
+              phase: {
+                roadmapId: roadmap.id,
+              },
             },
           },
-        },
-      });
+        }),
+      ]);
 
       roadmapSummary = {
         roadmapId: roadmap.id,
@@ -212,28 +208,21 @@ export async function getStudentDashboard(userId: string, institutionId: string)
     }
   }
 
-  // 5. Rangkuman pengajuan prestasi (milik sendiri maupun anggota kelompok)
+  // 5. Rangkuman pengajuan prestasi (1 groupBy menggantikan 7 query count terpisah)
   const achOwnerFilter = {
     OR: [{ userId }, { participants: { some: { userId } } }],
   };
   const [
-    totalAchievements,
-    pendingCount,
-    revisionCount,
-    approvedCount,
-    rejectedCount,
-    cancelledCount,
-    draftCount,
+    statusCountsRaw,
     recentAchievementsRaw,
     firstRevisionRow,
+    currentPeriod,
   ] = await Promise.all([
-    prisma.achievement.count({ where: achOwnerFilter }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'menunggu' } }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'perlu_perbaikan' } }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'disetujui' } }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'ditolak' } }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'dibatalkan' } }),
-    prisma.achievement.count({ where: { ...achOwnerFilter, status: 'draft' } }),
+    prisma.achievement.groupBy({
+      by: ['status'],
+      where: achOwnerFilter,
+      _count: { id: true },
+    }),
     prisma.achievement.findMany({
       where: achOwnerFilter,
       select: {
@@ -253,24 +242,37 @@ export async function getStudentDashboard(userId: string, institutionId: string)
       select: { id: true },
       orderBy: { updatedAt: 'desc' },
     }),
+    prisma.academicPeriod.findFirst({
+      where: { institutionId, isActive: true },
+    }),
   ]);
 
-  // 6. Poin periode aktif
-  const currentPeriod = await prisma.academicPeriod.findFirst({
-    where: { institutionId, isActive: true },
-  });
+  const statusMap: Record<string, number> = {};
+  let totalAchievements = 0;
+  for (const row of statusCountsRaw) {
+    statusMap[row.status] = row._count.id;
+    totalAchievements += row._count.id;
+  }
+  const pendingCount = statusMap['menunggu'] ?? 0;
+  const revisionCount = statusMap['perlu_perbaikan'] ?? 0;
+  const approvedCount = statusMap['disetujui'] ?? 0;
+  const rejectedCount = statusMap['ditolak'] ?? 0;
+  const cancelledCount = statusMap['dibatalkan'] ?? 0;
+  const draftCount = statusMap['draft'] ?? 0;
 
-  const ledgers = currentPeriod
-    ? await prisma.pointLedger.findMany({
+  // 6. Poin periode aktif (agregasi SUM langsung di MySQL tanpa memuat seluruh baris PointLedger)
+  const pointsAgg = currentPeriod
+    ? await prisma.pointLedger.aggregate({
         where: {
           userId,
           academicPeriodId: currentPeriod.id,
         },
+        _sum: { points: true },
       })
-    : [];
+    : null;
 
-  // Reversal sudah disimpan bernilai negatif di PointLedger, sehingga selalu dijumlahkan langsung
-  const currentPeriodPoints = ledgers.reduce((sum, item) => sum + item.points, 0);
+  // Reversal sudah disimpan bernilai negatif di PointLedger, sehingga _sum langsung akurat
+  const currentPeriodPoints = pointsAgg?._sum.points ?? 0;
 
   // 7. Langkah tindak lanjut yang dapat dilakukan (actionable steps)
   const actionableSteps: Array<{
@@ -481,46 +483,48 @@ export async function getStudentDashboard(userId: string, institutionId: string)
 }
 
 export async function getAdminDashboardStats(institutionId: string) {
+  // Kolaps 22 query paralel sebelumnya menjadi 9 query groupBy/agregasi agar ramah terhadap pool MariaDB (15 koneksi)
   const [
-    pendingVerifications,
-    revisionNeededCount,
-    approvedCount,
-    rejectedCount,
-    totalAchievements,
-    totalCompetitions,
-    draftCompetitions,
-    allCompetitionsCount,
-    teamsFormed,
-    teamsLockedSelection,
-    teamsSearching,
-    totalStudents,
-    totalStaff,
-    totalUsers,
-    approvedConsultants,
-    totalConsultants,
+    achByStatus,
+    compByStatus,
+    teamByStatus,
+    userByRoleStatus,
+    consultantByApproval,
+    selectionByResult,
     categoryRaw,
     levelRaw,
-    targetsByCompetition,
-    confirmedSelectionsCount,
-    totalSelectionsCount,
-    upcomingDeadlines,
+    publishedCompetitions,
   ] = await Promise.all([
-    prisma.achievement.count({ where: { institutionId, status: 'menunggu' } }),
-    prisma.achievement.count({ where: { institutionId, status: 'perlu_perbaikan' } }),
-    prisma.achievement.count({ where: { institutionId, status: 'disetujui' } }),
-    prisma.achievement.count({ where: { institutionId, status: 'ditolak' } }),
-    prisma.achievement.count({ where: { institutionId } }),
-    prisma.competition.count({ where: { institutionId, status: 'published' } }),
-    prisma.competition.count({ where: { institutionId, status: 'draft' } }),
-    prisma.competition.count({ where: { institutionId } }),
-    prisma.team.count({ where: { competition: { institutionId }, status: 'terbentuk' } }),
-    prisma.team.count({ where: { competition: { institutionId }, status: 'terkunci_seleksi' } }),
-    prisma.team.count({ where: { competition: { institutionId }, status: 'mencari' } }),
-    prisma.user.count({ where: { institutionId, role: 'mahasiswa', status: 'active' } }),
-    prisma.user.count({ where: { institutionId, role: { in: ['validator', 'super_admin'] } } }),
-    prisma.user.count({ where: { institutionId } }),
-    prisma.consultantContact.count({ where: { competition: { institutionId }, isApproved: true } }),
-    prisma.consultantContact.count({ where: { competition: { institutionId } } }),
+    prisma.achievement.groupBy({
+      by: ['status'],
+      where: { institutionId },
+      _count: { id: true },
+    }),
+    prisma.competition.groupBy({
+      by: ['status'],
+      where: { institutionId },
+      _count: { id: true },
+    }),
+    prisma.team.groupBy({
+      by: ['status'],
+      where: { competition: { institutionId } },
+      _count: { id: true },
+    }),
+    prisma.user.groupBy({
+      by: ['role', 'status'],
+      where: { institutionId },
+      _count: { id: true },
+    }),
+    prisma.consultantContact.groupBy({
+      by: ['isApproved'],
+      where: { competition: { institutionId } },
+      _count: { id: true },
+    }),
+    prisma.internalSelection.groupBy({
+      by: ['result', 'organizerVerified'],
+      where: { institutionId },
+      _count: { id: true },
+    }),
     prisma.achievement.groupBy({
       by: ['category'],
       where: { institutionId, status: 'disetujui' },
@@ -534,7 +538,12 @@ export async function getAdminDashboardStats(institutionId: string) {
     prisma.competition.findMany({
       where: { institutionId, status: 'published' },
       select: {
+        id: true,
+        name: true,
         slug: true,
+        category: true,
+        level: true,
+        registrationDeadline: true,
         _count: {
           select: {
             studentTargets: { where: { status: 'active' } },
@@ -542,30 +551,66 @@ export async function getAdminDashboardStats(institutionId: string) {
         },
       },
     }),
-    prisma.internalSelection.count({
-      where: { institutionId, result: 'lolos', organizerVerified: true },
-    }),
-    prisma.internalSelection.count({
-      where: { institutionId },
-    }),
-    prisma.competition.findMany({
-      where: {
-        institutionId,
-        status: 'published',
-        registrationDeadline: { gte: new Date() },
-      },
-      orderBy: { registrationDeadline: 'asc' },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        category: true,
-        level: true,
-        registrationDeadline: true,
-      },
-    }),
   ]);
+
+  let pendingVerifications = 0;
+  let revisionNeededCount = 0;
+  let approvedCount = 0;
+  let rejectedCount = 0;
+  let totalAchievements = 0;
+  for (const row of achByStatus) {
+    totalAchievements += row._count.id;
+    if (row.status === 'menunggu') pendingVerifications = row._count.id;
+    else if (row.status === 'perlu_perbaikan') revisionNeededCount = row._count.id;
+    else if (row.status === 'disetujui') approvedCount = row._count.id;
+    else if (row.status === 'ditolak') rejectedCount = row._count.id;
+  }
+
+  let totalCompetitions = 0;
+  let draftCompetitions = 0;
+  let allCompetitionsCount = 0;
+  for (const row of compByStatus) {
+    allCompetitionsCount += row._count.id;
+    if (row.status === 'published') totalCompetitions = row._count.id;
+    else if (row.status === 'draft') draftCompetitions = row._count.id;
+  }
+
+  let teamsFormed = 0;
+  let teamsLockedSelection = 0;
+  let teamsSearching = 0;
+  for (const row of teamByStatus) {
+    if (row.status === 'terbentuk') teamsFormed = row._count.id;
+    else if (row.status === 'terkunci_seleksi') teamsLockedSelection = row._count.id;
+    else if (row.status === 'mencari') teamsSearching = row._count.id;
+  }
+
+  let totalStudents = 0;
+  let totalStaff = 0;
+  let totalUsers = 0;
+  for (const row of userByRoleStatus) {
+    totalUsers += row._count.id;
+    if (row.role === 'mahasiswa' && row.status === 'active') {
+      totalStudents += row._count.id;
+    } else if (row.role === 'validator' || row.role === 'super_admin') {
+      totalStaff += row._count.id;
+    }
+  }
+
+  let approvedConsultants = 0;
+  let totalConsultants = 0;
+  for (const row of consultantByApproval) {
+    totalConsultants += row._count.id;
+    if (row.isApproved) approvedConsultants += row._count.id;
+  }
+
+  let confirmedSelectionsCount = 0;
+  let totalSelectionsCount = 0;
+  for (const row of selectionByResult) {
+    totalSelectionsCount += row._count.id;
+    if (row.result === 'lolos' && row.organizerVerified) {
+      confirmedSelectionsCount += row._count.id;
+    }
+  }
 
   const categoryBreakdown: Record<string, number> = {};
   for (const item of categoryRaw) {
@@ -578,7 +623,21 @@ export async function getAdminDashboardStats(institutionId: string) {
   }
 
   const participantsByCompetition: Record<string, number> = {};
-  for (const c of targetsByCompetition) {
+  const now = new Date();
+  const upcomingDeadlines = publishedCompetitions
+    .filter((c) => c.registrationDeadline && c.registrationDeadline >= now)
+    .sort((a, b) => a.registrationDeadline!.getTime() - b.registrationDeadline!.getTime())
+    .slice(0, 5)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      category: c.category,
+      level: c.level,
+      registrationDeadline: c.registrationDeadline,
+    }));
+
+  for (const c of publishedCompetitions) {
     participantsByCompetition[c.slug] = c._count.studentTargets;
   }
 

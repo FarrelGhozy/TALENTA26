@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { prisma } from '../../lib/prisma';
 import { recordAuditEvent } from '../../lib/audit';
+import { invalidateRankingCache } from '../../lib/cache';
 import { getStorageService } from '../../lib/storage';
 import { NotFoundError, ValidationError } from '../../app/middleware/error';
 import type { StudentProfile } from '@prisma/client';
@@ -258,6 +259,10 @@ export async function updateStudentProfile(
     userAgent,
   });
 
+  if (updateData.fullName || updateData.studyProgram || shouldDeleteOldAvatar) {
+    invalidateRankingCache();
+  }
+
   const { avatarObjectKey: _omit, ...safeUpdated } = updatedProfile;
   return safeUpdated;
 }
@@ -323,6 +328,7 @@ export async function uploadStudentAvatar(
     userAgent,
   });
 
+  invalidateRankingCache();
   return { avatarUrl: avatarEndpoint };
 }
 
@@ -358,6 +364,7 @@ export async function deleteStudentAvatar(userId: string, institutionId: string)
     targetId: profile.id,
   });
 
+  invalidateRankingCache();
   return { avatarUrl: null };
 }
 
@@ -386,6 +393,36 @@ export async function getAuthorizedUserAvatar(targetUserId: string, institutionI
   const storage = getStorageService();
   try {
     return await storage.getFile(user.studentProfile.avatarObjectKey);
+  } catch {
+    throw new NotFoundError('Berkas avatar tidak ditemukan di penyimpanan');
+  }
+}
+
+export async function getAuthorizedUserAvatarStream(targetUserId: string, institutionId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      id: true,
+      institutionId: true,
+      status: true,
+      studentProfile: {
+        select: { avatarObjectKey: true },
+      },
+    },
+  });
+
+  if (
+    !user ||
+    user.institutionId !== institutionId ||
+    user.status !== 'active' ||
+    !user.studentProfile?.avatarObjectKey
+  ) {
+    throw new NotFoundError('Avatar tidak ditemukan');
+  }
+
+  const storage = getStorageService();
+  try {
+    return await storage.getFileStream(user.studentProfile.avatarObjectKey);
   } catch {
     throw new NotFoundError('Berkas avatar tidak ditemukan di penyimpanan');
   }

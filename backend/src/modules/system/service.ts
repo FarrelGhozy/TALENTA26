@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { recordAuditEvent } from '../../lib/audit';
+import { invalidatePeriodCache } from '../../lib/cache';
 import { hashPassword } from '../../lib/password';
 import { getStorageDriverName, getStorageService } from '../../lib/storage';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../app/middleware/error';
@@ -470,6 +471,7 @@ export async function createAcademicPeriod(
     },
   });
 
+  invalidatePeriodCache();
   return period;
 }
 
@@ -625,6 +627,7 @@ export async function activateAcademicPeriod(
     },
   });
 
+  invalidatePeriodCache();
   return result.activated;
 }
 

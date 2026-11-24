@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
+import { appReadCache, invalidateRankingCache } from '../../lib/cache';
 import { loadConfig } from '../../lib/config';
 import { getStorageService } from '../../lib/storage';
 import { resolveAchievementPoints } from '../points/service';
@@ -84,6 +85,45 @@ export interface AdminAchievementFilter {
   category?: string;
   level?: string;
   q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+function normalizePagination(page?: number, limit?: number): { page: number; limit: number; skip: number } {
+  const safePage = Number.isFinite(page) && (page as number) >= 1 ? Math.floor(page as number) : 1;
+  const safeLimit =
+    Number.isFinite(limit) && (limit as number) >= 1
+      ? Math.min(100, Math.floor(limit as number))
+      : 100;
+  return { page: safePage, limit: safeLimit, skip: (safePage - 1) * safeLimit };
+}
+
+async function assertUserStorageQuota(userId: string, incomingBytes: number): Promise<void> {
+  if (incomingBytes <= 0) return;
+  const conf = loadConfig();
+  const used = await prisma.achievementEvidence.aggregate({
+    where: {
+      uploaderId: userId,
+      fileSize: { gt: 0 },
+      achievement: { status: { not: 'dibatalkan' } },
+    },
+    _sum: { fileSize: true },
+  });
+  const currentBytes = used._sum.fileSize ?? 0;
+  if (currentBytes + incomingBytes > conf.userStorageQuotaBytes) {
+    const quotaMb = Math.round(conf.userStorageQuotaBytes / (1024 * 1024));
+    throw new ValidationError(
+      `Kuota penyimpanan berkas Anda (${quotaMb} MB) telah terpenuhi. Hapus atau batalkan pengajuan lama sebelum mengunggah berkas baru.`,
+      { evidence: `Melebihi kuota penyimpanan maksimal ${quotaMb} MB per mahasiswa` }
+    );
+  }
 }
 
 const VALID_CATEGORIES = new Set<string>([
@@ -408,7 +448,11 @@ function sanitizeAchievementParticipants<
 }
 
 // 1. Ambil daftar prestasi milik mahasiswa login (termasuk anggota kelompok)
-export async function getStudentAchievements(userId: string, status?: string) {
+export async function getStudentAchievements(
+  userId: string,
+  status?: string,
+  pagination?: { page?: number; limit?: number }
+) {
   const whereClause: Prisma.AchievementWhereInput = {
     OR: [{ userId }, { participants: { some: { userId } } }],
   };
@@ -419,66 +463,81 @@ export async function getStudentAchievements(userId: string, status?: string) {
     whereClause.status = status as AchievementStatus;
   }
 
-  const rows = await prisma.achievement.findMany({
-    where: whereClause,
-    include: {
-      competition: {
-        select: { id: true, slug: true, name: true },
-      },
-      competitionCategory: {
-        select: { id: true, code: true, name: true },
-      },
-      subCategory: {
-        select: { id: true, code: true, name: true },
-      },
-      team: {
-        select: { id: true, name: true },
-      },
-      participants: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              studentProfile: {
-                select: {
-                  fullName: true,
-                  studyProgram: true,
-                  avatarObjectKey: true,
-                  updatedAt: true,
+  const { page, limit, skip } = normalizePagination(pagination?.page, pagination?.limit);
+
+  const [rows, total] = await Promise.all([
+    prisma.achievement.findMany({
+      where: whereClause,
+      include: {
+        competition: {
+          select: { id: true, slug: true, name: true },
+        },
+        competitionCategory: {
+          select: { id: true, code: true, name: true },
+        },
+        subCategory: {
+          select: { id: true, code: true, name: true },
+        },
+        team: {
+          select: { id: true, name: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                studentProfile: {
+                  select: {
+                    fullName: true,
+                    studyProgram: true,
+                    avatarObjectKey: true,
+                    updatedAt: true,
+                  },
                 },
               },
             },
           },
         },
-      },
-      evidences: {
-        where: { isActive: true },
-        select: {
-          id: true,
-          fileName: true,
-          fileSize: true,
-          mimeType: true,
-          isActive: true,
-          uploadedAt: true,
+        evidences: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            fileName: true,
+            fileSize: true,
+            mimeType: true,
+            isActive: true,
+            uploadedAt: true,
+          },
+        },
+        decisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+        revisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
         },
       },
-      decisions: {
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-      },
-      revisions: {
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.achievement.count({ where: whereClause }),
+  ]);
 
-  return rows.map((row) => ({
-    ...row,
-    participants: sanitizeAchievementParticipants(row.participants),
-  }));
+  return {
+    items: rows.map((row) => ({
+      ...row,
+      participants: sanitizeAchievementParticipants(row.participants),
+    })),
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    } satisfies PaginationMeta,
+  };
 }
 
 // 2. Ambil detail prestasi
@@ -686,6 +745,25 @@ export async function createAchievement(
     throw new ConflictError('Belum ada periode akademik aktif untuk pengajuan prestasi');
   }
 
+  // Anti-bloat: Batasi jumlah pengajuan non-batal per mahasiswa per periode & kuota penyimpanan RustFS
+  const conf = loadConfig();
+  const periodSubmissionCount = await prisma.achievement.count({
+    where: {
+      institutionId,
+      userId,
+      academicPeriodId: activePeriod.id,
+      status: { not: 'dibatalkan' },
+    },
+  });
+  if (periodSubmissionCount >= conf.maxAchievementsPerPeriod) {
+    throw new ValidationError(
+      `Batas maksimal pengajuan prestasi per periode akademik (${conf.maxAchievementsPerPeriod}) telah tercapai`,
+      { achievement: `Maksimal ${conf.maxAchievementsPerPeriod} pengajuan aktif per periode` }
+    );
+  }
+  const incomingBytes = files.reduce((sum, f) => sum + f.buffer.byteLength, 0);
+  await assertUserStorageQuota(userId, incomingBytes);
+
   // Hubungkan dengan kompetisi jika ada slug / ID
   let competitionId = input.competitionId || null;
   let competitionCategoryIdInput = input.competitionCategoryId || null;
@@ -881,6 +959,22 @@ export async function submitRevision(
 
   for (const f of newFiles) {
     validateFileItem(f);
+  }
+
+  // Anti-bloat: Batasi jumlah revisi per pengajuan & kuota penyimpanan berkas per mahasiswa
+  const conf = loadConfig();
+  const existingRevisionsCount = await prisma.achievementRevision.count({
+    where: { achievementId: current.id },
+  });
+  if (existingRevisionsCount >= conf.maxRevisionsPerAchievement) {
+    throw new ValidationError(
+      `Batas maksimal revisi (${conf.maxRevisionsPerAchievement} kali) untuk pengajuan ini telah tercapai`,
+      { revision: `Maksimal ${conf.maxRevisionsPerAchievement} kali revisi per pengajuan` }
+    );
+  }
+  if (newFiles.length > 0) {
+    const incomingBytes = newFiles.reduce((sum, f) => sum + f.buffer.byteLength, 0);
+    await assertUserStorageQuota(userId, incomingBytes);
   }
 
   const replaceIds = Array.from(new Set((input.replaceEvidenceIds || []).filter(Boolean)));
@@ -1231,14 +1325,68 @@ export async function getEvidenceFile(
   }
 
   const storage = getStorageService();
-  const fileData = await storage.getFile(evidence.objectKey);
+  try {
+    const fileData = await storage.getFile(evidence.objectKey);
+    return {
+      buffer: fileData.buffer,
+      contentType: fileData.contentType || evidence.mimeType,
+      fileName: evidence.fileName,
+      size: fileData.buffer.byteLength,
+      etag: fileData.etag,
+    };
+  } catch {
+    throw new NotFoundError('Berkas bukti tidak ditemukan atau sudah dibersihkan oleh kebijakan retensi');
+  }
+}
 
-  return {
-    buffer: fileData.buffer,
-    contentType: fileData.contentType || evidence.mimeType,
-    fileName: evidence.fileName,
-    size: fileData.buffer.byteLength,
-  };
+export async function getEvidenceFileStream(
+  evidenceId: string,
+  userId: string,
+  role: string,
+  institutionId?: string
+) {
+  const evidence = await prisma.achievementEvidence.findUnique({
+    where: { id: evidenceId },
+    include: {
+      achievement: {
+        include: {
+          participants: { select: { userId: true } },
+        },
+      },
+    },
+  });
+
+  if (!evidence || (institutionId && evidence.achievement.institutionId !== institutionId)) {
+    throw new NotFoundError('Berkas bukti tidak ditemukan');
+  }
+
+  const isParticipant = evidence.achievement.participants.some((p) => p.userId === userId);
+  if (
+    role === 'mahasiswa' &&
+    evidence.uploaderId !== userId &&
+    evidence.achievement.userId !== userId &&
+    !isParticipant
+  ) {
+    throw new ForbiddenError('Anda tidak memiliki izin untuk mengunduh berkas bukti ini');
+  }
+
+  if (evidence.fileSize <= 0) {
+    throw new NotFoundError('Berkas bukti telah dibersihkan sesuai kebijakan retensi penyimpanan');
+  }
+
+  const storage = getStorageService();
+  try {
+    const fileStream = await storage.getFileStream(evidence.objectKey);
+    return {
+      stream: fileStream.stream,
+      contentType: fileStream.contentType || evidence.mimeType,
+      fileName: evidence.fileName,
+      contentLength: fileStream.contentLength ?? evidence.fileSize,
+      etag: fileStream.etag,
+    };
+  } catch {
+    throw new NotFoundError('Berkas bukti tidak ditemukan di penyimpanan');
+  }
 }
 
 // 6. Antrean verifikasi validator
@@ -1280,86 +1428,101 @@ export async function getAdminAchievements(filters: AdminAchievementFilter = {})
     ];
   }
 
-  const rows = await prisma.achievement.findMany({
-    where: whereClause,
-    include: {
-      user: {
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          studentProfile: {
-            select: {
-              fullName: true,
-              nim: true,
-              studyProgram: true,
-              faculty: true,
-              avatarObjectKey: true,
-              updatedAt: true,
+  const { page, limit, skip } = normalizePagination(filters.page, filters.limit);
+
+  const [rows, total] = await Promise.all([
+    prisma.achievement.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            studentProfile: {
+              select: {
+                fullName: true,
+                nim: true,
+                studyProgram: true,
+                faculty: true,
+                avatarObjectKey: true,
+                updatedAt: true,
+              },
             },
           },
         },
-      },
-      competition: {
-        select: { id: true, slug: true, name: true },
-      },
-      competitionCategory: {
-        select: { id: true, code: true, name: true },
-      },
-      subCategory: {
-        select: { id: true, code: true, name: true },
-      },
-      team: {
-        select: { id: true, name: true },
-      },
-      participants: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              studentProfile: {
-                select: {
-                  fullName: true,
-                  nim: true,
-                  studyProgram: true,
-                  avatarObjectKey: true,
-                  updatedAt: true,
+        competition: {
+          select: { id: true, slug: true, name: true },
+        },
+        competitionCategory: {
+          select: { id: true, code: true, name: true },
+        },
+        subCategory: {
+          select: { id: true, code: true, name: true },
+        },
+        team: {
+          select: { id: true, name: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                studentProfile: {
+                  select: {
+                    fullName: true,
+                    nim: true,
+                    studyProgram: true,
+                    avatarObjectKey: true,
+                    updatedAt: true,
+                  },
                 },
               },
             },
           },
         },
-      },
-      evidences: {
-        where: { isActive: true },
-        select: {
-          id: true,
-          fileName: true,
-          fileSize: true,
-          mimeType: true,
-          isActive: true,
-          uploadedAt: true,
+        evidences: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            fileName: true,
+            fileSize: true,
+            mimeType: true,
+            isActive: true,
+            uploadedAt: true,
+          },
         },
-      },
-      decisions: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        include: {
-          decidedBy: {
-            select: { id: true, fullName: true, role: true },
+        decisions: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            decidedBy: {
+              select: { id: true, fullName: true, role: true },
+            },
           },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.achievement.count({ where: whereClause }),
+  ]);
 
-  return rows.map((row) => ({
-    ...row,
-    user: sanitizeAchievementUser(row.user),
-    participants: sanitizeAchievementParticipants(row.participants),
-  }));
+  return {
+    items: rows.map((row) => ({
+      ...row,
+      user: sanitizeAchievementUser(row.user),
+      participants: sanitizeAchievementParticipants(row.participants),
+    })),
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    } satisfies PaginationMeta,
+  };
 }
 
 // 7. Keputusan validator (approve, request_changes, reject) dengan Concurrency Lock, 3-Lapis Poin, & Kelompok
@@ -1571,6 +1734,7 @@ export async function decideAchievement(
   });
 
   if (!result.replayed) {
+    invalidateRankingCache();
     await recordAuditEvent({
       institutionId: result.updated.institutionId,
       actorId: validatorId,
@@ -1696,6 +1860,8 @@ export async function correctAchievement(
 
     return { updated, previousStatus: ach.status };
   });
+
+  invalidateRankingCache();
 
   await recordAuditEvent({
     institutionId: result.updated.institutionId,
@@ -1835,110 +2001,116 @@ function aggregateRankingEntries(
 // 9. Mesin Ranking Publik & Internal Terotorisasi — Bebas PII & Stabil
 export async function getPublicRanking(periodId?: string, options: RankingViewOptions = {}) {
   const institutionId = options.viewerInstitutionId || (await getDefaultInstitutionId());
-  let activePeriodId = periodId;
-
-  if (!activePeriodId) {
-    const activePeriod = await prisma.academicPeriod.findFirst({
-      where: { institutionId, isActive: true },
-    });
-    activePeriodId = activePeriod?.id;
-  }
-
-  if (!activePeriodId) {
-    return { period: null, ranking: [] };
-  }
-
-  const periodData = await prisma.academicPeriod.findFirst({
-    where: { id: activePeriodId, institutionId },
-  });
-  if (!periodData) {
-    return { period: null, ranking: [] };
-  }
-
   const includeAvatar = Boolean(options.includeAvatar && options.viewerInstitutionId);
+  const cacheKey = `ranking:period:${institutionId}:${periodId || 'active'}:${includeAvatar ? 'auth' : 'pub'}`;
 
-  const ledgerEntries = await prisma.pointLedger.findMany({
-    where: {
-      institutionId,
-      academicPeriodId: activePeriodId,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          ...(includeAvatar ? { institutionId: true } : {}),
-          studentProfile: {
-            select: {
-              fullName: true,
-              studyProgram: true,
-              ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
+  return appReadCache.getOrSet(cacheKey, async () => {
+    let activePeriodId = periodId;
+
+    if (!activePeriodId) {
+      const activePeriod = await prisma.academicPeriod.findFirst({
+        where: { institutionId, isActive: true },
+      });
+      activePeriodId = activePeriod?.id;
+    }
+
+    if (!activePeriodId) {
+      return { period: null, ranking: [] };
+    }
+
+    const periodData = await prisma.academicPeriod.findFirst({
+      where: { id: activePeriodId, institutionId },
+    });
+    if (!periodData) {
+      return { period: null, ranking: [] };
+    }
+
+    const ledgerEntries = await prisma.pointLedger.findMany({
+      where: {
+        institutionId,
+        academicPeriodId: activePeriodId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            ...(includeAvatar ? { institutionId: true } : {}),
+            studentProfile: {
+              select: {
+                fullName: true,
+                studyProgram: true,
+                ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
+              },
             },
           },
         },
-      },
-      achievement: {
-        select: {
-          id: true,
-          result: true,
-          status: true,
+        achievement: {
+          select: {
+            id: true,
+            result: true,
+            status: true,
+          },
         },
       },
-    },
+    });
+
+    const ranking = aggregateRankingEntries(ledgerEntries, options);
+
+    return {
+      period: {
+        id: periodData.id,
+        name: periodData.name,
+        year: periodData.year,
+        semester: periodData.semester,
+      },
+      ranking,
+    };
   });
-
-  const ranking = aggregateRankingEntries(ledgerEntries, options);
-
-  return {
-    period: {
-      id: periodData.id,
-      name: periodData.name,
-      year: periodData.year,
-      semester: periodData.semester,
-    },
-    ranking,
-  };
 }
 
 // 10. Ranking Sepanjang Waktu (Lifetime Ranking)
 export async function getLifetimeRanking(options: RankingViewOptions = {}) {
   const institutionId = options.viewerInstitutionId || (await getDefaultInstitutionId());
   const includeAvatar = Boolean(options.includeAvatar && options.viewerInstitutionId);
+  const cacheKey = `ranking:lifetime:${institutionId}:${includeAvatar ? 'auth' : 'pub'}`;
 
-  const ledgerEntries = await prisma.pointLedger.findMany({
-    where: { institutionId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          ...(includeAvatar ? { institutionId: true } : {}),
-          studentProfile: {
-            select: {
-              fullName: true,
-              studyProgram: true,
-              ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
+  return appReadCache.getOrSet(cacheKey, async () => {
+    const ledgerEntries = await prisma.pointLedger.findMany({
+      where: { institutionId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            ...(includeAvatar ? { institutionId: true } : {}),
+            studentProfile: {
+              select: {
+                fullName: true,
+                studyProgram: true,
+                ...(includeAvatar ? { avatarObjectKey: true, updatedAt: true } : {}),
+              },
             },
           },
         },
-      },
-      achievement: {
-        select: {
-          id: true,
-          result: true,
-          status: true,
+        achievement: {
+          select: {
+            id: true,
+            result: true,
+            status: true,
+          },
         },
       },
-    },
+    });
+
+    const ranking = aggregateRankingEntries(ledgerEntries, options);
+
+    return {
+      period: {
+        id: 'lifetime',
+        name: 'Sepanjang Waktu (Lifetime)',
+        year: 0,
+        semester: 'all',
+      },
+      ranking,
+    };
   });
-
-  const ranking = aggregateRankingEntries(ledgerEntries, options);
-
-  return {
-    period: {
-      id: 'lifetime',
-      name: 'Sepanjang Waktu (Lifetime)',
-      year: 0,
-      semester: 'all',
-    },
-    ranking,
-  };
 }

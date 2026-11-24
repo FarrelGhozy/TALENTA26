@@ -114,19 +114,37 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
       }),
     }
   )
-  .get('/users/:userId/avatar', async ({ auth, params }) => {
+  .get('/users/:userId/avatar', async ({ auth, params, headers }) => {
     assertAuthenticated(auth);
-    const file = await profileService.getAuthorizedUserAvatar(
+    const file = await profileService.getAuthorizedUserAvatarStream(
       params.userId,
       auth.user.institutionId
     );
-    return new Response(file.buffer, {
-      headers: {
-        'Content-Type': file.contentType,
-        'Cache-Control': 'private, max-age=300',
-        'Content-Length': file.buffer.byteLength.toString(),
-      },
-    });
+
+    const ifNoneMatch = headers['if-none-match']?.trim();
+    if (file.etag && ifNoneMatch && (ifNoneMatch === file.etag || ifNoneMatch === `W/${file.etag}` || ifNoneMatch === '*')) {
+      await file.stream.cancel().catch(() => {});
+      return new Response(null, {
+        status: 304,
+        headers: {
+          ETag: file.etag,
+          'Cache-Control': 'private, max-age=86400',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    const resHeaders: Record<string, string> = {
+      'Content-Type': file.contentType,
+      'Cache-Control': 'private, max-age=86400',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (file.etag) resHeaders['ETag'] = file.etag;
+    if (typeof file.contentLength === 'number') {
+      resHeaders['Content-Length'] = file.contentLength.toString();
+    }
+
+    return new Response(file.stream, { headers: resHeaders });
   })
   .get('/users/:userId', async ({ auth, params }) => {
     assertAuthenticated(auth);
@@ -221,45 +239,67 @@ export const userRoutes = new Elysia({ prefix: '/api/v1' })
       },
     };
   })
-  .get('/users', async ({ auth }) => {
-    assertAuthenticated(auth);
-    const users = await prisma.user.findMany({
-      where: {
+  .get(
+    '/users',
+    async ({ auth, query }) => {
+      assertAuthenticated(auth);
+      const page = Math.max(1, Number.parseInt(query.page || '1', 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(query.limit || '100', 10) || 100));
+      const whereClause = {
         institutionId: auth.user.institutionId,
-        role: 'mahasiswa',
-        status: 'active',
-      },
-      select: {
-        id: true,
-        institutionId: true,
-        email: true,
-        fullName: true,
-        role: true,
-        studentProfile: {
+        role: 'mahasiswa' as const,
+        status: 'active' as const,
+      };
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where: whereClause,
           select: {
+            id: true,
+            institutionId: true,
+            email: true,
             fullName: true,
-            studyProgram: true,
-            faculty: true,
-            enrollmentYear: true,
-            skills: true,
-            interests: true,
-            availability: true,
-            rolesCapable: true,
+            role: true,
+            studentProfile: {
+              select: {
+                fullName: true,
+                studyProgram: true,
+                faculty: true,
+                enrollmentYear: true,
+                skills: true,
+                interests: true,
+                availability: true,
+                rolesCapable: true,
+              },
+            },
           },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.user.count({ where: whereClause }),
+      ]);
+      const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
+      return {
+        data: users.map((u) => ({
+          id: u.id,
+          institutionId: u.institutionId,
+          fullName: u.fullName || u.studentProfile?.fullName || null,
+          role: u.role,
+          email: isStaff || auth.user.id === u.id ? u.email : '',
+          studentProfile: u.studentProfile,
+        })),
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    });
-    const isStaff = auth.user.role === 'validator' || auth.user.role === 'super_admin';
-    return {
-      data: users.map((u) => ({
-        id: u.id,
-        institutionId: u.institutionId,
-        fullName: u.fullName || u.studentProfile?.fullName || null,
-        role: u.role,
-        email: isStaff || auth.user.id === u.id ? u.email : '',
-        studentProfile: u.studentProfile,
-      })),
-    };
-  });
+      };
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    }
+  );

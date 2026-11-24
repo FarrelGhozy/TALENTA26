@@ -26,6 +26,8 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
           competitionSlug: query.competitionSlug,
           q: query.q,
           role: query.role,
+          page: query.page ? Number(query.page) : undefined,
+          limit: query.limit ? Number(query.limit) : undefined,
         }
       );
       return { data: result };
@@ -35,6 +37,8 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
         competitionSlug: t.Optional(t.String()),
         q: t.Optional(t.String()),
         role: t.Optional(t.String()),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
       }),
     }
   )

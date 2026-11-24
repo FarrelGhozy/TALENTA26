@@ -3,7 +3,11 @@ import { createServer } from '../../src/app/server';
 import { prisma, closeDatabase } from '../../src/lib/prisma';
 import { hashPassword } from '../../src/lib/password';
 import { createSession } from '../../src/lib/session';
-import { getStorageService } from '../../src/lib/storage';
+import { getStorageService, LocalStorageService } from '../../src/lib/storage';
+import { runMaintenance } from '../../src/lib/maintenance';
+import * as fsp from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 process.env.DB_HOST = '127.0.0.1';
 process.env.DB_PORT = '3306';
@@ -589,6 +593,123 @@ describe('Wave 1 — Hardening Keamanan, Concurrency, Privasi, & Integritas Data
       process.env.NODE_ENV = prevNodeEnv;
       if (prevSmtpHost !== undefined) process.env.SMTP_HOST = prevSmtpHost;
       if (prevSmtpUser !== undefined) process.env.SMTP_USER = prevSmtpUser;
+    }
+  });
+
+  it('7. Wave 3: Streaming evidence + ETag/If-None-Match 304, pagination, dan quota/revisi', async () => {
+    const achId = createdAchIds[0];
+    expect(achId).toBeTruthy();
+
+    const ev = await prisma.achievementEvidence.findFirstOrThrow({
+      where: { achievementId: achId, isActive: true },
+    });
+
+    const firstDownload = await app.handle(
+      new Request(`http://localhost/api/v1/evidence/${ev.id}/download`, {
+        headers: { Authorization: `Bearer ${leader1Token}` },
+      })
+    );
+    expect(firstDownload.status).toBe(200);
+    const etag = firstDownload.headers.get('etag');
+    expect(etag).toBeTruthy();
+    expect(firstDownload.headers.get('cache-control')).toContain('private');
+    expect(firstDownload.headers.get('x-content-type-options')).toBe('nosniff');
+    const bodyBytes = await firstDownload.arrayBuffer();
+    expect(bodyBytes.byteLength).toBeGreaterThan(0);
+
+    // Permintaan kedua dengan If-None-Match harus mengembalikan 304 Not Modified
+    const cachedDownload = await app.handle(
+      new Request(`http://localhost/api/v1/evidence/${ev.id}/download`, {
+        headers: {
+          Authorization: `Bearer ${leader1Token}`,
+          'If-None-Match': etag!,
+        },
+      })
+    );
+    expect(cachedDownload.status).toBe(304);
+
+    // Pagination meta pada /api/v1/me/achievements
+    const pageRes = await app.handle(
+      new Request('http://localhost/api/v1/me/achievements?page=1&limit=1', {
+        headers: { Authorization: `Bearer ${leader1Token}` },
+      })
+    );
+    expect(pageRes.status).toBe(200);
+    const pageJson = (await pageRes.json()) as any;
+    expect(Array.isArray(pageJson.data)).toBe(true);
+    expect(pageJson.data.length).toBeLessThanOrEqual(1);
+    expect(pageJson.meta?.page).toBe(1);
+    expect(pageJson.meta?.limit).toBe(1);
+    expect(pageJson.meta?.total).toBeGreaterThanOrEqual(1);
+  });
+
+  it('8. Wave 3: Maintenance TTL pruning MySQL & Orphan GC RustFS (dry-run & live + grace window 24 jam)', async () => {
+    const oldSessionId = `old_sess_${timeId}`;
+    const oldResetId = `old_rst_${timeId}`;
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000); // 10 hari lalu
+
+    await prisma.authSession.create({
+      data: {
+        id: oldSessionId,
+        userId: leader1Id,
+        sessionToken: `expired_hash_${timeId}`,
+        expiresAt: oldDate,
+      },
+    });
+    await prisma.passwordResetToken.create({
+      data: {
+        id: oldResetId,
+        userId: leader1Id,
+        tokenHash: `expired_reset_${timeId}`,
+        expiresAt: oldDate,
+      },
+    });
+
+    const tempStorageDir = path.join(os.tmpdir(), `talenta-maint-int-${timeId}`);
+    const isolatedStorage = new LocalStorageService(tempStorageDir);
+    const agedOrphanKey = `institutions/${institutionId}/achievements/orphan-old/stale.pdf`;
+    const freshOrphanKey = `institutions/${institutionId}/achievements/orphan-new/fresh.pdf`;
+
+    try {
+      await isolatedStorage.uploadFile(agedOrphanKey, Buffer.from('%PDF-1.4 old'), 'application/pdf');
+      await isolatedStorage.uploadFile(freshOrphanKey, Buffer.from('%PDF-1.4 new'), 'application/pdf');
+      // Mundurkan mtime agedOrphanKey 48 jam agar melewati grace window 24 jam
+      const agedPath = path.join(tempStorageDir, agedOrphanKey);
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      await fsp.utimes(agedPath, twoDaysAgo, twoDaysAgo);
+
+      // Dry-run menghitung tanpa menghapus
+      const drySummary = await runMaintenance({
+        dryRun: true,
+        storage: isolatedStorage,
+        auditRetentionDays: 0,
+        storageRetentionInactiveDays: 0,
+      });
+      expect(drySummary.mysql.authSessionsPruned).toBeGreaterThanOrEqual(1);
+      expect(drySummary.mysql.passwordResetTokensPruned).toBeGreaterThanOrEqual(1);
+      expect(drySummary.storage.orphanObjectsDeleted).toBe(1);
+
+      const stillThere = await prisma.authSession.findUnique({ where: { id: oldSessionId } });
+      expect(stillThere).not.toBeNull();
+
+      // Live run membersihkan baris kedaluwarsa & hanya orphan > 24 jam (fresh < 24 jam aman)
+      const liveSummary = await runMaintenance({
+        dryRun: false,
+        storage: isolatedStorage,
+        auditRetentionDays: 0,
+        storageRetentionInactiveDays: 0,
+      });
+      expect(liveSummary.mysql.authSessionsPruned).toBeGreaterThanOrEqual(1);
+      expect(liveSummary.mysql.passwordResetTokensPruned).toBeGreaterThanOrEqual(1);
+      expect(liveSummary.storage.orphanObjectsDeleted).toBe(1);
+
+      expect(await prisma.authSession.findUnique({ where: { id: oldSessionId } })).toBeNull();
+      expect(await prisma.passwordResetToken.findUnique({ where: { id: oldResetId } })).toBeNull();
+      await expect(isolatedStorage.getFile(agedOrphanKey)).rejects.toThrow();
+      const freshStillThere = await isolatedStorage.getFile(freshOrphanKey);
+      expect(freshStillThere.buffer.byteLength).toBeGreaterThan(0);
+    } finally {
+      await fsp.rm(tempStorageDir, { recursive: true, force: true });
     }
   });
 });

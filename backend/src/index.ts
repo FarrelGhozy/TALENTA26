@@ -2,6 +2,7 @@ import { createServer } from './app/server';
 import { loadConfig } from './lib/config';
 import { closeDatabase } from './lib/prisma';
 import { logger } from './lib/logger';
+import { startMaintenanceScheduler, stopMaintenanceScheduler } from './lib/maintenance';
 
 const currentConfig = loadConfig();
 const app = createServer();
@@ -21,6 +22,7 @@ app.listen(
       env: currentConfig.nodeEnv,
       maxRequestBodySizeBytes: maxRequestBodySize,
     });
+    startMaintenanceScheduler();
   }
 );
 
@@ -29,6 +31,7 @@ async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info('SERVER', `Received ${signal}, shutting down gracefully...`);
+  stopMaintenanceScheduler();
   try {
     await app.stop();
   } catch (err) {

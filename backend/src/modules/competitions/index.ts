@@ -10,14 +10,16 @@ export const competitionRoutes = new Elysia()
   .get(
     '/api/v1/competitions',
     async ({ query }) => {
-      const data = await compService.getPublishedCompetitions({
+      const result = await compService.getPublishedCompetitions({
         category: query.category,
         level: query.level,
         format: query.format,
         periodId: query.periodId,
         search: query.q || query.search,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
       });
-      return { data };
+      return { data: result.items, meta: result.meta };
     },
     {
       query: t.Object({
@@ -27,6 +29,8 @@ export const competitionRoutes = new Elysia()
         periodId: t.Optional(t.String()),
         q: t.Optional(t.String()),
         search: t.Optional(t.String()),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
       }),
     }
   )
@@ -41,12 +45,24 @@ export const competitionRoutes = new Elysia()
   })
 
   // Rute Pengelolaan Validator & Super Admin
-  .get('/api/v1/admin/competitions', async ({ auth }) => {
-    assertAuthenticated(auth);
-    assertRole(auth, ['validator', 'super_admin']);
-    const data = await compService.getAllCompetitionsAdmin(auth.user.institutionId);
-    return { data };
-  })
+  .get(
+    '/api/v1/admin/competitions',
+    async ({ auth, query }) => {
+      assertAuthenticated(auth);
+      assertRole(auth, ['validator', 'super_admin']);
+      const result = await compService.getAllCompetitionsAdmin(auth.user.institutionId, {
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+      });
+      return { data: result.items, meta: result.meta };
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    }
+  )
   .get('/api/v1/admin/competitions/:id', async ({ auth, params }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['validator', 'super_admin']);

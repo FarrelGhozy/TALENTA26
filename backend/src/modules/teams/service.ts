@@ -162,6 +162,8 @@ export interface TeamDirectoryFilters {
   competitionSlug?: string;
   q?: string;
   role?: string;
+  page?: number;
+  limit?: number;
 }
 
 export async function getMyTeam(userId: string) {
@@ -394,10 +396,24 @@ export async function getOpenTeamsDirectory(
       return true;
     });
 
+  const page = Number.isFinite(filters.page) && (filters.page as number) >= 1 ? Math.floor(filters.page!) : 1;
+  const limit =
+    Number.isFinite(filters.limit) && (filters.limit as number) >= 1
+      ? Math.min(100, Math.floor(filters.limit!))
+      : 100;
+  const total = items.length;
+  const paginatedItems = items.slice((page - 1) * limit, page * limit);
+
   return {
     competition,
-    teams: items,
+    teams: paginatedItems,
     myActiveTeamId: myMembership?.teamId || null,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    },
   };
 }
 
