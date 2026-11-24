@@ -1,9 +1,30 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, ShieldCheck, Heart, ExternalLink, GraduationCap } from 'lucide-react';
+import {
+  ExternalLink,
+  GraduationCap,
+  Heart,
+  Medal,
+  ShieldCheck,
+  Trophy,
+  UserPlus,
+} from 'lucide-react';
+import { useAuth } from '../../features/auth/AuthContext';
 import { TalentaMark } from './TalentaMark';
 
 export const Footer: React.FC = () => {
+  const { currentUser, currentRole } = useAuth();
+  const portalPath = currentUser
+    ? currentRole === 'mahasiswa'
+      ? '/app/beranda'
+      : '/admin'
+    : '/masuk';
+  const portalLabel = currentUser
+    ? currentRole === 'mahasiswa'
+      ? 'Buka Beranda Mahasiswa'
+      : 'Buka Portal Admin'
+    : 'Masuk ke Portal TALENTA';
+
   return (
     <footer className="bg-gradient-to-b from-[#081226] via-[#060e20] to-[#040814] text-slate-300 border-t border-blue-900/60 mt-20 pt-16 pb-10 relative overflow-hidden">
       {/* Ambient Blue Background Glow */}
@@ -21,7 +42,7 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-300/90 leading-relaxed max-w-md">
-              Platform pembinaan dan pendataan prestasi mahasiswa Universitas Darussalam Gontor. Mengintegrasikan pemetaan potensi talenta, pembentukan tim komplementer, roadmap persiapan mandiri, dan pencatatan capaian prestasi.
+              Platform pembinaan dan pendataan prestasi mahasiswa Universitas Darussalam Gontor. Menghubungkan katalog lomba, rekrutmen tim terbuka &amp; kode undangan, roadmap persiapan mandiri, serta pencatatan capaian prestasi terverifikasi.
             </p>
             <div className="flex items-center gap-2 text-xs text-sky-200 font-semibold bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-700/50 w-fit backdrop-blur-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
@@ -31,36 +52,56 @@ export const Footer: React.FC = () => {
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h4 className="font-bold text-white text-xs uppercase tracking-wider">
+            <h2 className="font-bold text-white text-xs uppercase tracking-wider">
               Navigasi Cepat
-            </h4>
+            </h2>
             <ul className="space-y-2.5 text-xs">
               <li>
                 <Link
                   to="/kompetisi"
-                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
+                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium py-0.5 group"
                 >
-                  <Trophy className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
+                  <Trophy className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
                   Katalog Kompetisi
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/masuk"
-                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
+                  to="/ranking"
+                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium py-0.5 group"
                 >
-                  <GraduationCap className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                  Masuk ke Portal TALENTA
+                  <Medal className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                  Papan Peringkat
                 </Link>
               </li>
+              <li>
+                <Link
+                  to={portalPath}
+                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium py-0.5 group"
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                  {portalLabel}
+                </Link>
+              </li>
+              {!currentUser && (
+                <li>
+                  <Link
+                    to="/daftar"
+                    className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium py-0.5 group"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                    Daftar Akun Mahasiswa
+                  </Link>
+                </li>
+              )}
               <li>
                 <a
                   href="https://unida.gontor.ac.id"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium group"
+                  className="hover:text-white text-slate-300 transition-colors inline-flex items-center gap-2 font-medium py-0.5 group"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" />
+                  <ExternalLink className="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
                   Website Resmi UNIDA Gontor
                 </a>
               </li>
@@ -69,24 +110,24 @@ export const Footer: React.FC = () => {
 
           {/* Ethics / Principles */}
           <div className="space-y-4">
-            <h4 className="font-bold text-white text-xs uppercase tracking-wider">
-              Nilai & Prinsip
-            </h4>
-            <ul className="space-y-2 text-xs text-slate-300/80 leading-relaxed">
+            <h2 className="font-bold text-white text-xs uppercase tracking-wider">
+              Nilai &amp; Prinsip
+            </h2>
+            <ul className="space-y-2 text-xs text-slate-300/85 leading-relaxed">
               <li>• Menjunjung tinggi nilai keislaman, keikhlasan, dan kesungguhan (<em>Mujahadah</em>).</li>
-              <li>• Rekomendasi tim membantu menemukan keahlian yang saling melengkapi.</li>
-              <li>• Pengesahan prestasi diverifikasi secara transparan oleh validator kampus.</li>
+              <li>• Pembentukan tim melalui rekrutmen terbuka dan kode undangan yang dikelola ketua tim.</li>
+              <li>• Pengesahan prestasi diverifikasi secara transparan oleh validator kampus; dokumen bukti tetap privat.</li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-blue-900/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
           <div>
-            TALENTA — Pembinaan Mahasiswa.
+            TALENTA — Pembinaan Mahasiswa. Identitas pendaftar bersifat isian mandiri kampus.
           </div>
           <div className="flex items-center gap-1.5 text-slate-400">
             <span>Untuk generasi khaira ummah berprestasi</span>
-            <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400 inline" />
+            <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400 inline" aria-hidden="true" />
           </div>
         </div>
       </div>

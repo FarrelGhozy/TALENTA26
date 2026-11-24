@@ -16,6 +16,7 @@ import {
   X,
   LogOut,
   ArrowRight,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { TalentaMark } from './TalentaMark';
@@ -187,11 +188,11 @@ export const Navbar: React.FC = () => {
                   key={link.to}
                   to={link.to}
                   aria-current={active ? 'page' : undefined}
-                  className={`relative py-1.5 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
+                  className={`relative inline-flex items-center min-h-[40px] py-2 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
                     isLanding
                       ? active
                         ? 'text-sky-300 font-bold'
-                        : 'text-slate-300 hover:text-white'
+                        : 'text-slate-200 hover:text-white'
                       : active
                         ? 'text-blue-700 font-bold'
                         : 'text-slate-600 hover:text-blue-700'
@@ -314,28 +315,27 @@ export const Navbar: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2.5">
               <Link
-                to="/kompetisi"
-                className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl min-h-[38px] transition-all border ${
+                to="/daftar"
+                className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full min-h-[40px] transition-all border ${
                   isLanding
-                    ? 'text-white bg-white/10 hover:bg-white/20 border-white/20'
+                    ? 'text-white bg-white/10 hover:bg-white/20 border-white/25'
                     : 'text-slate-700 hover:text-blue-800 hover:bg-slate-100 border-slate-200'
                 }`}
               >
-                <Compass className={`w-3.5 h-3.5 ${isLanding ? 'text-sky-300' : 'text-blue-700'}`} />
-                Jelajah Lomba
+                <UserPlus className={`w-3.5 h-3.5 ${isLanding ? 'text-sky-300' : 'text-blue-700'}`} aria-hidden="true" />
+                Daftar
               </Link>
 
-              {/* Aesthetic Pill CTA Button matching Image 1 with UNIDA Royal Blue Branding */}
               <Link
                 to="/masuk"
-                className={`text-xs font-bold px-5 py-2 rounded-full min-h-[38px] inline-flex items-center gap-2 transition-all shadow-md active:scale-95 ${
+                className={`text-xs font-bold px-5 py-2 rounded-full min-h-[40px] inline-flex items-center gap-2 transition-all shadow-md active:scale-95 ${
                   isLanding
                     ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white shadow-blue-950/60 hover:shadow-blue-800/80 border border-blue-400/30 hover:scale-[1.02]'
                     : 'bg-blue-700 text-white hover:bg-blue-800 shadow-blue-600/20'
                 }`}
               >
                 <span>Masuk Portal</span>
-                <ArrowRight className="w-3.5 h-3.5 text-sky-200" />
+                <ArrowRight className="w-3.5 h-3.5 text-sky-200" aria-hidden="true" />
               </Link>
             </div>
           )}
@@ -464,13 +464,27 @@ export const Navbar: React.FC = () => {
                 </button>
               </>
             ) : (
-              <Link
-                to="/masuk"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] shadow-sm bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white"
-              >
-                Masuk ke Aplikasi
-              </Link>
+              <div className="space-y-2">
+                <Link
+                  to="/masuk"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] shadow-sm bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white"
+                >
+                  Masuk ke Aplikasi
+                </Link>
+                <Link
+                  to="/daftar"
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center justify-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] border transition-colors ${
+                    isLanding
+                      ? 'border-white/25 text-white bg-white/10 hover:bg-white/20'
+                      : 'border-slate-300 text-slate-800 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <UserPlus className="w-4 h-4" aria-hidden="true" />
+                  Daftar Akun Mahasiswa
+                </Link>
+              </div>
             )}
           </div>
         </nav>

@@ -138,6 +138,14 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-25` di 
 
 ---
 
+## Tugas mandiri — Penyelarasan & Peningkatan Landing Page, Navbar, & Footer (24 November 2026)
+- [x] Tambahkan seksi **Sorotan Mahasiswa Berprestasi (Top 3 Live)** pada [LandingPage.tsx](file:///home/fazy/projek/STACK2026/frontend/src/features/landing/LandingPage.tsx) (`PRD_TALENTA.md` §4 & `K-11`) dengan kepatuhan privasi `K-20` (tamu publik hanya melihat inisial, avatar hanya tampil saat civitas login), badge periode aktif, catatan asal data, serta state loading/kosong/gagal + retry.
+- [x] Ganti strip metrik statis `"Kompetisi Belmawa"` dengan 4 metrik live dari API (Periode Aktif, Kompetisi Terbit/Pendaftaran Buka, Mahasiswa di Peringkat, Prestasi Lomba Sah) dan perkaya kartu **Pilihan Kompetisi** dengan prioritas `registrationStatus === 'buka'`, badge Buka/Tutup (`K-23`), format Individu/Beregu, penyelenggara, dan jadwal terdekat.
+- [x] Perbaiki kontras & aksesibilitas Hero (panel glass gelap `Fokus Layanan` di kanan desktop, scrim tablet/mobile tanpa pemotongan deskripsi, tombol pagination & gulir `>= 44×44 px` dengan focus ring jelas, tombol jeda/putar slider yang menghormati `prefers-reduced-motion` & hover/focus), hilangkan seluruh `<button>` bersarang di dalam `<a>`, perbarui [Footer.tsx](file:///home/fazy/projek/STACK2026/frontend/src/components/common/Footer.tsx) (link `/ranking` & `/daftar`, portal dinamis, copy `K-19`, hierarki `H2`, `aria-hidden`), ganti tombol duplikat di [Navbar.tsx](file:///home/fazy/projek/STACK2026/frontend/src/components/common/Navbar.tsx) menjadi jalur cepat `Daftar` (`/daftar`), dan perluas E2E [01-public-flows.ts](file:///home/fazy/projek/STACK2026/tests/e2e/specs/01-public-flows.ts).
+- Verifikasi: `bun run typecheck`, `bun run lint` (0 error/warning), 33 unit test, `bun run build:demo`, `bun run build` (bundle bersih), inspeksi visual Playwright live di Desktop (`1440×900`), Tablet (`768×1024`), dan Mobile (`390×844`) untuk mode login & tamu (0 foto privat bocor ke tamu, 0 nested interactive, hierarki `H1→H2→H3`, kontrol slider `44×44 px`, 0 overflow), serta **Playwright E2E penuh** (`bash run-e2e.sh` — 4/4 suite lulus dalam 10,97 detik).
+
+---
+
 ## Tugas mandiri — Audit Menyeluruh, Hardening DDoS, & Anti-Bloat MySQL/RustFS (24 November 2026)
 - [x] **Wave 1 — Patch Kritis Keamanan, Bug Logika Bisnis, & Integritas Data Backend**:
   - Tutup fail-closed SMTP `K-13` (`MailerUnavailableError` + timeout/close transport), TOCTOU reset password atomik + cabut sesi dalam `$transaction`, anti-timing enumeration pada login, dan batas panjang field registrasi.
