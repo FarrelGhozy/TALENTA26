@@ -820,8 +820,7 @@ export const ValidatorContentPage: React.FC = () => {
                       {validatorContentService.deleteCompetition && (
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          variant="danger-outline"
                           onClick={() => void openDeleteCompetitionModal(item)}
                           leftIcon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
                           aria-label={`Hapus kompetisi ${item.name}`}
@@ -972,8 +971,10 @@ export const ValidatorContentPage: React.FC = () => {
                         <Button
                           type="button"
                           size="sm"
-                          variant="ghost"
-                          className="text-rose-600"
+                          variant="danger-outline"
+                          className="px-2.5"
+                          aria-label={`Hapus aturan poin khusus baris ${idx + 1}`}
+                          title="Hapus aturan poin"
                           onClick={() => setCustomPointRules((prev) => prev.filter((_, i) => i !== idx))}
                         >
                           <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -1062,8 +1063,8 @@ export const ValidatorContentPage: React.FC = () => {
                       <Button
                         type="button"
                         size="sm"
-                        variant="ghost"
-                        className="text-rose-600"
+                        variant="danger-outline"
+                        leftIcon={<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
                         onClick={() => setPhases((prev) => prev.filter((_, i) => i !== pIdx))}
                       >
                         Hapus Fase
@@ -1125,8 +1126,10 @@ export const ValidatorContentPage: React.FC = () => {
                           <Button
                             type="button"
                             size="sm"
-                            variant="ghost"
-                            className="text-rose-600"
+                            variant="danger-outline"
+                            className="px-2.5"
+                            aria-label={`Hapus tugas ${task.title || tIdx + 1}`}
+                            title="Hapus tugas"
                             onClick={() => {
                               const next = [...phases];
                               next[pIdx] = {
@@ -1241,8 +1244,9 @@ export const ValidatorContentPage: React.FC = () => {
                       {validatorContentService.deleteConsultant && (
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="text-rose-600"
+                          variant="danger-outline"
+                          leftIcon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                          aria-label={`Hapus kontak ${c.name}`}
                           onClick={() => setDeleteConsultantTarget(c)}
                         >
                           Hapus

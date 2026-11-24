@@ -3,6 +3,7 @@ import { AlertCircle, Camera, ShieldAlert, Trash2, Upload } from 'lucide-react';
 import { Input } from '../../../components/ui/Input';
 import { Select, SelectOption } from '../../../components/ui/Select';
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
 import { User } from '../../../types';
 import { assetUrl } from '../../../lib/asset';
 
@@ -161,26 +162,29 @@ export const StepIdentitas: React.FC<StepIdentitasProps> = ({
           )}
 
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="primary"
               disabled={uploadingAvatar}
+              isLoading={uploadingAvatar}
               onClick={() => fileInputRef.current?.click()}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
+              leftIcon={<Upload className="w-3.5 h-3.5" aria-hidden="true" />}
             >
-              <Upload className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{uploadingAvatar ? 'Mengunggah...' : currentAvatar ? 'Ganti Foto' : 'Unggah Foto'}</span>
-            </button>
+              {uploadingAvatar ? 'Mengunggah...' : currentAvatar ? 'Ganti Foto' : 'Unggah Foto'}
+            </Button>
 
             {currentAvatar && (
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant="danger-outline"
                 disabled={uploadingAvatar}
                 onClick={handleRemoveAvatar}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-rose-600 bg-rose-50 hover:bg-rose-100/80 border border-rose-200 disabled:opacity-60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                leftIcon={<Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
               >
-                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Hapus Foto</span>
-              </button>
+                Hapus Foto
+              </Button>
             )}
           </div>
         </div>

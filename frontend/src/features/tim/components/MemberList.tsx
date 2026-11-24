@@ -74,8 +74,8 @@ export const MemberList: React.FC<MemberListProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 px-2"
+                  variant="danger-outline"
+                  className="px-2.5"
                   isLoading={removingUserId === m.userId}
                   onClick={() => onRemoveMember(m.userId, displayName)}
                   aria-label={`Keluarkan ${displayName} dari tim`}

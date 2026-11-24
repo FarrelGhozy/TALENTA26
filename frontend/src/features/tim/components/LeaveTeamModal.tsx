@@ -22,7 +22,7 @@ export const LeaveTeamModal: React.FC<LeaveTeamModalProps> = ({
       title="Konfirmasi Keluar dari Tim"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={onClose} disabled={isLoading}>
+          <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
             Batal
           </Button>
           <Button variant="danger" size="sm" onClick={onConfirm} isLoading={isLoading}>

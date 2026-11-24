@@ -215,7 +215,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
             Konfirmasi Penolakan: Pengajuan yang ditolak tidak akan dihitung sebagai prestasi terverifikasi. Lanjutkan?
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setConfirming(null)}>
+            <Button variant="outline" size="sm" onClick={() => setConfirming(null)}>
               Batal
             </Button>
             <Button
@@ -232,20 +232,19 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({
       ) : (
         <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
           <Button
-            variant="outline"
+            variant="warning-outline"
             size="sm"
             disabled={isLoading}
             onClick={() => requestAction('perlu_perbaikan')}
-            leftIcon={<AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-hidden="true" />}
+            leftIcon={<AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />}
           >
             Minta Revisi Dokumen
           </Button>
           <Button
-            variant="ghost"
+            variant="danger-outline"
             size="sm"
             disabled={isLoading}
             onClick={() => requestAction('ditolak')}
-            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
             leftIcon={<XCircle className="w-3.5 h-3.5" aria-hidden="true" />}
           >
             Tolak

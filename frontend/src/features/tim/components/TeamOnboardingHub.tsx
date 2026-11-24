@@ -135,8 +135,7 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
             <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
               <Button
                 size="sm"
-                variant="secondary"
-                className="bg-white text-blue-900 hover:bg-blue-50 border-0"
+                variant="white"
                 leftIcon={<BookOpen className="w-3.5 h-3.5" aria-hidden="true" />}
               >
                 Lihat Roadmap Awal
@@ -159,8 +158,8 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
           <Button
             type="button"
             size="sm"
-            variant="outline"
-            className="shrink-0 bg-white border-amber-300 text-amber-900 hover:bg-amber-100"
+            variant="warning-outline"
+            className="shrink-0"
             onClick={onViewRequests}
           >
             Lihat Pengajuan Saya

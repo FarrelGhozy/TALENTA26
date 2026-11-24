@@ -122,7 +122,7 @@ export const MyJoinRequestsPanel: React.FC<MyJoinRequestsPanelProps> = ({
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="danger-outline"
                   isLoading={cancellingId === req.id}
                   onClick={() => handleCancelRequest(req.id)}
                 >

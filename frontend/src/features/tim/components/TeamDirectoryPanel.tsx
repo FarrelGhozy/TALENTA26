@@ -334,7 +334,7 @@ export const TeamDirectoryPanel: React.FC<TeamDirectoryPanelProps> = ({
                 </Button>
               )}
               <Link to={`/app/kompetisi/${competition.slug}/persiapan`}>
-                <Button type="button" size="sm" variant="ghost">
+                <Button type="button" size="sm" variant="outline">
                   Buka Roadmap Persiapan
                 </Button>
               </Link>

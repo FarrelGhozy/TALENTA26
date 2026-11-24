@@ -559,26 +559,26 @@ export const SuperAdminDashboardPage: React.FC = () => {
                                 year: 'numeric',
                               })}
                             </td>
-                            <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
-                              {systemService.updateUserName && (
+                            <td className="p-3.5 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center justify-end gap-2">
+                                {systemService.updateUserName && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditNameTarget({ id: u.id, fullName: u.fullName || displayName })}
+                                    leftIcon={<Edit3 className="w-3.5 h-3.5" aria-hidden="true" />}
+                                  >
+                                    Nama
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
-                                  variant="ghost"
-                                  onClick={() => setEditNameTarget({ id: u.id, fullName: u.fullName || displayName })}
-                                  className="text-[11px] h-8"
-                                  leftIcon={<Edit3 className="w-3 h-3" aria-hidden="true" />}
+                                  variant={isSuspended ? 'info-outline' : 'danger-outline'}
+                                  onClick={() => setConfirmUserAction({ user: u })}
                                 >
-                                  Nama
+                                  {isSuspended ? 'Aktifkan' : 'Suspend'}
                                 </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant={isSuspended ? 'outline' : 'danger'}
-                                onClick={() => setConfirmUserAction({ user: u })}
-                                className="text-[11px] h-8"
-                              >
-                                {isSuspended ? 'Aktifkan' : 'Suspend'}
-                              </Button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1010,7 +1010,13 @@ export const SuperAdminDashboardPage: React.FC = () => {
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setConfirmUserAction(null)}>Batal</Button>
-            <Button variant="primary" size="sm" onClick={executeConfirmUserAction}>Ya, Lanjutkan</Button>
+            <Button
+              variant={confirmUserAction?.user.status === 'active' ? 'danger' : 'primary'}
+              size="sm"
+              onClick={executeConfirmUserAction}
+            >
+              {confirmUserAction?.user.status === 'active' ? 'Ya, Tangguhkan' : 'Ya, Aktifkan'}
+            </Button>
           </div>
         }
       >

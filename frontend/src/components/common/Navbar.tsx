@@ -475,8 +475,13 @@ export const Navbar: React.FC = () => {
                   </Link>
                 )}
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-rose-500 font-bold px-3 py-2.5 rounded-xl hover:bg-rose-500/10 min-h-[44px] transition-colors cursor-pointer"
+                  className={`w-full flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl border min-h-[44px] transition-colors cursor-pointer ${
+                    isLanding
+                      ? 'text-rose-300 border-rose-400/40 bg-rose-500/10 hover:bg-rose-500/20'
+                      : 'text-rose-700 border-rose-300 bg-rose-50/80 hover:bg-rose-100'
+                  }`}
                 >
                   <LogOut className="w-4 h-4" aria-hidden="true" />
                   Keluar dari Akun

@@ -131,49 +131,54 @@ export const AchievementTable: React.FC<{
                     <AchievementStatusBadge status={item.status} />
                   </td>
                   {(onSelect || onRevise || onCancel || studentDetailBasePath) && (
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
-                      {onSelect && (
-                        <button
-                          onClick={() => onSelect(item)}
-                          aria-label={`Periksa pengajuan ${item.nama}`}
-                          className="font-extrabold text-blue-700 hover:text-blue-900 min-h-[36px] px-3 py-1.5 rounded-xl hover:bg-blue-50 cursor-pointer inline-flex items-center gap-1 transition-colors text-xs"
-                        >
-                          Periksa <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                      )}
-                      {studentDetailBasePath && (
-                        <Link
-                          to={`${studentDetailBasePath}/${item.id}`}
-                          aria-label={`Detail pengajuan ${item.nama}`}
-                          className="font-bold text-blue-700 hover:text-blue-900 min-h-[34px] px-2.5 py-1 rounded-xl hover:bg-blue-50 inline-flex items-center gap-1 transition-colors text-xs"
-                        >
-                          Detail <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                        </Link>
-                      )}
-                      {onRevise &&
-                        item.status === 'perlu_perbaikan' &&
-                        (!currentUserId || item.userId === currentUserId) && (
-                        <button
-                          onClick={() => onRevise(item)}
-                          aria-label={`Revisi pengajuan ${item.nama}`}
-                          className="font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 min-h-[34px] px-3 py-1 rounded-xl cursor-pointer inline-flex items-center gap-1.5 transition-colors text-xs border border-amber-300 shadow-2xs"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
-                          Revisi
-                        </button>
-                      )}
-                      {onCancel &&
-                        item.status === 'menunggu' &&
-                        (!currentUserId || item.userId === currentUserId) && (
-                        <button
-                          onClick={() => onCancel(item)}
-                          aria-label={`Batalkan pengajuan ${item.nama}`}
-                          className="font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 min-h-[34px] px-2.5 py-1 rounded-xl cursor-pointer inline-flex items-center gap-1 transition-colors text-xs border border-rose-200"
-                        >
-                          <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                          Batalkan
-                        </button>
-                      )}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        {onSelect && (
+                          <button
+                            type="button"
+                            onClick={() => onSelect(item)}
+                            aria-label={`Periksa pengajuan ${item.nama}`}
+                            className="font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 hover:text-blue-900 border border-blue-200 hover:border-blue-300 shadow-2xs min-h-[36px] px-3 py-1.5 rounded-xl cursor-pointer inline-flex items-center gap-1 transition-colors text-xs"
+                          >
+                            Periksa <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                          </button>
+                        )}
+                        {studentDetailBasePath && (
+                          <Link
+                            to={`${studentDetailBasePath}/${item.id}`}
+                            aria-label={`Detail pengajuan ${item.nama}`}
+                            className="font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 hover:text-blue-900 border border-blue-200 hover:border-blue-300 shadow-2xs min-h-[36px] px-3 py-1.5 rounded-xl inline-flex items-center gap-1 transition-colors text-xs"
+                          >
+                            Detail <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                          </Link>
+                        )}
+                        {onRevise &&
+                          item.status === 'perlu_perbaikan' &&
+                          (!currentUserId || item.userId === currentUserId) && (
+                          <button
+                            type="button"
+                            onClick={() => onRevise(item)}
+                            aria-label={`Revisi pengajuan ${item.nama}`}
+                            className="font-bold text-amber-900 bg-amber-50/90 hover:bg-amber-100 min-h-[36px] px-3 py-1.5 rounded-xl cursor-pointer inline-flex items-center gap-1.5 transition-colors text-xs border border-amber-300 hover:border-amber-400 shadow-2xs"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+                            Revisi
+                          </button>
+                        )}
+                        {onCancel &&
+                          item.status === 'menunggu' &&
+                          (!currentUserId || item.userId === currentUserId) && (
+                          <button
+                            type="button"
+                            onClick={() => onCancel(item)}
+                            aria-label={`Batalkan pengajuan ${item.nama}`}
+                            className="font-bold text-rose-700 bg-rose-50/80 hover:bg-rose-100 min-h-[36px] px-3 py-1.5 rounded-xl cursor-pointer inline-flex items-center gap-1 transition-colors text-xs border border-rose-300 hover:border-rose-400 shadow-2xs"
+                          >
+                            <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                            Batalkan
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

@@ -190,8 +190,7 @@ export const AchievementDetailPage: React.FC = () => {
         {isSubmitter && item.status === 'menunggu' && achievementService.cancel && (
           <Button
             size="sm"
-            variant="outline"
-            className="text-rose-600 border-rose-200 hover:bg-rose-50"
+            variant="danger-outline"
             onClick={() => setCancelModalOpen(true)}
             leftIcon={<XCircle className="w-4 h-4" aria-hidden="true" />}
           >

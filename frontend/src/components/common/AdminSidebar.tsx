@@ -591,7 +591,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[38px] rounded-xl text-xs font-bold text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[38px] rounded-xl text-xs font-bold text-rose-700 bg-rose-50/60 hover:bg-rose-100 border border-rose-200 hover:border-rose-300 shadow-2xs transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Keluar dari Portal</span>

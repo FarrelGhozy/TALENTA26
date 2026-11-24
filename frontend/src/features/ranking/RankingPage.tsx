@@ -347,10 +347,10 @@ export const RankingPage: React.FC = () => {
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="danger-outline"
               onClick={handleRetry}
               leftIcon={<RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />}
-              className="bg-white border-rose-300 text-rose-800 hover:bg-rose-100 shrink-0"
+              className="shrink-0"
             >
               Muat Ulang
             </Button>

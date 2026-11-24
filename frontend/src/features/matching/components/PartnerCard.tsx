@@ -151,11 +151,10 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({ candidate, inviteStatu
               {onCancel && (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="danger-outline"
                   onClick={() => onCancel(user.id)}
                   isLoading={loading}
-                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                  leftIcon={<X className="w-3.5 h-3.5" />}
+                  leftIcon={<X className="w-3.5 h-3.5" aria-hidden="true" />}
                 >
                   Batalkan
                 </Button>

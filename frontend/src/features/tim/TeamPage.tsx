@@ -422,8 +422,7 @@ export const TeamPage: React.FC = () => {
             <Link to={`/app/kompetisi/${activeCompetition.slug}/persiapan`}>
               <Button
                 size="sm"
-                variant="secondary"
-                className="bg-white text-blue-900 hover:bg-blue-50 border-0"
+                variant="white"
                 leftIcon={<BookOpen className="w-3.5 h-3.5" aria-hidden="true" />}
               >
                 Lihat Roadmap Awal

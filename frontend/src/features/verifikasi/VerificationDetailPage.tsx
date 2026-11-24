@@ -154,9 +154,9 @@ export const VerificationDetailPage: React.FC = () => {
         <div className="flex items-center gap-2">
           {isApproved && (
             <Button
-              variant="outline"
+              variant="warning-outline"
               size="sm"
-              leftIcon={<RotateCcw className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />}
+              leftIcon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
               onClick={() => setShowCorrectionModal(true)}
             >
               Koreksi Keputusan
@@ -164,7 +164,7 @@ export const VerificationDetailPage: React.FC = () => {
           )}
           <Link
             to="/admin/prestasi"
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white"
+            className="text-xs font-bold text-slate-800 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-400 inline-flex items-center gap-1.5 px-3.5 py-1.5 min-h-[36px] rounded-xl border border-slate-300 bg-white shadow-2xs transition-colors"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Kembali ke Antrean

@@ -200,7 +200,7 @@ export const BerandaPage: React.FC = () => {
             </div>
           </div>
           <Link to="/app/prestasi" className="shrink-0">
-            <Button size="sm" variant="outline" className="border-orange-300 text-orange-900 hover:bg-orange-100">
+            <Button size="sm" variant="warning-outline">
               Periksa Berkas Sekarang
             </Button>
           </Link>

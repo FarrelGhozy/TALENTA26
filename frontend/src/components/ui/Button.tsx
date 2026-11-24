@@ -1,7 +1,21 @@
 import React from 'react';
+import { mergeButtonClasses } from '../../lib/buttonClasses';
+
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'info-outline'
+  | 'ghost'
+  | 'danger'
+  | 'danger-outline'
+  | 'warning-outline'
+  | 'success'
+  | 'white'
+  | 'outline-white';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success' | 'white' | 'outline-white';
+  variant?: ButtonVariant;
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -22,23 +36,29 @@ export const Button: React.FC<ButtonProps> = ({
   const base =
     'inline-flex items-center justify-center font-bold transition-all duration-150 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer active:scale-[0.98] select-none';
 
-  const variants = {
+  const variants: Record<ButtonVariant, string> = {
     primary:
-      'bg-blue-700 text-white shadow-sm hover:bg-blue-800 hover:shadow-md hover:shadow-blue-600/20 focus-visible:ring-blue-600',
+      'border border-blue-700 bg-blue-700 text-white shadow-sm hover:bg-blue-800 hover:border-blue-800 hover:shadow-md hover:shadow-blue-600/20 focus-visible:ring-blue-600',
     secondary:
-      'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200/90 focus-visible:ring-slate-400',
+      'border border-slate-300/80 bg-slate-100 text-slate-800 hover:bg-slate-200 hover:border-slate-300 focus-visible:ring-slate-400 shadow-2xs',
     outline:
-      'border-2 border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 focus-visible:ring-blue-500 shadow-2xs',
+      'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400 hover:text-slate-900 focus-visible:ring-blue-500 shadow-2xs',
+    'info-outline':
+      'border border-blue-200 bg-blue-50/80 text-blue-700 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-900 focus-visible:ring-blue-500 shadow-2xs',
     ghost:
-      'text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300',
+      'border border-transparent text-slate-700 hover:bg-slate-100 hover:border-slate-200 hover:text-slate-900 focus-visible:ring-slate-300',
     danger:
-      'bg-rose-600 text-white shadow-sm hover:bg-rose-700 hover:shadow-md hover:shadow-rose-500/20 focus-visible:ring-rose-500',
+      'border border-rose-600 bg-rose-600 text-white shadow-sm hover:bg-rose-700 hover:border-rose-700 hover:shadow-md hover:shadow-rose-500/20 focus-visible:ring-rose-500',
+    'danger-outline':
+      'border border-rose-300 bg-rose-50/80 text-rose-700 hover:bg-rose-100 hover:border-rose-400 hover:text-rose-800 focus-visible:ring-rose-500 shadow-2xs',
+    'warning-outline':
+      'border border-amber-300 bg-amber-50/90 text-amber-900 hover:bg-amber-100 hover:border-amber-400 hover:text-amber-950 focus-visible:ring-amber-500 shadow-2xs',
     success:
-      'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/20 focus-visible:ring-emerald-500',
+      'border border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:border-emerald-700 hover:shadow-md hover:shadow-emerald-600/20 focus-visible:ring-emerald-500',
     white:
-      'bg-white text-blue-900 hover:bg-blue-50 border border-slate-200/60 shadow-md focus-visible:ring-white',
+      'border border-white/80 bg-white text-blue-900 hover:bg-blue-50 shadow-sm focus-visible:ring-white',
     'outline-white':
-      'border-2 border-white/90 bg-white/10 text-white hover:bg-white hover:text-blue-950 focus-visible:ring-white shadow-xs backdrop-blur-xs',
+      'border border-white/85 bg-white/10 text-white hover:bg-white hover:text-blue-950 focus-visible:ring-white shadow-xs backdrop-blur-xs',
   };
 
   const sizes = {
@@ -49,7 +69,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={mergeButtonClasses(base, variants[variant], sizes[size], className)}
       disabled={disabled || isLoading}
       aria-busy={isLoading || undefined}
       aria-disabled={disabled || isLoading || undefined}

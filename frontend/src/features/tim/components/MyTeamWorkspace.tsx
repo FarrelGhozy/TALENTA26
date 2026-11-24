@@ -226,10 +226,9 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
           )}
           <Button
             type="button"
-            variant="ghost"
+            variant={isLocked ? 'secondary' : 'danger-outline'}
             size="sm"
             disabled={isLocked}
-            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
             onClick={() => setIsLeaveModalOpen(true)}
             leftIcon={
               isLocked ? (
@@ -498,7 +497,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
                         <Button
                           type="button"
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                          variant="success"
                           disabled={decidingId === req.id}
                           isLoading={decidingId === req.id}
                           onClick={() => handleDecideRequest(req.id, 'disetujui')}
@@ -509,7 +508,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
+                          variant="danger-outline"
                           disabled={decidingId === req.id}
                           onClick={() => handleDecideRequest(req.id, 'ditolak')}
                           leftIcon={<X className="w-3.5 h-3.5" aria-hidden="true" />}
@@ -532,7 +531,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
                     type="button"
                     disabled={rotatingCode}
                     onClick={handleRotateCode}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-800 cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50/70 text-[11px] font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-300 cursor-pointer transition-colors disabled:opacity-50"
                   >
                     <RefreshCw
                       className={`w-3 h-3 ${rotatingCode ? 'animate-spin' : ''}`}
@@ -553,7 +552,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
                       type="button"
                       onClick={handleCopyCode}
                       aria-label="Salin kode undangan tim"
-                      className="p-2 rounded-lg text-slate-600 hover:bg-white hover:text-blue-700 cursor-pointer transition-colors"
+                      className="p-2 rounded-lg bg-white border border-slate-300 text-slate-700 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50/50 shadow-2xs cursor-pointer transition-colors"
                     >
                       <Copy className="w-4 h-4" aria-hidden="true" />
                     </button>
