@@ -50,8 +50,32 @@ export class ConflictError extends AppError {
 }
 
 export class RateLimitError extends AppError {
-  constructor(message = 'Terlalu banyak permintaan. Silakan tunggu beberapa saat.') {
+  public readonly retryAfterSeconds: number;
+
+  constructor(
+    message = 'Terlalu banyak permintaan. Silakan tunggu beberapa saat.',
+    retryAfterSeconds = 60
+  ) {
     super(429, 'RATE_LIMITED', message);
+    this.retryAfterSeconds = Math.max(1, Math.ceil(retryAfterSeconds));
+  }
+}
+
+export class PayloadTooLargeError extends AppError {
+  constructor(message = 'Ukuran data atau berkas yang dikirim melebihi batas maksimal server.') {
+    super(413, 'PAYLOAD_TOO_LARGE', message);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  public readonly retryAfterSeconds?: number;
+
+  constructor(
+    message = 'Layanan sedang sibuk atau belum siap. Silakan coba kembali beberapa saat lagi.',
+    retryAfterSeconds?: number
+  ) {
+    super(503, 'SERVICE_UNAVAILABLE', message);
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -60,14 +84,49 @@ export interface ApiErrorResponse {
     code: string;
     message: string;
     fieldErrors?: Record<string, string>;
+    retryAfterSeconds?: number;
     requestId: string;
   };
 }
 
 export function formatErrorResponse(
   error: unknown,
-  requestId = crypto.randomUUID()
-): { status: number; body: ApiErrorResponse } {
+  requestId: string = crypto.randomUUID()
+): { status: number; body: ApiErrorResponse; headers?: Record<string, string> } {
+  if (error instanceof RateLimitError) {
+    return {
+      status: error.statusCode,
+      headers: {
+        'Retry-After': String(error.retryAfterSeconds),
+      },
+      body: {
+        error: {
+          code: error.code,
+          message: error.message,
+          retryAfterSeconds: error.retryAfterSeconds,
+          requestId,
+        },
+      },
+    };
+  }
+
+  if (error instanceof ServiceUnavailableError) {
+    return {
+      status: error.statusCode,
+      headers: error.retryAfterSeconds
+        ? { 'Retry-After': String(error.retryAfterSeconds) }
+        : undefined,
+      body: {
+        error: {
+          code: error.code,
+          message: error.message,
+          retryAfterSeconds: error.retryAfterSeconds,
+          requestId,
+        },
+      },
+    };
+  }
+
   if (error instanceof AppError) {
     return {
       status: error.statusCode,

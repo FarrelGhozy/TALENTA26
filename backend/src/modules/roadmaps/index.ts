@@ -107,23 +107,25 @@ export const roadmapRoutes = new Elysia({ prefix: '/api/v1' })
       body: t.Object({
         phases: t.Array(
           t.Object({
-            id: t.Optional(t.String()),
+            id: t.Optional(t.String({ maxLength: 80 })),
             orderIndex: t.Number(),
-            title: t.String(),
-            description: t.Optional(t.String()),
-            targetDays: t.Optional(t.Number()),
+            title: t.String({ maxLength: 180 }),
+            description: t.Optional(t.String({ maxLength: 2000 })),
+            targetDays: t.Optional(t.Number({ minimum: 1, maximum: 365 })),
             tasks: t.Array(
               t.Object({
-                id: t.Optional(t.String()),
+                id: t.Optional(t.String({ maxLength: 80 })),
                 orderIndex: t.Number(),
-                title: t.String(),
-                description: t.Optional(t.String()),
+                title: t.String({ maxLength: 180 }),
+                description: t.Optional(t.String({ maxLength: 2000 })),
                 isRequired: t.Optional(t.Boolean()),
-                resourceUrl: t.Optional(t.String()),
-                resourceTitle: t.Optional(t.String()),
-              })
+                resourceUrl: t.Optional(t.String({ maxLength: 500 })),
+                resourceTitle: t.Optional(t.String({ maxLength: 180 })),
+              }),
+              { maxItems: 50 }
             ),
-          })
+          }),
+          { maxItems: 20 }
         ),
       }),
     }

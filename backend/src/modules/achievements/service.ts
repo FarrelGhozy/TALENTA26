@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '../../app/middleware/error';
 import { recordAuditEvent } from '../../lib/audit';
+import { loadConfig } from '../../lib/config';
 import { getStorageService } from '../../lib/storage';
 import { resolveAchievementPoints } from '../points/service';
 import { getDefaultInstitutionId } from '../competitions/service';
@@ -20,9 +21,13 @@ import type {
   Prisma,
 } from '@prisma/client';
 
-export const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8 MB batas maksimal sesuai arahan user
+export const MAX_FILE_SIZE = 8 * 1024 * 1024; // Default 8 MB (dapat ditimpa lewat env UPLOAD_MAX_BYTES)
 export const ALLOWED_MIME_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 export const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
+
+export function getConfiguredUploadMaxBytes(): number {
+  return loadConfig().uploadMaxBytes;
+}
 
 export interface UploadedFileItem {
   name: string;
@@ -112,7 +117,7 @@ const MAX_PARTICIPANTS = 20;
 
 function formatJakartaDateStr(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jakarta',
+    timeZone: loadConfig().timezoneDisplay || 'Asia/Jakarta',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -181,10 +186,12 @@ export function validateAchievementInput(data: CreateAchievementInput) {
 
 export function validateFileItem(file: UploadedFileItem) {
   const realSize = file.buffer.byteLength;
-  if (realSize === 0 || realSize > MAX_FILE_SIZE) {
+  const maxBytes = getConfiguredUploadMaxBytes();
+  const maxMb = Math.round((maxBytes / (1024 * 1024)) * 10) / 10;
+  if (realSize === 0 || realSize > maxBytes) {
     throw new ValidationError(
-      `Ukuran berkas '${file.name}' tidak valid atau melebihi batas maksimal 8 MB`,
-      { file: 'Ukuran berkas harus antara 1 byte hingga 8 MB' }
+      `Ukuran berkas '${file.name}' tidak valid atau melebihi batas maksimal ${maxMb} MB`,
+      { file: `Ukuran berkas harus antara 1 byte hingga ${maxMb} MB` }
     );
   }
   const ext = path.extname(file.name).toLowerCase();

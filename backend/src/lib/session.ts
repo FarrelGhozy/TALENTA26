@@ -4,6 +4,9 @@ import { loadConfig } from './config';
 import type { User, StudentProfile } from '@prisma/client';
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 hari
+const SESSION_TOKEN_RE = /^[0-9a-f]{64}$/;
+const MAX_UA_LEN = 255;
+const MAX_IP_LEN = 45;
 
 export function generateSecureToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString('hex');
@@ -37,22 +40,47 @@ export async function createSession(
   const token = generateSecureToken(32);
   const tokenDigest = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  const safeIp = ipAddress ? ipAddress.slice(0, MAX_IP_LEN) : null;
+  const safeUa = userAgent ? userAgent.slice(0, MAX_UA_LEN) : null;
+  const maxSessions = loadConfig().maxSessionsPerUser;
 
-  await prisma.authSession.create({
-    data: {
-      userId,
-      sessionToken: tokenDigest,
-      ipAddress: ipAddress || null,
-      userAgent: userAgent || null,
-      expiresAt,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.authSession.create({
+      data: {
+        userId,
+        sessionToken: tokenDigest,
+        ipAddress: safeIp,
+        userAgent: safeUa,
+        expiresAt,
+      },
+    });
+
+    // Batasi jumlah sesi aktif per pengguna (eviksi sesi terlama agar auth_sessions tidak membengkak)
+    const activeSessions = await tx.authSession.findMany({
+      where: {
+        userId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+      skip: maxSessions,
+    });
+
+    if (activeSessions.length > 0) {
+      await tx.authSession.updateMany({
+        where: { id: { in: activeSessions.map((s) => s.id) } },
+        data: { revokedAt: new Date() },
+      });
+    }
   });
 
   return { token, expiresAt };
 }
 
 export async function validateSession(token: string): Promise<SessionData | null> {
-  if (!token) return null;
+  // Fast-fail sebelum HMAC dan query MySQL terhadap token cacat / flood acak
+  if (!token || !SESSION_TOKEN_RE.test(token)) return null;
   const tokenDigest = hashSessionToken(token);
 
   const session = await prisma.authSession.findUnique({

@@ -3,6 +3,9 @@ import * as achService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
 import { ValidationError } from '../../app/middleware/error';
+import { resolveClientIp } from '../../app/middleware/client-ip';
+import { uploadIpLimiter, uploadUserLimiter } from '../../app/middleware/rate-limit';
+import { loadConfig } from '../../lib/config';
 import type {
   AchievementCategory,
   AchievementLevel,
@@ -100,34 +103,64 @@ function parseStringArrayField(
   return undefined;
 }
 
-function extractUploadedFiles(rawItems: any[]): Promise<achService.UploadedFileItem[]> {
-  return Promise.all(
-    rawItems
-      .filter(Boolean)
-      .map(async (item) => {
-        if (item instanceof File && item.size > 0) {
-          const buffer = Buffer.from(await item.arrayBuffer());
-          return {
-            name: item.name,
-            size: buffer.byteLength,
-            type: item.type,
-            buffer,
-          };
+async function extractUploadedFiles(rawItems: any[]): Promise<achService.UploadedFileItem[]> {
+  const nonEmpty = rawItems.filter(Boolean);
+  if (nonEmpty.length > 3) {
+    throw new ValidationError('Maksimal berkas bukti yang diizinkan adalah 3 berkas', {
+      evidence: 'Maksimal 3 berkas bukti',
+    });
+  }
+
+  const maxBytes = loadConfig().uploadMaxBytes;
+  const maxMb = Math.round((maxBytes / (1024 * 1024)) * 10) / 10;
+  const result: achService.UploadedFileItem[] = [];
+
+  for (const item of nonEmpty) {
+    if (item instanceof File) {
+      // Validasi ukuran SEBELUM mengalokasikan Buffer di RAM (anti OOM DoS)
+      if (item.size <= 0) continue;
+      if (item.size > maxBytes) {
+        throw new ValidationError(
+          `Ukuran berkas '${item.name}' melampaui batas maksimal ${maxMb} MB`,
+          { evidence: `Maksimal ukuran per berkas ${maxMb} MB` }
+        );
+      }
+      const buffer = Buffer.from(await item.arrayBuffer());
+      result.push({
+        name: item.name,
+        size: buffer.byteLength,
+        type: item.type,
+        buffer,
+      });
+    } else if (item && typeof item === 'object' && item.buffer) {
+      if (typeof item.buffer === 'string') {
+        const estimatedBytes = Math.ceil((item.buffer.length * 3) / 4);
+        if (estimatedBytes > maxBytes + 64) {
+          throw new ValidationError(
+            `Ukuran berkas '${item.name || item.fileName || 'berkas'}' melampaui batas maksimal ${maxMb} MB`,
+            { evidence: `Maksimal ukuran per berkas ${maxMb} MB` }
+          );
         }
-        if (item && typeof item === 'object' && item.buffer) {
-          const buffer = Buffer.isBuffer(item.buffer)
-            ? item.buffer
-            : Buffer.from(item.buffer, 'base64');
-          return {
-            name: item.name || item.fileName || 'berkas.pdf',
-            size: buffer.byteLength,
-            type: item.type || item.mimeType || 'application/pdf',
-            buffer,
-          };
-        }
-        return null;
-      })
-  ).then((arr) => arr.filter((x): x is achService.UploadedFileItem => x !== null));
+      }
+      const buffer = Buffer.isBuffer(item.buffer)
+        ? item.buffer
+        : Buffer.from(item.buffer, 'base64');
+      if (buffer.byteLength > maxBytes) {
+        throw new ValidationError(
+          `Ukuran berkas '${item.name || item.fileName || 'berkas'}' melampaui batas maksimal ${maxMb} MB`,
+          { evidence: `Maksimal ukuran per berkas ${maxMb} MB` }
+        );
+      }
+      result.push({
+        name: item.name || item.fileName || 'berkas.pdf',
+        size: buffer.byteLength,
+        type: item.type || item.mimeType || 'application/pdf',
+        buffer,
+      });
+    }
+  }
+
+  return result;
 }
 
 export const achievementRoutes = new Elysia()
@@ -198,9 +231,14 @@ export const achievementRoutes = new Elysia()
     return { data };
   })
 
-  .post('/api/v1/me/achievements', async ({ auth, request, body }) => {
+  .post('/api/v1/me/achievements', async ({ auth, request, body, headers, server }) => {
     assertAuthenticated(auth);
     assertRole(auth, ['mahasiswa']);
+
+    const remoteAddress = server?.requestIP?.(request)?.address;
+    const clientIp = resolveClientIp(headers, remoteAddress);
+    uploadIpLimiter.check(`upip:${clientIp}`);
+    uploadUserLimiter.check(`upuser:${auth.user.id}`);
 
     const contentType = request.headers.get('content-type') || '';
     const b = (body || {}) as any;
@@ -287,7 +325,7 @@ export const achievementRoutes = new Elysia()
 
   .post(
     '/api/v1/me/achievements/:id/revisions',
-    async ({ auth, params, request, body }) => {
+    async ({ auth, params, request, body, headers, server }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
 
@@ -349,6 +387,13 @@ export const achievementRoutes = new Elysia()
       if (b.files) {
         if (Array.isArray(b.files)) rawItems.push(...b.files);
         else rawItems.push(b.files);
+      }
+
+      if (rawItems.length > 0) {
+        const remoteAddress = server?.requestIP?.(request)?.address;
+        const clientIp = resolveClientIp(headers, remoteAddress);
+        uploadIpLimiter.check(`upip:${clientIp}`);
+        uploadUserLimiter.check(`upuser:${auth.user.id}`);
       }
 
       const newFiles = await extractUploadedFiles(rawItems);

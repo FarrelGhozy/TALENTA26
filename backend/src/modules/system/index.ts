@@ -287,8 +287,9 @@ export const systemRoutes = new Elysia()
               t.Literal('juara_1'),
               t.Literal('penghargaan_khusus'),
             ]),
-            points: t.Number({ minimum: 0 }),
-          })
+            points: t.Number({ minimum: 0, maximum: 10000 }),
+          }),
+          { maxItems: 60 }
         ),
       }),
     }

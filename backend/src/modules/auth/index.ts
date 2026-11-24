@@ -1,7 +1,12 @@
 import { Elysia, t } from 'elysia';
 import * as authService from './service';
 import { assertAuthenticated, extractToken, authPlugin } from '../../app/middleware/auth';
-import { authRateLimiter } from '../../app/middleware/rate-limit';
+import {
+  authForgotEmailLimiter,
+  authLoginEmailLimiter,
+  authRateLimiter,
+  authRegisterIpLimiter,
+} from '../../app/middleware/rate-limit';
 import { loadConfig } from '../../lib/config';
 import { resolveClientIp } from '../../app/middleware/client-ip';
 
@@ -14,7 +19,8 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       const clientIp = resolveClientIp(headers, remoteAddress);
       const userAgent = headers['user-agent'] || '';
 
-      authRateLimiter.check(clientIp);
+      authRateLimiter.check(`auth:${clientIp}`);
+      authRegisterIpLimiter.check(`reg:${clientIp}`);
 
       const result = await authService.registerMahasiswa(body, clientIp, userAgent);
 
@@ -38,14 +44,14 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     },
     {
       body: t.Object({
-        email: t.String(),
-        password: t.String(),
-        nim: t.String(),
-        fullName: t.String(),
-        studyProgram: t.String(),
-        faculty: t.String(),
+        email: t.String({ maxLength: 254 }),
+        password: t.String({ maxLength: 128 }),
+        nim: t.String({ maxLength: 32 }),
+        fullName: t.String({ maxLength: 150 }),
+        studyProgram: t.String({ maxLength: 120 }),
+        faculty: t.String({ maxLength: 120 }),
         enrollmentYear: t.Optional(t.Number()),
-        phone: t.Optional(t.String()),
+        phone: t.Optional(t.String({ maxLength: 30 })),
       }),
     }
   )
@@ -55,10 +61,14 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       const remoteAddress = server?.requestIP?.(request)?.address;
       const clientIp = resolveClientIp(headers, remoteAddress);
       const userAgent = headers['user-agent'] || '';
+      const emailKey = `login:${(body.email || '').trim().toLowerCase()}`;
 
-      authRateLimiter.check(clientIp);
+      authRateLimiter.check(`auth:${clientIp}`);
+      authLoginEmailLimiter.check(emailKey);
 
       const result = await authService.login(body, clientIp, userAgent);
+      // Reset throttle akun setelah login berhasil agar tidak memblokir pengguna sah
+      authLoginEmailLimiter.reset(emailKey);
 
       const currentConfig = loadConfig();
       if (cookie.talenta_session) {
@@ -80,8 +90,8 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     },
     {
       body: t.Object({
-        email: t.String(),
-        password: t.String(),
+        email: t.String({ maxLength: 254 }),
+        password: t.String({ maxLength: 128 }),
       }),
     }
   )
@@ -137,7 +147,8 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     async ({ body, headers, request, server }) => {
       const remoteAddress = server?.requestIP?.(request)?.address;
       const clientIp = resolveClientIp(headers, remoteAddress);
-      authRateLimiter.check(clientIp);
+      authRateLimiter.check(`auth:${clientIp}`);
+      authForgotEmailLimiter.check(`forgot:${(body.email || '').trim().toLowerCase()}`);
 
       const result = await authService.requestPasswordReset(
         body.email,
@@ -148,7 +159,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     },
     {
       body: t.Object({
-        email: t.String(),
+        email: t.String({ maxLength: 254 }),
       }),
     }
   )
@@ -157,7 +168,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     async ({ body, headers, request, server }) => {
       const remoteAddress = server?.requestIP?.(request)?.address;
       const clientIp = resolveClientIp(headers, remoteAddress);
-      authRateLimiter.check(clientIp);
+      authRateLimiter.check(`auth:${clientIp}`);
 
       const result = await authService.resetPasswordWithToken(
         body.token,
@@ -169,8 +180,8 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     },
     {
       body: t.Object({
-        token: t.String(),
-        password: t.String(),
+        token: t.String({ maxLength: 256 }),
+        password: t.String({ maxLength: 128 }),
       }),
     }
   );

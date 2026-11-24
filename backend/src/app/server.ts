@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { assertProductionConfig, loadConfig } from '../lib/config';
@@ -16,6 +17,15 @@ import { dashboardRoutes } from '../modules/dashboard';
 import { assertSameOrigin } from './middleware/csrf';
 import { selectionRoutes } from '../modules/selections';
 import { pointRoutes } from '../modules/points';
+import { resolveClientIp } from './middleware/client-ip';
+import {
+  applyRateLimitHeaders,
+  globalApiLimiter,
+  mutationUserLimiter,
+} from './middleware/rate-limit';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const PRIVATE_PREFIXES = ['/api/v1/auth/', '/api/v1/me/', '/api/v1/admin/', '/api/v1/system/'];
 
 export function createServer() {
   const currentConfig = loadConfig();
@@ -35,13 +45,58 @@ export function createServer() {
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'],
       })
     )
-    .onError(({ error, set }) => {
-      const { status, body } = formatErrorResponse(error);
+    .derive({ as: 'global' }, ({ request, set }) => {
+      const incomingId = request.headers.get('x-request-id');
+      const requestId =
+        incomingId && /^[a-zA-Z0-9._-]{8,64}$/.test(incomingId)
+          ? incomingId
+          : crypto.randomUUID();
+      set.headers['x-request-id'] = requestId;
+      set.headers['x-content-type-options'] = 'nosniff';
+      set.headers['referrer-policy'] = 'strict-origin-when-cross-origin';
+
+      const pathname = new URL(request.url).pathname;
+      if (PRIVATE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+        set.headers['cache-control'] = 'no-store';
+      }
+
+      return { requestId };
+    })
+    .onError(({ error, set, request }) => {
+      const headerReqId =
+        typeof set.headers['x-request-id'] === 'string'
+          ? set.headers['x-request-id']
+          : request.headers.get('x-request-id') || crypto.randomUUID();
+      const { status, body, headers } = formatErrorResponse(error, headerReqId);
       set.status = status;
+      set.headers['x-request-id'] = headerReqId;
+      if (headers) {
+        for (const [k, v] of Object.entries(headers)) {
+          set.headers[k.toLowerCase()] = v;
+        }
+      }
       return body;
     })
-    .onBeforeHandle(({ request }) => assertSameOrigin(request))
     .use(authPlugin)
+    .onBeforeHandle(({ request, headers, set, server, auth }) => {
+      assertSameOrigin(request);
+
+      const pathname = new URL(request.url).pathname;
+      if (pathname.startsWith('/api/v1/')) {
+        const remoteAddress = server?.requestIP?.(request)?.address;
+        const clientIp = resolveClientIp(headers, remoteAddress);
+        const rl = globalApiLimiter.check(`api:${clientIp}`);
+        applyRateLimitHeaders(set.headers as Record<string, string | number>, rl);
+
+        if (
+          auth?.user &&
+          !SAFE_METHODS.has(request.method.toUpperCase()) &&
+          !pathname.startsWith('/api/v1/auth/')
+        ) {
+          mutationUserLimiter.check(`mut:${auth.user.id}`);
+        }
+      }
+    })
     .use(healthRoutes)
     .use(authRoutes)
     .use(profileRoutes)

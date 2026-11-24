@@ -1,12 +1,13 @@
 import { Elysia } from 'elysia';
 import { prisma } from '../../lib/prisma';
+import { resolveClientIp } from '../../app/middleware/client-ip';
+import { healthReadyIpLimiter } from '../../app/middleware/rate-limit';
 
 export const healthRoutes = new Elysia({ prefix: '/health' })
   .get('/', () => {
     return {
       data: {
         status: 'ok',
-        uptime: process.uptime(),
         timestamp: new Date().toISOString(),
       },
     };
@@ -15,12 +16,15 @@ export const healthRoutes = new Elysia({ prefix: '/health' })
     return {
       data: {
         status: 'ok',
-        uptime: process.uptime(),
         timestamp: new Date().toISOString(),
       },
     };
   })
-  .get('/ready', async ({ set }) => {
+  .get('/ready', async ({ set, headers, request, server }) => {
+    const remoteAddress = server?.requestIP?.(request)?.address;
+    const clientIp = resolveClientIp(headers, remoteAddress);
+    healthReadyIpLimiter.check(`health:${clientIp}`);
+
     try {
       await prisma.$queryRaw`SELECT 1`;
       return {

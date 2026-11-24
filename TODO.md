@@ -144,8 +144,12 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-24` di 
   - Samarkan `inviteCode` & `joinRequests` bagi non-ketua di `GET /api/v1/me/dashboard`, perbaiki ekspor CSV prestasi kelompok (1 baris per peserta sah + audit log + validasi enum), dan perbaiki bug wipe multipart revisi (`readOptionalString`/`readNullableString`) serta `cancelAchievement` atomik dengan penghapusan objek RustFS.
   - Nonaktifkan 5 rute legacy `matching`/`invites` yang mem-bypass `K-19`/`K-23`, tambahkan row lock deterministik (`users` → `teams FOR UPDATE`) dan bipartite matching peran di `evaluateTeamReadiness`, keluarkan `recordAuditEvent` dan upload RustFS dari dalam `$transaction`, perketat `/api/v1/system/*` khusus `super_admin` (kecuali read-only `GET /system/point-templates`), cegah eskalasi/lockout staf, perbaiki filter SQL `NULL` pergantian periode, isolasi `institutionId` pada point-rules & ranking, normalisasi nomor WA, dan multi-stage `InternalSelection`.
   - Verifikasi: `bun run typecheck`, `bun run lint` (0 error/warning), 23 unit test, dan 11 suite integrasi (termasuk `hardening-and-fixes.test.ts` — 6 test, 40 assertions) lulus 100%.
-- [ ] **Wave 2 — Proteksi DDoS, Rate Limiting Berlapis, & Hardening Application Layer** *(berikutnya)*.
-- [ ] **Wave 3 — Anti-Bloat & Optimasi Performa MySQL + RustFS**.
+- [x] **Wave 2 — Proteksi DDoS, Rate Limiting Berlapis, & Hardening Application Layer**:
+  - Perkuat `resolveClientIp` (`net.isIP`, normalisasi `::ffff:` IPv4-mapped IPv6, prioritas `CF-Connecting-IP` & hop non-privat paling kanan pada `X-Forwarded-For` anti-spoofing).
+  - Bangun ulang `InMemoryRateLimiter` dengan batas `maxEntries` LRU anti-OOM Map, sweep 30 detik, header `Retry-After` & `X-RateLimit-*`, serta preset berjenjang ramah NAT kampus (global IP, per-email login/forgot-password, per-IP register, per-user & per-IP upload, join-by-code, ekspor CSV, mutasi, dan `/health/ready`).
+  - Tambahkan Argon2id concurrency semaphore (`max 4` = maks `256 MiB` RAM) + batas password `128` karakter, fast-fail regex token sesi sebelum HMAC/MySQL, batas maks `10` sesi aktif per akun, pemotongan `userAgent`/`metadata` audit, validasi ukuran berkas sebelum `arrayBuffer()`, batas `maxLength`/`maxItems` skema endpoint, `X-Request-Id`, header keamanan + `Cache-Control: no-store`, graceful shutdown `SIGTERM`/`SIGINT`, serta aktivasi `UPLOAD_MAX_BYTES`/`LOG_LEVEL`/`TIMEZONE_DISPLAY` & fail-fast `PUBLIC_ORIGIN`/`SMTP` produksi.
+  - Verifikasi: `bun run typecheck`, `bun run lint` (0 error/warning), 28 unit test (termasuk `rate-limit-and-ip.test.ts`), dan 11 suite integrasi lulus 100%.
+- [ ] **Wave 3 — Anti-Bloat & Optimasi Performa MySQL + RustFS** *(berikutnya)*.
 - [ ] **Wave 4 — Perbaikan Bug Frontend, Validasi Klien, Deduplikasi Fetch, & UX**.
 - [ ] **Wave 5 — Hardening Infrastruktur, Nginx Edge, Docker Compose, Backup, & CI/CD**.
 - [ ] **Wave 6 — Rekonsiliasi Total Dokumentasi & Kebersihan Repositori**.

@@ -45,15 +45,16 @@ export const pointRoutes = new Elysia({ prefix: '/api/v1' })
     },
     {
       body: t.Object({
-        name: t.String(),
-        description: t.Optional(t.String()),
+        name: t.String({ maxLength: 150 }),
+        description: t.Optional(t.String({ maxLength: 1000 })),
         activateAsDefault: t.Optional(t.Boolean()),
         rules: t.Array(
           t.Object({
-            level: t.String(),
-            result: t.String(),
-            points: t.Number({ minimum: 0 }),
-          })
+            level: t.String({ maxLength: 32 }),
+            result: t.String({ maxLength: 32 }),
+            points: t.Number({ minimum: 0, maximum: 10000 }),
+          }),
+          { maxItems: 60 }
         ),
       }),
     }

@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import * as teamService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
+import { joinCodeUserLimiter } from '../../app/middleware/rate-limit';
 
 export const teamRoutes = new Elysia({ prefix: '/api/v1' })
   .use(authPlugin)
@@ -63,11 +64,11 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
     },
     {
       body: t.Object({
-        competitionSlug: t.String(),
-        teamName: t.String(),
-        roleInTeam: t.Optional(t.String()),
-        description: t.Optional(t.String()),
-        neededRoles: t.Optional(t.Array(t.String())),
+        competitionSlug: t.String({ maxLength: 160 }),
+        teamName: t.String({ maxLength: 120 }),
+        roleInTeam: t.Optional(t.String({ maxLength: 80 })),
+        description: t.Optional(t.String({ maxLength: 1000 })),
+        neededRoles: t.Optional(t.Array(t.String({ maxLength: 80 }), { maxItems: 15 })),
         recruitmentType: t.Optional(t.Union([t.Literal('terbuka'), t.Literal('privat')])),
         targetMaxMembers: t.Optional(t.Number()),
       }),
@@ -78,6 +79,7 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
     async ({ auth, body }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['mahasiswa']);
+      joinCodeUserLimiter.check(`joincode:${auth.user.id}`);
 
       const result = await teamService.joinTeamByCode(
         auth.user.id,
@@ -88,7 +90,7 @@ export const teamRoutes = new Elysia({ prefix: '/api/v1' })
     },
     {
       body: t.Object({
-        inviteCode: t.String(),
+        inviteCode: t.String({ maxLength: 32 }),
       }),
     }
   )

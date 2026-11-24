@@ -3,6 +3,7 @@ import * as profileService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
 import { resolveClientIp } from '../../app/middleware/client-ip';
+import { uploadIpLimiter, uploadUserLimiter } from '../../app/middleware/rate-limit';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, ValidationError } from '../../app/middleware/error';
 
@@ -55,6 +56,11 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
     assertAuthenticated(auth);
     assertRole(auth, ['mahasiswa']);
 
+    const remoteAddress = server?.requestIP?.(request)?.address;
+    const clientIp = resolveClientIp(headers, remoteAddress);
+    uploadIpLimiter.check(`upip:${clientIp}`);
+    uploadUserLimiter.check(`upuser:${auth.user.id}`);
+
     const b = (body || {}) as any;
     let fileItem: File | null = null;
     if (b.avatar instanceof File) {
@@ -71,13 +77,17 @@ export const profileRoutes = new Elysia({ prefix: '/api/v1/me/profile' })
       throw new ValidationError('Berkas foto profil (field avatar) wajib dipilih');
     }
 
+    // Validasi ukuran SEBELUM mengalokasikan Buffer di RAM (anti OOM DoS)
+    if (fileItem.size <= 0 || fileItem.size > profileService.MAX_AVATAR_SIZE) {
+      throw new ValidationError('Ukuran foto profil harus antara 1 byte hingga 2 MB');
+    }
+
     const buffer = Buffer.from(await fileItem.arrayBuffer());
-    const remoteAddress = server?.requestIP?.(request)?.address;
     const result = await profileService.uploadStudentAvatar(
       auth.user.id,
       auth.user.institutionId,
       { name: fileItem.name, type: fileItem.type, buffer },
-      resolveClientIp(headers, remoteAddress),
+      clientIp,
       headers['user-agent'] || ''
     );
     return { data: result };

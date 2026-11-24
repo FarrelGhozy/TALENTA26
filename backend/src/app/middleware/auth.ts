@@ -32,7 +32,12 @@ export function assertAuthenticated(auth: SessionData | null): asserts auth is S
 
 export const authPlugin = new Elysia({ name: 'auth-plugin' }).derive(
   { as: 'scoped' },
-  async ({ headers, cookie }) => {
+  async ({ headers, cookie, request }) => {
+    const pathname = new URL(request.url).pathname;
+    // Lewati query sesi MySQL untuk endpoint health probe
+    if (pathname === '/health' || pathname.startsWith('/health/')) {
+      return { auth: null };
+    }
     const rawCookie = cookie.talenta_session?.value;
     const cookieStr = typeof rawCookie === 'string' ? rawCookie : null;
     const auth = await resolveAuth(headers['authorization'], cookieStr);

@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import * as dashboardService from './service';
 import { assertAuthenticated, authPlugin } from '../../app/middleware/auth';
 import { assertRole } from '../../app/middleware/rbac';
+import { heavyExportUserLimiter } from '../../app/middleware/rate-limit';
 
 export const dashboardRoutes = new Elysia()
   .use(authPlugin)
@@ -39,6 +40,7 @@ export const dashboardRoutes = new Elysia()
     async ({ auth, query }) => {
       assertAuthenticated(auth);
       assertRole(auth, ['validator', 'super_admin']);
+      heavyExportUserLimiter.check(`export:${auth.user.id}`);
       const institutionId = auth.user.institutionId;
 
       const csvContent = await dashboardService.generateAchievementsCsv(
