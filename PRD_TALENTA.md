@@ -1,6 +1,6 @@
 # PRD TALENTA — Sistem pembinaan lomba dan prestasi mahasiswa
 
-Versi rancangan: 2.2, 23 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-23`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
+Versi rancangan: 2.3, 24 November 2026. Status: rancangan target produksi yang telah diselaraskan dengan keputusan pemilik produk (`K-01`–`K-24`); lihat `TODO.md` untuk status implementasi per fase dan gate verifikasi. Keputusan yang disepakati dan yang masih terbuka tercatat di `docs/14-keputusan-terbuka.md`.
 
 ## 1. Masalah dan tujuan
 
@@ -16,6 +16,7 @@ TALENTA rilis pertama ditujukan untuk satu kampus, UNIDA Gontor. Produk dapat di
 5. Setiap periode akademik baru dapat dibuat tanpa menghapus riwayat periode sebelumnya.
 
 ## 2. Prinsip produk
+- Identitas aplikasi memakai **Simpul Talenta**, konsep ketiga yang disetujui pemilik produk (`K-24`), dengan biru/navy, versi putih pada latar gelap, dan tipografi Plus Jakarta Sans. Ini identitas aplikasi, bukan klaim lambang resmi kampus.
 - Data riil dibedakan jelas dari demo/mock. Tidak ada klaim AI, beasiswa, SKPI, atau verifikasi BAAK dalam rilis awal.
 - Identitas mahasiswa rilis awal bersumber dari isian sendiri, belum diverifikasi kampus. NIM unik mencegah duplikat teknis tetapi tidak membuktikan identitas.
 - Hanya keputusan validator yang membuat prestasi menjadi terverifikasi dan layak dihitung.

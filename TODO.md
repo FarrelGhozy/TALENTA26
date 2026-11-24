@@ -1,6 +1,6 @@
 # TODO — Rencana bertahap TALENTA menuju produksi
 
-Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di `docs/14-keputusan-terbuka.md`, termasuk revisi alur rekrutmen tim berbasis pengajuan & aturan dinamis per kompetisi). Tanda `[x]` hanya untuk bukti yang sudah ada dan terverifikasi; pekerjaan kode sistem pada setiap fase dijalankan berurutan setelah penyelarasan dokumentasi selesai. Lihat `docs/13-peta-jalan.md` untuk dependensi dan gate yang rinci.
+Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-24` di `docs/14-keputusan-terbuka.md`, termasuk revisi alur rekrutmen tim berbasis pengajuan, aturan dinamis per kompetisi, dan pemilihan identitas aplikasi Simpul Talenta). Tanda `[x]` hanya untuk bukti yang sudah ada dan terverifikasi; pekerjaan kode sistem pada setiap fase dijalankan berurutan setelah penyelarasan dokumentasi selesai. Lihat `docs/13-peta-jalan.md` untuk dependensi dan gate yang rinci.
 
 ## Kondisi awal yang terverifikasi
 - [x] Frontend React/Vite dengan rute publik, mahasiswa, validator, super admin, serta adapter mock/API.
@@ -150,7 +150,10 @@ Status diperbarui 23 November 2026 (selaras keputusan produk `K-01`–`K-23` di 
 - [x] Buat tiga papan konsep modern minimal **T Bertumbuh**, **Jalur Prestasi**, dan **Simpul Talenta** melalui imagegen; setiap papan PNG memuat simbol, tulisan TALENTA, versi satu warna, ikon aplikasi, dan navbar terang/gelap. Artefak, prompt, makna, rekomendasi, dan batas finalisasi ada di `docs/design/logo-talenta-2026-11/README.md`.
 - [x] Periksa ejaan TALENTA dan sampel simbol 16/24/32 px pada versi warna dan satu warna terang/gelap; bukti `docs/design/logo-talenta-2026-11/qa-small-sizes.png`. T Bertumbuh paling jelas; detail negatif Simpul Talenta perlu disederhanakan bila dipilih untuk 16 px. Tipografi asli, warna tepat, dan geometri master merupakan pekerjaan finalisasi vektor setelah pemilihan.
 - Verifikasi: ketiga PNG dapat dibaca dan berukuran 1536×1024; pemeriksaan visual papan dan bukti ukuran selesai; `bun run typecheck`, `bun run lint`, dan `git diff --check` lulus. Tidak ada perubahan kode atau kebutuhan uji domain/API baru.
-- Pemilihan konsep, aset vektor final, dan pemasangan logo ke aplikasi belum termasuk pekerjaan yang diselesaikan; ketiga papan adalah usulan, bukan brand resmi kampus atau penutupan gate rilis.
+- Tahap eksplorasi di atas selesai sebelum pemilihan; ketiga papan tetap menjadi arsip usulan, bukan brand resmi kampus atau penutupan gate rilis.
+- [x] Terapkan **03 — Simpul Talenta** setelah persetujuan tim/pemilik produk (`K-24`): satu SVG master dengan versi biru/navy, putih, dan satu warna; komponen `TalentaMark` di navbar, footer, sidebar/drawer admin; favicon SVG/PNG/ICO multi-ukuran, apple touch icon, PNG aplikasi, dan kompatibilitas URL logo lama. Tulisan merek tetap Plus Jakarta Sans dari CSS aplikasi; tidak memakai teks raster.
+- [x] Sediakan regenerasi aset terkunci pada master melalui `bun run brand:generate`, selaraskan PRD, keputusan, dan spesifikasi UI. Bukti ukuran final `docs/design/logo-talenta-2026-11/simpul-final-qa.png` menunjukkan simbol 16/24/32 px pada warna, putih, dan satu warna.
+- Verifikasi implementasi: `bun run typecheck`, typecheck/lint skrip ekspor tersendiri, `bun run lint`, `bun run build`, pemeriksaan format/dimensi PNG/JPEG dan seluruh entri ICO (16/24/32/48/64), serta sembilan skenario Playwright lokal mode demo (landing/katalog/sidebar admin × 390×844, 768×1024, 1440×900) lulus; tidak ada pageerror/overflow, simbol termuat, fokus keyboard berfungsi, dan empat URL ikon memberi HTTP 200. Tidak ada perubahan domain/API atau deploy.
 
 ---
 

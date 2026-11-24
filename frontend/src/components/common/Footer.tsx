@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, ShieldCheck, Heart, ExternalLink, GraduationCap } from 'lucide-react';
-import { assetUrl } from '../../lib/asset';
+import { TalentaMark } from './TalentaMark';
 
 export const Footer: React.FC = () => {
   return (
@@ -15,16 +15,9 @@ export const Footer: React.FC = () => {
           {/* Brand Col */}
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-3">
-              <img
-                src={assetUrl('images/logo-icon.png')}
-                alt="Logo TALENTA UNIDA Gontor"
-                className="w-9 h-9 rounded-xl shadow-md object-cover border border-white/20"
-              />
+              <TalentaMark tone="light" />
               <span className="font-black text-white tracking-tight text-lg">
                 TALENTA UNIDA Gontor
-              </span>
-              <span className="text-[10px] bg-blue-500/25 text-sky-300 font-bold px-2 py-0.5 rounded border border-blue-400/40">
-                TALENTA
               </span>
             </div>
             <p className="text-xs text-slate-300/90 leading-relaxed max-w-md">

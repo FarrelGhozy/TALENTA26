@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { assetUrl } from '../../lib/asset';
+import { TalentaMark } from './TalentaMark';
 
 interface NavItem {
   to: string;
@@ -160,14 +161,10 @@ export const Navbar: React.FC = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        {/* Brand Logo with Generated UNIDA Icon */}
+        {/* Identitas aplikasi Simpul Talenta */}
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-3 group">
-            <img
-              src={assetUrl('images/logo-icon.png')}
-              alt="Logo TALENTA UNIDA Gontor"
-              className="w-9 h-9 rounded-xl shadow-xs group-hover:scale-105 transition-transform object-cover border border-white/20"
-            />
+          <Link to="/" className="flex min-h-[44px] items-center gap-3 group">
+            <TalentaMark tone={isLanding ? 'light' : 'color'} />
             <div>
               <span
                 className={`font-black tracking-tight block text-base leading-none ${

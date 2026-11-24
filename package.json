@@ -25,7 +25,8 @@
     "test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage backend/tests/unit backend/tests/integration/*.test.ts",
     "test:integration": "bun backend/tests/run-integration.ts",
     "test:e2e": "bash run-e2e.sh",
-    "lint": "oxlint frontend/src backend/src"
+    "lint": "oxlint frontend/src backend/src",
+    "brand:generate": "bun scripts/generate-brand-assets.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1174.0",

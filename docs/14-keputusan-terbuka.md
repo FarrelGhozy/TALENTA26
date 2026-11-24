@@ -1,6 +1,6 @@
 # 14 — Catatan keputusan produk dan operasi
 
-Versi 2.2, 23 November 2026. Dokumen lama berjudul FIX v1.0 tidak lagi dianggap final seluruhnya. Keputusan di bawah berasal dari arahan pemilik produk dalam percakapan; hal yang belum diputuskan ditandai terbuka. Jangan menganggap usulan teknis sebagai persetujuan kebijakan kampus.
+Versi 2.3, 24 November 2026. Dokumen lama berjudul FIX v1.0 tidak lagi dianggap final seluruhnya. Keputusan di bawah berasal dari arahan pemilik produk dalam percakapan; hal yang belum diputuskan ditandai terbuka. Jangan menganggap usulan teknis sebagai persetujuan kebijakan kampus.
 
 ## Disepakati pemilik produk
 | ID | Keputusan | Dampak |
@@ -28,6 +28,12 @@ Versi 2.2, 23 November 2026. Dokumen lama berjudul FIX v1.0 tidak lagi dianggap 
 | K-21 | Manajemen pergantian periode akademik diatur eksplisit di panel super admin dengan pengarsipan atomik target & tim periode lama; verifikasi email (`pending_verification`) ditunda | aktivasi periode baru menampilkan pratinjau dampak + konfirmasi dan mengarsipkan target/tim lama tanpa menghapus riwayat; registrasi manual langsung `active` di rilis awal dan verifikasi email diletakkan di bagian paling bawah `TODO.md` |
 | K-22 | Pertahankan struktur rute ringkas UI (`/admin/konten` + `/admin/konten/:id?tab=...`, `/admin/sistem?tab=...`, `/app/tim?tab=...`) serta path API aktual, gabungkan peran pengelola menjadi portal terpadu `/admin`, satukan pengelolaan lomba ke 1 menu berbasis kartu lomba, dan hapus rute legacy rawan IDOR | `docs/04` dan `docs/16` diselaraskan ke struktur ringkas; Kelola Lomba digabung menjadi 1 menu `/admin/konten` (hub card-card lomba + modal Buat Lomba & Master Jenis/Sub-Lomba) yang masuk ke `/admin/konten/:id?tab=info\|roadmap\|poin\|konsultan\|seleksi`; rute `/app/partner` & `/app/tim/cari` diarahkan ke `/app/tim?tab=cari`; `/validator/*` & `/super-admin/*` diarahkan ke `/admin/*` dengan hak akses setara (`ADMIN_ROLES = ['validator', 'super_admin']`); rute legacy seperti `/users/:userId/target`, alias `/matching/invites`, dan `POST /competitions` dihapus |
 | K-23 | Setiap kompetisi mengatur aturan dinamis sendiri (`registrationStatus`, `internalSelectionDeadline`, toggle syarat peran & lintas prodi opsional/wajib, batas satu tim per cabang); kesiapan tim dipisahkan menjadi 3 lapis (*tim dibuat*, *anggota cukup*, *siap seleksi*) dan ketua dapat mendaftarkan kesiapan seleksi internal | roadmap boleh dibuka sejak tim dibuat (belum harus lengkap); status `terbentuk` menandai anggota cukup, tetapi tombol *Daftar Seleksi Internal* (`InternalSelection` status `menunggu`) hanya aktif saat seluruh syarat wajib kompetisi terpenuhi; pengelola lomba mengatur aturan di dalam ruang lomba `/admin/konten/:id?tab=info`, validasi prestasi berada di `/admin/prestasi` |
+
+### K-24 — Identitas aplikasi Simpul Talenta
+
+Pemilik produk menyatakan tim menyetujui konsep **03 — Simpul Talenta** dan meminta pemasangannya pada 24 November 2026. Dua bidang saling mengunci dengan ruang negatif T menjadi identitas aplikasi pada navbar, footer, sidebar admin, favicon, dan ikon perangkat. Master SVG memakai biru `#1D4ED8` dan navy `#0F172A`, dengan versi putih untuk latar gelap dan tulisan TALENTA memakai keluarga font Plus Jakarta Sans yang sudah digunakan aplikasi.
+
+SVG khusus diizinkan untuk identitas merek ini; ikon aksi, navigasi, dan status tetap memakai Lucide React. Pemilihan identitas aplikasi bukan pengesahan lambang resmi kampus; keputusan institusional `O-05` tetap terbuka. Sumber desain, master, turunan, dan bukti pemeriksaan ada di `docs/design/logo-talenta-2026-11/README.md`.
 
 ## Rekomendasi rancangan yang belum menjadi kebijakan kampus
 | ID | Usulan | Alasan/gate |

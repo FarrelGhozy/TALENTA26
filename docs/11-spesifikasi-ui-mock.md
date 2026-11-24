@@ -8,6 +8,8 @@ Fondasi UI telah diterapkan dan diuji pada 390×844, 768×1024, dan viewport des
 Semua ikon produk berasal dari Lucide React. Emoji, SVG ikon buatan tangan, dan pustaka ikon kedua tidak dipakai tanpa keputusan proyek. Ikon dekoratif memakai `aria-hidden`; kontrol icon-only wajib memiliki nama aksesibel. Token dasar warna, radius, bayangan, tipografi, dan focus ring berada di `frontend/src/index.css`.
 
 ## Arah visual
+Identitas aplikasi yang disetujui pemilik produk adalah **Simpul Talenta** (`K-24`): dua bidang saling mengunci dan ruang negatif T. SVG master `frontend/public/images/talenta-mark.svg` menjadi sumber versi biru/navy, putih untuk latar gelap, satu warna, dan ekspor PNG/ICO. Komponen `TalentaMark` memasang simbol dekoratif di samping tulisan merek yang tetap berupa teks Plus Jakarta Sans; ukuran simbol 36 px dan tautan merek minimal 44 px. Navbar landing/footer memakai putih, navbar halaman terang/sidebar admin memakai biru/navy. SVG khusus hanya untuk merek yang disetujui ini; ikon antarmuka tetap Lucide React.
+
 Identitas UNIDA yang sudah ada menjadi bahan awal, bukan persetujuan brand resmi. Gunakan palet biru utama, aksen seperlunya, tipografi terbaca, ruang putih cukup, dan komponen konsisten. Hindari klaim pemasaran seperti jaminan beasiswa/SKPI/BAAK. Landing harus menjelaskan manfaat dan alur, lalu menampilkan lomba terbit serta ranking terverifikasi dengan sumber/periode.
 
 ## Struktur navigasi

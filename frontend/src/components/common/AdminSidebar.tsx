@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { useAdminNav } from '../../features/admin/AdminNavContext';
-import { assetUrl } from '../../lib/asset';
+import { TalentaMark } from './TalentaMark';
 import { UserAvatar } from '../ui/UserAvatar';
 
 type BadgeTone = 'amber' | 'orange' | 'emerald' | 'rose' | 'slate' | 'blue';
@@ -326,13 +326,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <Link
           to="/admin"
           onClick={() => onNavigate?.()}
-          className="flex items-center gap-2.5 min-w-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xl"
+          className="flex min-h-[44px] items-center gap-2.5 min-w-0 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xl"
         >
-          <img
-            src={assetUrl('images/logo-icon.png')}
-            alt="Logo TALENTA UNIDA Gontor"
-            className="w-9 h-9 rounded-xl shadow-xs object-cover border border-slate-200 shrink-0 group-hover:scale-105 transition-transform"
-          />
+          <TalentaMark />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="font-black tracking-tight text-sm text-blue-950 leading-none">
