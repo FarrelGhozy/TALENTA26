@@ -213,16 +213,12 @@ Status diperbarui 24 November 2026 (selaras keputusan produk `K-01`–`K-26` di 
 
 ---
 
-## Tugas mandiri — Rebranding UNIDA STUDENT CHAMPIONSHIP (USC) & Penyelarasan Tema UI (24 November 2026)
-### Tahap 1 — Rebranding Nama & Optimasi Seluruh Aset Logo (`K-26`)
+## Tugas mandiri — Rebranding UNIDA STUDENT CHAMPIONSHIP (USC) (24 November 2026)
 - [x] Simpan kedua master resmi di `docs/design/logo-usc-2026-11/sources/` dan bangun generator deterministik `scripts/generate-brand-assets.py` (dipanggil via `bun run brand:generate`) yang mengekspor seluruh aset optimal: Emblem WebP/PNG (`192`/`512`), Wordmark transparan gelap & putih bebas halo (`408×83` lossless WebP/PNG), multi-size `favicon.ico` (16/24/32/48/64) + `favicon-*.png`, `apple-touch-icon.png` (180 px), ikon PWA & maskable (`192`/`512`/`maskable-512`) + `site.webmanifest`, kartu Open Graph (`1200×630`), kompatibilitas `logo-icon.*`, dan lembar QA `docs/design/logo-usc-2026-11/usc-brand-qa.png`; hapus aset lama (`favicon.svg`, `talenta-*.svg`, `vite.svg`).
 - [x] Bangun komponen merek terpusat `UscBrand.tsx` (menggantikan `TalentaMark.tsx`) dan pasang pada seluruh permukaan UI: `Navbar` (adaptif Emblem+Wordmark di `>= sm` & Emblem+`USC` di mobile, dengan medalion kontras pada landing gelap), `Footer`, `AdminSidebar` (`USC Admin`), halaman autentikasi (`LoginPage`, `RegisterPage`, `ForgotPasswordPage`, `ResetPasswordPage`), serta banner CTA `LandingPage`.
 - [x] Perbarui seluruh teks user-facing, metadata HTML/OG/manifest, nama file CSV (`rekap-prestasi-usc-*.csv`), email pemulihan kata sandi (`mailer.ts`), log startup API, seed admin, tes E2E (`01-public-flows.ts` memverifikasi pemuatan gambar logo & HTTP 200 seluruh tautan favicon/manifest), serta dokumentasi aktif (`K-26` di `docs/14`, `PRD_TALENTA.md`, `README.md`, `AGENTS.md`, `docs/00`, `docs/11`, `docs/design/logo-usc-2026-11/README.md`, `backend/README.md`, `infra/README.md`), sambil mempertahankan identifier teknis internal (`talenta_dev`, `talenta_session`, `@talenta/services`, GHCR).
-- [x] Review & ACC pengguna Tahap 1 sebelum commit Git lokal Tahap 1 (verifikasi: `bun run brand:generate`, `bun run typecheck`, `bun run lint` 0 error/warning, `bun run test` 33 unit + 11 integrasi lulus, `bun run build` & `build:demo` bersih, E2E seluruh 4 suite lulus termasuk cek logo/favicon/manifest HTTP 200 & CSV `rekap-prestasi-usc-*.csv`, serta 9 screenshot + 14 cek responsif 0 overflow/pageerror).
-
-### Tahap 2 — Penyelarasan Palet Tema UI Navy & Gold *(Menunggu ACC & Commit Tahap 1)*
-- [ ] Selaraskan sistem token warna di `frontend/src/index.css` dan komponen UI/halaman utama ke palet Navy & Gold (`#142432`, `#1F3442`, `#B89669`, `#EACA97`) dengan kontras WCAG AA serta pertahankan warna semantik status.
-- [ ] Verifikasi penuh (automated + screenshot lintas viewport) & ACC pengguna sebelum commit Git lokal Tahap 2.
+- [x] Evaluasi tema UI & keputusan akhir pemilik produk (`K-26`): Tahap 1 (rebranding nama + seluruh aset logo USC) di-ACC dan di-commit lokal (`8fbceda`); percobaan penyesuaian palet UI ke Navy & Gold dibatalkan atas keputusan pemilik produk setelah tinjauan visual sehingga **tema biru utama aplikasi tetap dipertahankan** karena terasa lebih hidup.
+- Verifikasi: `bun run brand:generate`, `bun run typecheck`, `bun run lint` (0 error/warning), `bun run test` (33 unit + 11 integrasi lulus), `bun run build` & `build:demo` (bundle bersih), E2E seluruh 4 suite lulus (termasuk cek logo/favicon/manifest HTTP 200 & CSV `rekap-prestasi-usc-*.csv`), 9 tangkapan layar + 14 cek responsif (0 overflow/pageerror), serta `git diff --check`. Tidak ada push atau deploy.
 
 ---
 

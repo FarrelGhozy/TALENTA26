@@ -48,6 +48,7 @@ Seluruh permukaan UI memanggil satu komponen terpusat [`UscBrand.tsx`](../../../
 - **Sidebar Admin (`compact`)**: Emblem + teks tebal `USC` + lencana `Admin` + subjudul `UNIDA Student Championship`.
 - **Halaman Auth (`stacked` / `emblem`)**: Emblem besar di atas Wordmark gelap (`LoginPage`, `RegisterPage`) atau Emblem mandiri (`ForgotPasswordPage`, `ResetPasswordPage`).
 - Gambar dekoratif memakai `alt=""` dan `aria-hidden="true"`, dilengkapi `<span className="sr-only">UNIDA Student Championship (USC)</span>` untuk pembaca layar dan SEO.
+- **Palet antarmuka**: Berdasarkan keputusan pemilik produk (`K-26`), antarmuka aplikasi tetap memakai **tema biru utama** (`#1D4ED8`) agar terasa lebih hidup, sedangkan palet Navy & Gold hadir pada aset logo/ikon USC dan `theme-color`.
 
 ## Bukti QA Visual
 
