@@ -47,6 +47,19 @@ Konsep kontainerisasi UNIDA Student Championship (USC) **khusus untuk lingkungan
    docker compose ps
    ```
 
+   Bootstrap database awal (pilih salah satu sesuai peruntukan server):
+   - **Produksi bersih (disarankan)**:
+     ```bash
+     docker compose run --rm api bun backend/prisma/seed.ts
+     ```
+   - **Staging / Showcase Demo saja (JANGAN di DB produksi nyata)**: karena `seed-simulation.ts` tidak disertakan di image GHCR dan menolak `NODE_ENV=production`, mount file lokal + override `NODE_ENV=development` sekali jalan:
+     ```bash
+     docker compose run --rm --no-deps \
+       -e NODE_ENV=development \
+       -v "$(pwd)/../backend/prisma/seed-simulation.ts:/app/backend/prisma/seed-simulation.ts:ro" \
+       api bun backend/prisma/seed-simulation.ts
+     ```
+
 3. **Menggunakan atau beralih ke Tag Tertentu (Pinning / Rollback)**:
    - Ubah `IMAGE_TAG=v1.0.0` (atau `sha-<commit>`) di dalam `infra/.env`, lalu jalankan `docker compose pull && docker compose up -d`.
    - Atau sementara lewat environment shell: `IMAGE_TAG=v1.0.0 docker compose pull && IMAGE_TAG=v1.0.0 docker compose up -d`.

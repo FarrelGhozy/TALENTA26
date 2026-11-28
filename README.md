@@ -210,6 +210,21 @@ Jalankan seed production bersih untuk membuat entri Institusi, akun Super Admin 
 docker compose run --rm api bun backend/prisma/seed.ts
 ```
 
+> **Menjalankan Seed Demo / Simulasi di Docker (Khusus Server Uji Coba / Demo, Bukan Produksi Resmi)**:
+> Secara bawaan image `talenta-backend` tidak menyertakan `backend/prisma/seed-simulation.ts` (dikecualikan oleh `.dockerignore`), dan skrip tersebut otomatis menolak `NODE_ENV=production` agar kredensial demo (`Validator2026!`, `Mahasiswa2026!`) tidak masuk ke database produksi resmi.
+>
+> Jika Anda sengaja ingin mengisi **data simulasi lengkap** (12 mahasiswa berfoto profil, 4 lomba + roadmap + konsultan, tim, 28 prestasi disetujui, & antrean verifikasi) ke database Docker staging/demo setelah `docker compose up -d` dan `S3_*` (RustFS) di `infra/.env` aktif, mount berkas skrip lokal lalu override `NODE_ENV=development` khusus untuk perintah satu kali tersebut dari direktori `infra/`:
+> ```bash
+> docker compose run --rm --no-deps \
+>   -e NODE_ENV=development \
+>   -v "$(pwd)/../backend/prisma/seed-simulation.ts:/app/backend/prisma/seed-simulation.ts:ro" \
+>   api bun backend/prisma/seed-simulation.ts
+> ```
+> **Catatan penting**:
+> - Jangan jalankan perintah ini pada database produksi nyata yang sudah memiliki data pengguna aktif.
+> - Karena `S3_*` di `infra/.env` terisi ke RustFS, foto profil dan berkas PDF simulasi akan langsung tersimpan di RustFS sehingga terbaca oleh container `api`.
+> - Container `web` memakai build production (hanya form **Login Manual** di `/masuk`), jadi masuklah secara manual menggunakan kredensial Super Admin di `infra/.env` atau akun uji pada bagian *"Akun Pengujian Cepat"* di atas.
+
 ### Langkah 4 — Verifikasi Status Container & Health Check
 ```bash
 docker compose ps
