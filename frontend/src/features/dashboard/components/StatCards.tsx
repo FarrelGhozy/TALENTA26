@@ -48,25 +48,25 @@ export const StatCards: React.FC<{ stats: AdminStats }> = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5" role="list" aria-label="Statistik utama">
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5" role="list" aria-label="Statistik utama">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
           <Card key={c.label} className="bg-white border-slate-200/90 shadow-2xs hover:border-slate-300 transition-colors" role="listitem">
-            <CardContent className="p-4 space-y-2">
+            <CardContent className="p-4 sm:p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${c.bgColor}`}>
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block leading-tight truncate" title={c.label}>
+                <span className="text-sm font-bold text-slate-600 block leading-snug" title={c.label}>
                   {c.label}
                 </span>
                 <div className={`text-2xl font-black mt-1 ${c.color}`} aria-label={`${c.label}: ${c.value}`}>
                   {c.value}
                 </div>
-                <p className="text-[10px] text-slate-400 mt-0.5 truncate">{c.sub}</p>
+                <p className="text-xs text-slate-600 mt-1 leading-snug">{c.sub}</p>
               </div>
             </CardContent>
           </Card>

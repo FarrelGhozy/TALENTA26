@@ -62,10 +62,10 @@ export const CompetitionListPage: React.FC = () => {
             Katalog
           </span>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-950 tracking-tight mt-2">
           Katalog Kompetisi Pembinaan Mahasiswa
         </h1>
-        <p className="text-xs text-slate-500 mt-1" aria-live="polite">
+        <p className="text-base text-slate-600 mt-3" aria-live="polite">
           {loading ? 'Memuat daftar kompetisi…' : `${filtered.length} dari ${competitions.length} kompetisi tersedia.`}
         </p>
       </div>
@@ -93,7 +93,7 @@ export const CompetitionListPage: React.FC = () => {
         <PageLoading message="Memuat katalog kompetisi..." />
       ) : error ? (
         <div className="p-12 text-center space-y-4 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-          <p role="alert" className="text-xs text-rose-600 font-semibold">{error}</p>
+          <p role="alert" className="text-sm text-rose-700 font-semibold">{error}</p>
           <Button
             variant="outline"
             size="sm"

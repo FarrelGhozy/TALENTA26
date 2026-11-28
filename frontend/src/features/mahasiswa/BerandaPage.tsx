@@ -88,7 +88,7 @@ export const BerandaPage: React.FC = () => {
           </div>
           <div className="space-y-1">
             <h1 className="text-base font-extrabold text-rose-950">Beranda Gagal Dimuat</h1>
-            <p className="text-xs text-rose-800">
+            <p className="text-sm text-rose-800">
               {error || 'Terjadi kendala saat mengambil ringkasan aktivitas Anda.'}
             </p>
           </div>
@@ -321,17 +321,17 @@ export const BerandaPage: React.FC = () => {
       : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Banner 1: Prioritas Tertinggi — Revisi Prestasi */}
       {revisionCount > 0 && (
         <div className="p-4 rounded-2xl bg-orange-50/90 border border-orange-200 text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <div className="text-xs font-bold text-orange-900">
+              <div className="text-sm font-bold text-orange-900">
                 Perhatian: {revisionCount} Pengajuan Prestasi Memerlukan Perbaikan
               </div>
-              <div className="text-xs text-orange-800/90 mt-0.5">
+              <div className="text-sm text-orange-800/90 mt-0.5">
                 Validator meminta revisi kelengkapan berkas atau data pendukung. Periksa catatan review dan kirim perbaikan agar pengajuan segera diproses ulang.
               </div>
             </div>
@@ -350,10 +350,10 @@ export const BerandaPage: React.FC = () => {
           <div className="flex items-start gap-3">
             <Users className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <div className="text-xs font-bold text-blue-900">
+              <div className="text-sm font-bold text-blue-900">
                 {incomingJoinRequests} Permintaan Bergabung ke {activeTeam.name} Menunggu Persetujuan
               </div>
-              <div className="text-xs text-blue-700 mt-0.5">
+              <div className="text-sm text-blue-700 mt-0.5">
                 Tinjau profil ringkas pelamar di Ruang Tim Saya untuk menerima atau menolak pengajuan anggota baru.
               </div>
             </div>
@@ -372,12 +372,12 @@ export const BerandaPage: React.FC = () => {
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-indigo-700 shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <div className="text-xs font-bold text-indigo-950">
+              <div className="text-sm font-bold text-indigo-950">
                 {pendingJoinReqsSent.length === 1
                   ? `Pengajuan Bergabung ke ${pendingJoinReqsSent[0].teamName} Menunggu Persetujuan Ketua`
                   : `${pendingJoinReqsSent.length} Pengajuan Bergabung Tim Menunggu Persetujuan Ketua`}
               </div>
-              <div className="text-xs text-indigo-800/90 mt-0.5">
+              <div className="text-sm text-indigo-800/90 mt-0.5">
                 Anda dapat memantau status pengajuan, membatalkan, atau memilih tim lain melalui tab Pengajuan Saya.
               </div>
             </div>
@@ -391,74 +391,69 @@ export const BerandaPage: React.FC = () => {
       )}
 
       {/* Top Welcome Card */}
-      <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="absolute top-0 right-0 w-96 h-48 bg-gradient-to-l from-blue-100/60 via-sky-50/40 to-transparent pointer-events-none -z-0"
-        />
+      <div className="relative overflow-hidden rounded-[1.5rem] border border-blue-100 bg-[#eaf7fc] p-5 sm:p-8 lg:p-9">
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4 sm:gap-5">
+        <div className="relative flex flex-col justify-between gap-7 xl:flex-row xl:items-center">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-5">
             <UserAvatar
               src={currentUser?.avatar}
               name={currentUser?.nama || 'Mahasiswa'}
-              size="xl"
+              size="lg"
               shape="rounded"
-              className="w-16 h-16 sm:w-20 sm:h-20 text-xl sm:text-2xl border-2 border-blue-600/30 shadow-md"
+              className="sm:w-20 sm:h-20 sm:text-2xl border-2 border-white shadow-sm"
             />
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black text-blue-700 uppercase tracking-wider">
-                  {getGreeting()},
-                </span>
-                <span className="text-[11px] bg-blue-50 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200/60">
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-extrabold text-blue-700 uppercase tracking-wider">
+                {getGreeting()},
+              </p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-950 tracking-tight break-words">
+                {currentUser?.nama}
+              </h1>
+              <p className="text-sm sm:text-base text-slate-700 font-medium leading-6">
+                {currentUser?.prodi}
+                {currentUser?.angkatan ? ` • Angkatan ${currentUser.angkatan}` : ''} • Universitas Darussalam Gontor
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs bg-blue-50 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-200/60">
                   Mahasiswa
                 </span>
                 {dashboardData.points && (
-                  <span className="text-[11px] bg-emerald-50 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  <span className="text-xs bg-emerald-50 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
                     {dashboardData.points.totalPoints} Poin ({dashboardData.points.currentPeriod})
                   </span>
                 )}
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                {currentUser?.nama}
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">
-                {currentUser?.prodi}
-                {currentUser?.angkatan ? ` • Angkatan ${currentUser.angkatan}` : ''} • Universitas Darussalam Gontor
-              </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {secondaryHeroAction && (
-              <Link to={secondaryHeroAction.to}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<secondaryHeroAction.icon className="w-3.5 h-3.5" aria-hidden="true" />}
-                >
-                  {secondaryHeroAction.label}
-                </Button>
+            {nextStep && (
+              <Link to={nextStep.to} className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-blue-700 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-800">
+                Lanjutkan: {nextStep.label}
               </Link>
             )}
-            <Link to="/app/prestasi/baru">
-              <Button size="sm" leftIcon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />}>
-                Catat Prestasi Baru
-              </Button>
+            {secondaryHeroAction && secondaryHeroAction.to !== nextStep?.to && (
+              <Link to={secondaryHeroAction.to} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-blue-200 bg-white px-5 py-2 text-sm font-bold text-blue-900 transition-colors hover:bg-blue-50">
+                <secondaryHeroAction.icon className="h-4 w-4" aria-hidden="true" />
+                {secondaryHeroAction.label}
+              </Link>
+            )}
+            <Link to="/app/prestasi/baru" className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-colors ${nextStep ? 'border border-blue-200 bg-white text-blue-900 hover:bg-blue-50' : 'bg-blue-700 text-white hover:bg-blue-800'}`}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Catat Prestasi Baru
             </Link>
           </div>
         </div>
 
         {/* Milestone Pipeline Header & Progress Bar */}
-        <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
+        <div className="mt-7 space-y-4 border-t border-blue-200/70 pt-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="text-sm font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-2">
               <Compass className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
               <span>Alur Perjalanan Kesiapan Kompetisi</span>
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-              <span className="text-slate-400">Progres Kesiapan:</span>
+            <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+              <span className="text-slate-600">Progres Kesiapan:</span>
               <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
                 {completedStepsCount} dari {activeSteps.length} Langkah ({progressPercent}%)
               </span>
@@ -466,9 +461,9 @@ export const BerandaPage: React.FC = () => {
           </div>
 
           {/* Progress bar visual */}
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden" aria-hidden="true">
+          <div className="w-full bg-white rounded-full h-2 overflow-hidden" aria-hidden="true">
             <div
-              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-2 rounded-full transition-all duration-500"
+              className="bg-blue-700 h-2 rounded-full transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -481,20 +476,20 @@ export const BerandaPage: React.FC = () => {
                 <Link
                   key={st.id}
                   to={st.to}
-                  className={`p-2.5 rounded-xl border transition-all text-left flex items-start gap-2 relative group ${
+                  className={`p-3 rounded-2xl border transition-all text-left flex items-start gap-2.5 relative group ${
                     st.done
                       ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 hover:bg-emerald-100/60'
                       : st.unavailable
-                        ? 'bg-slate-50/70 border-dashed border-slate-200 text-slate-500 hover:bg-slate-100/80'
+                        ? 'bg-white/60 border-dashed border-slate-200 text-slate-500 hover:bg-white'
                         : isNext
-                          ? 'bg-blue-50/90 border-blue-300 text-blue-950 ring-2 ring-blue-500/20 shadow-xs'
+                          ? 'bg-white border-blue-400 text-blue-950 ring-2 ring-blue-500/20 shadow-xs'
                           : st.inProgress
                             ? 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/60'
-                            : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100'
+                            : 'bg-white/75 border-blue-100 text-slate-600 hover:bg-white'
                   }`}
                 >
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
                       st.done
                         ? 'bg-emerald-600 text-white'
                         : st.unavailable
@@ -509,9 +504,9 @@ export const BerandaPage: React.FC = () => {
                     {st.done ? <Check className="w-3 h-3" aria-hidden="true" /> : idx + 1}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-bold leading-tight truncate">{st.label}</div>
+                    <div className="text-sm font-bold leading-snug break-words">{st.label}</div>
                     <div
-                      className={`text-[10px] mt-0.5 leading-tight truncate ${
+                      className={`text-xs mt-0.5 leading-snug break-words ${
                         st.done
                           ? 'text-emerald-700 font-semibold'
                           : isNext
@@ -531,7 +526,7 @@ export const BerandaPage: React.FC = () => {
 
           {/* Callout Langkah Berikutnya atau Status Tuntas */}
           {nextStep ? (
-            <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="p-4 rounded-2xl bg-white/80 border border-blue-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
               <span className="text-blue-900 font-semibold">
                 {nextStep.id === 'join-team' && pendingJoinReqsSent.length > 0 ? (
                   <>
@@ -561,7 +556,7 @@ export const BerandaPage: React.FC = () => {
               </Link>
             </div>
           ) : targetComp ? (
-            <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
               <span className="text-emerald-900 font-semibold inline-flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
                 <span>
@@ -603,7 +598,7 @@ export const BerandaPage: React.FC = () => {
                 </div>
                 <Link
                   to={targetComp ? '/app/profil?need=target' : '/kompetisi'}
-                  className="text-xs font-semibold text-blue-700 hover:text-blue-900 hover:underline min-h-[32px] inline-flex items-center"
+                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline min-h-[44px] inline-flex items-center"
                 >
                   {targetComp ? 'Ganti Target' : 'Jelajahi Lomba'}
                 </Link>
@@ -616,7 +611,7 @@ export const BerandaPage: React.FC = () => {
                       <Badge color="blue" dot>
                         {targetComp.category}
                       </Badge>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                         Tingkat {targetComp.level}
                       </span>
                     </div>
@@ -627,7 +622,7 @@ export const BerandaPage: React.FC = () => {
                       </h3>
                       {targetComp.description && (
                         <p
-                          className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2"
+                          className="text-sm text-slate-500 mt-1 leading-relaxed line-clamp-2"
                           title={targetComp.description}
                         >
                           {targetComp.description}
@@ -637,12 +632,12 @@ export const BerandaPage: React.FC = () => {
 
                     {/* Team Health Meter & Status Box */}
                     <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="text-slate-600 font-semibold">
                           {isIndividualTarget ? 'Format Kepesertaan:' : 'Status Formasi Tim:'}
                         </span>
                         <span
-                          className={`font-black px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1 ${
+                          className={`font-black px-2.5 py-1 rounded-full text-sm inline-flex items-center gap-1 ${
                             isIndividualTarget || isSelectionReady
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               : isLockedSelection
@@ -691,11 +686,11 @@ export const BerandaPage: React.FC = () => {
                       </div>
 
                       {isIndividualTarget ? (
-                        <p className="text-[11px] text-slate-600 pt-1">
+                        <p className="text-xs text-slate-600 pt-1">
                           Kompetisi target Anda bersifat individu. Buka Ruang Persiapan untuk melengkapi roadmap dan berkonsultasi dengan dosen pembimbing.
                         </p>
                       ) : activeTeam ? (
-                        <div className="space-y-2 pt-2 border-t border-slate-200/60 text-xs">
+                        <div className="space-y-2 pt-2 border-t border-slate-200/60 text-sm">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-slate-500">Nama Tim:</span>
                             <span className="font-extrabold text-slate-900 text-right">
@@ -709,7 +704,7 @@ export const BerandaPage: React.FC = () => {
 
                           {/* Syarat wajib yang belum terpenuhi (K-23) */}
                           {unmetCriteria.length > 0 && (
-                            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-[11px] text-amber-950 space-y-1">
+                            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-xs text-amber-950 space-y-1">
                               <div className="font-bold flex items-center gap-1.5 text-amber-900">
                                 <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
                                 <span>Syarat wajib belum terpenuhi:</span>
@@ -724,7 +719,7 @@ export const BerandaPage: React.FC = () => {
 
                           {/* Saran opsional (tidak menyesatkan sebagai wajib) */}
                           {advisoryNotes.length > 0 && (
-                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-600 flex items-start gap-1.5">
+                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-600 flex items-start gap-1.5">
                               <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
                               <span>
                                 <strong className="text-slate-700">Saran opsional:</strong>{' '}
@@ -734,7 +729,7 @@ export const BerandaPage: React.FC = () => {
                           )}
                         </div>
                       ) : pendingJoinReqsSent.length > 0 ? (
-                        <div className="space-y-1.5 pt-2 border-t border-slate-200/60 text-xs">
+                        <div className="space-y-1.5 pt-2 border-t border-slate-200/60 text-sm">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-slate-500">Tim Tujuan:</span>
                             <span className="font-extrabold text-indigo-950">
@@ -751,14 +746,14 @@ export const BerandaPage: React.FC = () => {
                           )}
                         </div>
                       ) : (
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-xs text-slate-500">
                           Buat tim baru, cari tim yang membuka rekrutmen, atau gabung memakai kode undangan ketua.
                         </p>
                       )}
 
                       {/* Ringkasan Progres Roadmap */}
                       {hasRoadmap && roadmap && (
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
                           <span className="text-slate-500 flex items-center gap-1">
                             <BookOpenCheck className="w-3 h-3 text-blue-700" aria-hidden="true" />
                             Progres Roadmap:
@@ -771,7 +766,7 @@ export const BerandaPage: React.FC = () => {
 
                       {/* Agenda Terdekat / Jadwal Terakhir (jujur terhadap tanggal lewat) */}
                       {upcomingAgenda ? (
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
                           <span className="text-slate-500 flex items-center gap-1 shrink-0">
                             <Calendar className="w-3 h-3 text-blue-700" aria-hidden="true" />
                             Agenda Terdekat:
@@ -781,7 +776,7 @@ export const BerandaPage: React.FC = () => {
                           </span>
                         </div>
                       ) : latestPastAgenda ? (
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-[11px]">
+                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 text-xs">
                           <span className="text-slate-500 flex items-center gap-1 shrink-0">
                             <Calendar className="w-3 h-3 text-slate-400" aria-hidden="true" />
                             Jadwal Terakhir (Berlalu):
@@ -800,7 +795,7 @@ export const BerandaPage: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-800">Belum Ada Target Kompetisi</h4>
-                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      <p className="text-sm text-slate-500 max-w-xs mx-auto">
                         Pilih satu kompetisi acuan untuk mengaktifkan alur pembentukan tim dan roadmap persiapan.
                       </p>
                     </div>
@@ -818,7 +813,7 @@ export const BerandaPage: React.FC = () => {
               <div className="p-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                 <Link
                   to={`/kompetisi/${targetComp.slug}`}
-                  className="text-xs text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center gap-1"
+                  className="text-sm text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center gap-1"
                 >
                   Panduan Lomba <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
@@ -859,7 +854,7 @@ export const BerandaPage: React.FC = () => {
                 </div>
                 <Link
                   to="/app/prestasi"
-                  className="text-xs font-semibold text-blue-700 hover:text-blue-900 hover:underline min-h-[32px] inline-flex items-center"
+                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline min-h-[44px] inline-flex items-center"
                 >
                   Lihat Semua
                 </Link>
@@ -873,14 +868,14 @@ export const BerandaPage: React.FC = () => {
                     className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200/70 text-center transition-colors"
                   >
                     <div className="text-lg font-black text-emerald-700 leading-tight">{verifiedCount}</div>
-                    <div className="text-[10px] font-semibold text-emerald-800 leading-tight">Disetujui</div>
+                    <div className="text-xs font-semibold text-emerald-800 leading-tight">Disetujui</div>
                   </Link>
                   <Link
                     to="/app/prestasi?status=menunggu"
                     className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100/70 border border-amber-200/70 text-center transition-colors"
                   >
                     <div className="text-lg font-black text-amber-700 leading-tight">{pendingCount}</div>
-                    <div className="text-[10px] font-semibold text-amber-800 leading-tight">Verifikasi</div>
+                    <div className="text-xs font-semibold text-amber-800 leading-tight">Verifikasi</div>
                   </Link>
                   <Link
                     to="/app/prestasi?status=perlu_perbaikan"
@@ -898,7 +893,7 @@ export const BerandaPage: React.FC = () => {
                       {revisionCount}
                     </div>
                     <div
-                      className={`text-[10px] font-semibold leading-tight ${
+                      className={`text-xs font-semibold leading-tight ${
                         revisionCount > 0 ? 'text-orange-800' : 'text-slate-600'
                       }`}
                     >
@@ -914,7 +909,7 @@ export const BerandaPage: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-800">Belum Ada Capaian Tercatat</h4>
-                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      <p className="text-sm text-slate-500 max-w-xs mx-auto">
                         Pernah menjuarai lomba atau jadi presenter konferensi? Daftarkan bukti prestasimu agar terdata di kampus.
                       </p>
                     </div>
@@ -934,12 +929,12 @@ export const BerandaPage: React.FC = () => {
                         >
                           <div className="min-w-0">
                             <h4
-                              className="font-bold text-xs text-slate-800 group-hover:text-blue-800 truncate transition-colors"
+                              className="font-bold text-sm text-slate-800 group-hover:text-blue-800 truncate transition-colors"
                               title={item.name}
                             >
                               {item.name}
                             </h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                            <p className="text-xs text-slate-500 mt-0.5 truncate">
                               {item.organizer} • {formatDate(item.eventDate)}
                             </p>
                           </div>
@@ -959,13 +954,13 @@ export const BerandaPage: React.FC = () => {
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-slate-500 font-medium">
+              <span className="text-xs text-slate-500 font-medium">
                 {totalAchievementCount} pengajuan tercatat
                 {extraStatusParts.length > 0 ? ` (${extraStatusParts.join(', ')})` : ''}
               </span>
               <Link
                 to="/app/prestasi"
-                className="text-xs font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0"
+                className="text-sm font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 shrink-0"
               >
                 Kelola Prestasi <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
               </Link>

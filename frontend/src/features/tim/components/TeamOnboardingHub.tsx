@@ -63,7 +63,7 @@ export const TeamOnboardingHub: React.FC<TeamOnboardingHubProps> = ({
               <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
                 Langkah Setelah Profil Selesai
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-950 tracking-tight mt-1">
                 Mau ikut lomba dengan cara apa?
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">

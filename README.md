@@ -84,7 +84,7 @@ USC menyediakan **2 skrip seed** yang idempotent sesuai kebutuhan:
 | Perintah | Target Lingkungan | Isi Data yang Dibuat |
 |---|---|---|
 | `bun run db:seed:demo` *(atau `bun run seed:simulasi`)* | **Development / Demo** *(ditolak otomatis jika `NODE_ENV=production`)* | Menjalankan seed dasar **ditambah** 12 mahasiswa simulasi berfoto profil, 2 periode akademik (aktif & arsip), 4 lomba + roadmap + konsultan, 3 tim terbuka/terbentuk beserta pelamar, 28 prestasi disetujui lintas 2 periode + berkas PDF + `PointLedger` (papan ranking langsung terisi), 2 antrean verifikasi `menunggu`, dan 1 `perlu_perbaikan`. **Menghasilkan tampilan aplikasi penuh seperti kondisi demo saat ini.** |
-| `bun run db:seed` *(atau `bunx prisma db seed`)* | **Development atau Production** | Pada `NODE_ENV=development`: Institusi, Super Admin, Validator, 2 akun mahasiswa uji, 1 periode aktif, 4 lomba + roadmap + konsultan, Template & Aturan Poin v1, dan Master Jenis/Sub-Lomba.<br>Pada `NODE_ENV=production`: **hanya** Institusi, akun Super Admin dari `SUPER_ADMIN_BOOTSTRAP_EMAIL`/`PASSWORD`, dan Template & Aturan Poin v1 (nol akun/konten demo). |
+| `bun run db:seed` *(atau `bunx prisma db seed`)* | **Development atau Production** | Pada `NODE_ENV=development`: Institusi, Super Admin (memakai `SUPER_ADMIN_BOOTSTRAP_EMAIL`/`PASSWORD` di `.env`, atau default `admin@unida.gontor.ac.id` / `AdminGontor2026!` jika kosong/placeholder), Validator, 2 akun mahasiswa uji, 1 periode aktif, 4 lomba + roadmap + konsultan, Template & Aturan Poin v1, dan Master Jenis/Sub-Lomba.<br>Pada `NODE_ENV=production`: **hanya** Institusi, akun Super Admin dari `SUPER_ADMIN_BOOTSTRAP_EMAIL`/`PASSWORD` (email & kata sandi 8–128 karakter untuk login pertama di `/masuk`), dan Template & Aturan Poin v1 (nol akun/konten demo). |
 
 Untuk menjalankan aplikasi lokal dengan tampilan data lengkap seperti demo saat ini:
 ```bash
@@ -183,7 +183,7 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
 - **SMTP (Pemulihan Kata Sandi)**:
   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
 - **Bootstrap Super Admin Pertama Kali**:
-  - `SUPER_ADMIN_BOOTSTRAP_EMAIL` dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD` *(wajib kuat; putar/hapus setelah bootstrap awal selesai)*.
+  - `SUPER_ADMIN_BOOTSTRAP_EMAIL` (email pengenal login pada `/masuk`) dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD` (kata sandi 8–128 karakter, wajib kuat & bukan `change-with-*`/`dev-*`; putar/hapus setelah bootstrap awal & login pertama selesai). Non-destruktif: tidak menimpa akun `super_admin` yang sudah ada.
 
 ### Langkah 2 — Tarik Image Production GHCR & Jalankan Stack (Migrasi Otomatis)
 Dari direktori `infra/`:
@@ -273,7 +273,7 @@ prisma.config.ts   Konfigurasi Prisma 7 (schema, migrations, seed)
 ### Dokumen Acuan Utama
 - **`PRD_TALENTA.md`**: Tujuan produk, aktor, alur utama, dan batasan rilis pertama.
 - **`docs/README.md`**: Indeks lengkap seluruh dokumen spesifikasi (`docs/00`–`docs/24`).
-- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-25`) dan poin kebijakan terbuka (`O-01`–`O-06`).
+- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-27`) dan poin kebijakan terbuka (`O-01`–`O-06`).
 - **`docs/17-runbook-operasi.md`** & **`infra/README.md`**: Prosedur rilis CI/CD GHCR, migrasi, backup, restore, dan rollback.
 - **`TODO.md`**: Status pekerjaan bertahap dan bukti verifikasi gate.
 - **`AGENTS.md`**: Panduan kerja, arsitektur, dan aturan kualitas repositori.

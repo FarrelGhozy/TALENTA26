@@ -43,6 +43,10 @@ Pemilik produk menetapkan penggantian nama aplikasi dari **TALENTA** menjadi **U
 - **Batas kompatibilitas teknis**: Seluruh tampilan pengguna, metadata HTML/OG/manifest, email pemulihan kata sandi, nama file ekspor CSV (`rekap-prestasi-usc-*.csv`), log server, dan dokumen aktif beralih ke **UNIDA Student Championship (USC)**. Identifier internal & operasional (`DB_NAME=talenta_dev`/`talenta_test`, `S3_BUCKET`, cookie `talenta_session`, image GHCR `talenta-frontend`/`talenta-backend`, alias `@talenta/services`, serta nama berkas `PRD_TALENTA.md`) dipertahankan untuk mencegah pemutusan basis data, CI/CD, dan lingkungan existing.
 - **Batas kebijakan**: Penggantian identitas aplikasi ini bukan pengesahan lambang atau kebijakan resmi kampus; keputusan institusional `O-05` tetap terbuka. Sumber master, spesifikasi teknis, dan bukti QA visual berada di `docs/design/logo-usc-2026-11/README.md`.
 
+### K-27 — Pembaruan emblem dan arah UI/UX (24 November 2026)
+
+Pengguna memberikan emblem biru–cyan dan meminta palet aplikasi disesuaikan dengan logo, dengan inspirasi pengalaman platform pembelajaran Coursera, Google Skillshop, dan Apple Developer Academy. Nama USC dan alur kompetisi tetap dipertahankan. Emblem baru dan warna biru–cyan menggantikan pilihan visual emblem dan palet pada K-26; uraian K-26 di atas tetap disimpan sebagai sejarah keputusan. Ini arahan desain proyek, bukan pengesahan lambang resmi atau kebijakan kampus. Master baru berada di `docs/design/logo-usc-2026-11/sources/usc-emblem-blue-master.png`.
+
 ## Rekomendasi rancangan yang belum menjadi kebijakan kampus
 | ID | Usulan | Alasan/gate |
 |---|---|---|

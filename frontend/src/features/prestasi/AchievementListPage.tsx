@@ -145,10 +145,10 @@ export const AchievementListPage: React.FC = () => {
               {achievements.length} Total Prestasi
             </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-blue-950 sm:text-3xl">
             Pencatatan Prestasi Mahasiswa
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="mt-2 text-sm leading-6 text-slate-600">
             Rekam jejak seluruh capaian kompetisi pembinaan Belmawa dan keikutsertaan mandiri yang telah diajukan.
           </p>
         </div>

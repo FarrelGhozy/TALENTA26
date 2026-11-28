@@ -130,8 +130,8 @@ export function applyRateLimitHeaders(
   headersTarget['x-ratelimit-reset'] = String(result.resetSeconds);
 }
 
-// Preset berjenjang ramah NAT kampus (IP + akun/email/userId)
-export const globalApiLimiter = new InMemoryRateLimiter(240, 60 * 1000, {
+// Preset berjenjang ramah NAT kampus (IP + akun/email/userId); batas khusus auth/upload/mutasi/ekspor tetap ketat
+export const globalApiLimiter = new InMemoryRateLimiter(600, 60 * 1000, {
   maxEntries: 15_000,
 });
 

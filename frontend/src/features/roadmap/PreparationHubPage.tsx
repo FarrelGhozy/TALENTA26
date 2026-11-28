@@ -223,7 +223,7 @@ export const PreparationHubPage: React.FC = () => {
           <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
             Pusat Pembinaan &amp; Roadmap
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-950 tracking-tight mt-1">
             Ruang Persiapan Lomba
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">

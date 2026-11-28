@@ -1,3 +1,5 @@
+> **Pembaruan visual 24 November 2026 — K-27:** Emblem aktif sekarang adalah [`usc-emblem-blue-master.png`](sources/usc-emblem-blue-master.png), yaitu logo biru–cyan yang diberikan pengguna. Palet UI memakai biru tua `#082A46`, biru utama `#00639C`, dan aksen cyan `#008FC0`. Jalankan `bun run brand:generate` untuk menghasilkan seluruh ukuran. Wordmark USC tetap digunakan. Penjelasan Navy & Gold di bawah merupakan arsip keputusan K-26 sebelum pembaruan ini, bukan spesifikasi warna aktif.
+
 # Identitas Merek UNIDA STUDENT CHAMPIONSHIP (USC) — 24 November 2026
 
 Status: disetujui pemilik produk pada 24 November 2026 (`K-26`), menggantikan identitas aplikasi lama *Simpul Talenta* (`K-24`). Ini adalah identitas aplikasi **UNIDA Student Championship (USC)** dan bukan klaim pengesahan lambang resmi institusi; keputusan institusional `O-05` tetap terbuka.

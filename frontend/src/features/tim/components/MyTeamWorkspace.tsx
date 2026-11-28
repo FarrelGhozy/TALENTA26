@@ -183,7 +183,7 @@ export const MyTeamWorkspace: React.FC<MyTeamWorkspaceProps> = ({
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-950 tracking-tight">
               {team.nama}
             </h1>
             <Badge color="blue" size="sm">

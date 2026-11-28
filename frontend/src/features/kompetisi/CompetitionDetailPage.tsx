@@ -178,7 +178,7 @@ export const CompetitionDetailPage: React.FC = () => {
         </div>
 
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-950 tracking-tight leading-snug">
             {competition.namaResmi}
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">

@@ -42,8 +42,8 @@ export const AchievementNewPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 max-w-xl mx-auto">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Formulir Prestasi Mandiri</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-extrabold tracking-tight text-blue-950 sm:text-3xl">Formulir Prestasi Mandiri</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
             Dapat diajukan untuk kejuaraan eksternal, konferensi internasional, olahraga, seni, maupun seleksi internal.
             Status awal selalu <strong>Menunggu verifikasi</strong>.
           </p>

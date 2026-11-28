@@ -14,7 +14,7 @@ export interface TabsProps {
 
 export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
   return (
-    <div role="tablist" aria-label="Navigasi tab" className="flex border-b border-slate-200 gap-2 overflow-x-auto">
+    <div role="tablist" aria-label="Navigasi tab" className="flex border-b border-slate-200 gap-1 overflow-x-auto overscroll-x-contain">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
@@ -38,7 +38,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
               onChange(tabs[next].id);
               document.getElementById(`tab-${tabs[next].id}`)?.focus();
             }}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer min-h-[44px] ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer min-h-[48px] ${
               isActive
                 ? 'border-blue-700 text-blue-700 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -48,7 +48,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
             {tab.badge !== undefined ? (
               <span
                 aria-hidden="true"
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                className={`text-xs px-2 py-0.5 rounded-full font-bold ${
                   isActive ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600'
                 }`}
               >
