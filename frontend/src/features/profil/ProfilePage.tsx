@@ -230,10 +230,10 @@ export const ProfilePage: React.FC = () => {
             Langkah {step} dari 3
           </span>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
+        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-blue-950 sm:text-3xl">
           Profil, Keahlian & Target Kompetisi
         </h1>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="mt-2 text-sm leading-6 text-slate-600">
           Data profil ini ditampilkan secara aman saat kamu mengajukan bergabung ke tim, mengikuti roadmap, dan mengajukan prestasi kampus.
         </p>
       </div>

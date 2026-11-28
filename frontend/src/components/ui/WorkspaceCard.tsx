@@ -26,6 +26,6 @@ export const WorkspaceCard: React.FC<WorkspaceCardProps> = ({ title, description
     </>
   );
 
-  const classes = 'flex min-h-48 flex-col justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md';
+  const classes = 'flex min-h-48 flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md';
   return to ? <Link to={to} className={classes}>{content}</Link> : <div className={classes}>{content}</div>;
 };

@@ -273,7 +273,7 @@ prisma.config.ts   Konfigurasi Prisma 7 (schema, migrations, seed)
 ### Dokumen Acuan Utama
 - **`PRD_TALENTA.md`**: Tujuan produk, aktor, alur utama, dan batasan rilis pertama.
 - **`docs/README.md`**: Indeks lengkap seluruh dokumen spesifikasi (`docs/00`–`docs/24`).
-- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-25`) dan poin kebijakan terbuka (`O-01`–`O-06`).
+- **`docs/14-keputusan-terbuka.md`**: Keputusan produk yang disepakati (`K-01`–`K-27`) dan poin kebijakan terbuka (`O-01`–`O-06`).
 - **`docs/17-runbook-operasi.md`** & **`infra/README.md`**: Prosedur rilis CI/CD GHCR, migrasi, backup, restore, dan rollback.
 - **`TODO.md`**: Status pekerjaan bertahap dan bukti verifikasi gate.
 - **`AGENTS.md`**: Panduan kerja, arsitektur, dan aturan kualitas repositori.

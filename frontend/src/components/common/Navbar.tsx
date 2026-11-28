@@ -1,22 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  BookOpen,
-  ChevronDown,
-  Compass,
-  LayoutDashboard,
-  Trophy,
-  UserCircle2,
-  Users,
-  Award,
-  CheckCheck,
-  Medal,
-  Settings2,
-  Menu,
-  X,
-  LogOut,
-  ArrowRight,
-  UserPlus,
+  Award, BookOpen, CheckCheck, ChevronDown, Compass, LayoutDashboard, LogOut,
+  Medal, Menu, Settings2, Trophy, UserCircle2, UserPlus, Users, X,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/AuthContext';
 import { UscBrand } from './UscBrand';
@@ -25,17 +11,17 @@ import { UserAvatar } from '../ui/UserAvatar';
 interface NavItem {
   to: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
 }
 
 export const Navbar: React.FC = () => {
   const { currentUser, currentRole, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setProfileMenuOpen(false);
@@ -43,14 +29,17 @@ export const Navbar: React.FC = () => {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (!profileMenuOpen) return;
+    if (!profileMenuOpen && !mobileOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+      if (profileMenuOpen && profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
         setProfileMenuOpen(false);
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setProfileMenuOpen(false);
+      if (e.key !== 'Escape') return;
+      if (mobileOpen) mobileToggleRef.current?.focus();
+      setProfileMenuOpen(false);
+      setMobileOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
@@ -58,85 +47,55 @@ export const Navbar: React.FC = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [profileMenuOpen]);
+  }, [profileMenuOpen, mobileOpen]);
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-  const strippedPath =
-    basePath && location.pathname.startsWith(basePath)
-      ? location.pathname.slice(basePath.length) || '/'
-      : location.pathname;
-  const isLanding = strippedPath === '/';
-
-  useEffect(() => {
-    if (!isLanding) {
-      setScrolled(false);
-      return;
-    }
-    const onScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [isLanding]);
+  const strippedPath = basePath && location.pathname.startsWith(basePath)
+    ? location.pathname.slice(basePath.length) || '/'
+    : location.pathname;
 
   const getNavLinks = (): NavItem[] => {
-    if (!currentUser) {
-      return [
-        { to: '/', label: 'Beranda', icon: Compass },
-        { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
-        { to: '/ranking', label: 'Ranking', icon: Medal },
-      ];
-    }
-    if (currentRole === 'mahasiswa') {
-      return [
-        { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
-        { to: '/app/persiapan', label: 'Ruang Persiapan', icon: BookOpen },
-        { to: '/app/tim', label: 'Tim', icon: Users },
-        { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
-        { to: '/app/prestasi', label: 'Prestasi', icon: Award },
-        { to: '/ranking', label: 'Ranking', icon: Medal },
-      ];
-    }
+    if (!currentUser) return [
+      { to: '/', label: 'Beranda', icon: Compass },
+      { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
+      { to: '/ranking', label: 'Ranking', icon: Medal },
+    ];
+    if (currentRole === 'mahasiswa') return [
+      { to: '/app/beranda', label: 'Beranda', icon: LayoutDashboard },
+      { to: '/app/persiapan', label: 'Ruang Persiapan', icon: BookOpen },
+      { to: '/app/tim', label: 'Tim', icon: Users },
+      { to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy },
+      { to: '/app/prestasi', label: 'Prestasi', icon: Award },
+      { to: '/ranking', label: 'Ranking', icon: Medal },
+    ];
     if (currentRole === 'super_admin' || currentRole === 'validator') {
       const adminLinks: NavItem[] = [
         { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/admin/konten', label: 'Kelola Lomba', icon: Trophy },
         { to: '/admin/prestasi', label: 'Validasi Prestasi', icon: CheckCheck },
       ];
-      if (currentRole === 'super_admin') {
-        adminLinks.push({ to: '/admin/sistem', label: 'Pengaturan Sistem', icon: Settings2 });
-      }
+      if (currentRole === 'super_admin') adminLinks.push({ to: '/admin/sistem', label: 'Pengaturan Sistem', icon: Settings2 });
       return adminLinks;
     }
     return [{ to: '/kompetisi', label: 'Katalog Lomba', icon: Trophy }];
   };
 
   const navLinks = getNavLinks();
-
   const isActive = (to: string) => {
     const cleanTarget = to.split('?')[0];
     if (cleanTarget === '/app/persiapan') {
-      return (
-        strippedPath === '/app/persiapan' ||
-        (strippedPath.startsWith('/app/kompetisi/') && strippedPath.endsWith('/persiapan'))
-      );
+      return strippedPath === '/app/persiapan' ||
+        (strippedPath.startsWith('/app/kompetisi/') && strippedPath.endsWith('/persiapan'));
     }
-    if (
-      cleanTarget === '/' ||
-      cleanTarget === '/admin'
-    ) {
-      return strippedPath === cleanTarget;
-    }
+    if (cleanTarget === '/' || cleanTarget === '/admin') return strippedPath === cleanTarget;
     return strippedPath === cleanTarget || strippedPath.startsWith(`${cleanTarget}/`);
   };
-
   const handleLogout = async () => {
     setProfileMenuOpen(false);
     await logout();
     setMobileOpen(false);
     navigate('/masuk');
   };
-
   const formatRole = (role?: string) => {
     if (role === 'mahasiswa') return 'Mahasiswa';
     if (role === 'super_admin') return 'Super Admin';
@@ -145,334 +104,109 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header
-      className={`transition-all duration-300 z-50 ${
-        isLanding
-          ? `fixed top-0 left-0 right-0 ${
-              scrolled
-                ? 'bg-[#070b16]/95 backdrop-blur-md border-b border-white/10 shadow-xl text-white'
-                : 'bg-gradient-to-b from-[#060a14]/90 via-[#060a14]/60 to-transparent border-b border-white/10 text-white'
-            }`
-          : 'sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs text-slate-800'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        {/* Identitas aplikasi UNIDA Student Championship (USC) */}
-        <div className="flex items-center gap-6">
-          <Link to="/" className="flex min-h-[44px] items-center group">
-            <UscBrand
-              variant="responsive-nav"
-              tone={isLanding ? 'light' : 'dark'}
-              priority
-            />
+    <header className="sticky top-0 z-50 border-b border-blue-100 bg-white/95 text-blue-950 backdrop-blur-md">
+      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-7">
+          <Link to="/" className="flex min-h-[44px] shrink-0 items-center" aria-label="UNIDA Student Championship (USC)">
+            <UscBrand variant="responsive-nav" tone="dark" priority />
           </Link>
-
-          {/* Desktop Navigation - Clean Text with Underline Indicator */}
-          <nav aria-label="Navigasi utama" className="hidden lg:flex items-center gap-7">
+          <nav aria-label="Navigasi utama" className="hidden items-center gap-1 xl:flex">
             {navLinks.map((link) => {
               const active = isActive(link.to);
               return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  aria-current={active ? 'page' : undefined}
-                  className={`relative inline-flex items-center min-h-[40px] py-2 text-xs sm:text-sm font-semibold transition-colors duration-200 ${
-                    isLanding
-                      ? active
-                        ? 'text-sky-300 font-bold'
-                        : 'text-slate-200 hover:text-white'
-                      : active
-                        ? 'text-blue-700 font-bold'
-                        : 'text-slate-600 hover:text-blue-700'
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  {active && (
-                    <span
-                      className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-full transition-all ${
-                        isLanding
-                          ? 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]'
-                          : 'bg-blue-700'
-                      }`}
-                    />
-                  )}
+                <Link key={link.to} to={link.to} aria-current={active ? 'page' : undefined}
+                  className={`inline-flex min-h-[44px] items-center rounded-lg px-3 text-sm font-semibold transition-colors ${
+                    active ? 'bg-blue-50 text-blue-900' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-900'
+                  }`}>
+                  {link.label}
                 </Link>
               );
             })}
           </nav>
         </div>
 
-        {/* User / Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
           {currentUser ? (
             <div ref={profileMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setProfileMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={profileMenuOpen}
-                aria-label="Menu akun dan profil"
-                className={`flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-3 pr-2 py-1 rounded-2xl border transition-colors cursor-pointer min-h-[42px] ${
-                  isLanding
-                    ? profileMenuOpen
-                      ? 'bg-white/15 border-white/30'
-                      : 'border-white/15 hover:bg-white/10'
-                    : profileMenuOpen
-                      ? 'bg-slate-100 border-blue-300'
-                      : 'border-slate-200/80 hover:bg-slate-50 hover:border-slate-300'
-                }`}
-              >
-                <UserAvatar
-                  name={currentUser.nama}
-                  src={currentUser.avatar}
-                  size="sm"
-                  className="border-2 border-blue-500/50 shadow-xs"
-                />
-                <div className="text-right hidden md:block">
-                  <span
-                    className={`text-xs font-bold block leading-tight truncate max-w-[140px] ${
-                      isLanding ? 'text-white' : 'text-slate-900'
-                    }`}
-                  >
-                    {currentUser.nama}
-                  </span>
-                  <span
-                    className={`text-[11px] font-semibold block leading-tight mt-0.5 ${
-                      isLanding ? 'text-sky-300' : 'text-blue-700'
-                    }`}
-                  >
-                    {formatRole(currentRole || 'mahasiswa')}
-                  </span>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    profileMenuOpen ? 'rotate-180' : ''
-                  } ${isLanding ? 'text-slate-300' : 'text-slate-500'}`}
-                  aria-hidden="true"
-                />
+              <button type="button" onClick={() => setProfileMenuOpen((v) => !v)}
+                aria-haspopup="menu" aria-expanded={profileMenuOpen} aria-label="Menu akun dan profil"
+                className={`flex min-h-[44px] items-center gap-2 rounded-xl border px-2 py-1 transition-colors cursor-pointer ${
+                  profileMenuOpen ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                }`}>
+                <UserAvatar name={currentUser.nama} src={currentUser.avatar} size="sm" />
+                <span className="hidden max-w-[150px] text-left md:block">
+                  <span className="block truncate text-sm font-bold leading-tight text-slate-900">{currentUser.nama}</span>
+                  <span className="mt-0.5 block text-xs font-semibold text-blue-700">{formatRole(currentRole || 'mahasiswa')}</span>
+                </span>
+                <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
-
               {profileMenuOpen && (
-                <div
-                  role="menu"
-                  aria-label="Pilihan akun"
-                  className="absolute right-0 mt-2 w-60 rounded-2xl bg-white text-slate-800 border border-slate-200 shadow-xl py-1.5 z-50"
-                >
-                  <div className="px-4 py-2.5 border-b border-slate-100">
-                    <div className="text-xs font-extrabold text-slate-900 truncate">
-                      {currentUser.nama}
-                    </div>
-                    <div className="text-[11px] font-semibold text-blue-700">
-                      {formatRole(currentRole || 'mahasiswa')}
-                    </div>
-                    {currentUser.email && (
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                        {currentUser.email}
-                      </div>
-                    )}
+                <div role="menu" aria-label="Pilihan akun" className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                  <div className="border-b border-slate-100 px-3 py-2.5">
+                    <div className="truncate text-sm font-bold text-slate-900">{currentUser.nama}</div>
+                    <div className="text-xs font-semibold text-blue-700">{formatRole(currentRole || 'mahasiswa')}</div>
+                    {currentUser.email && <div className="mt-1 truncate text-xs text-slate-500">{currentUser.email}</div>}
                   </div>
-
                   {currentRole === 'mahasiswa' && (
-                    <div className="py-1">
-                      <Link
-                        to="/app/profil"
-                        role="menuitem"
-                        onClick={() => setProfileMenuOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-800 transition-colors"
-                      >
-                        <UserCircle2 className="w-4 h-4 text-blue-700" aria-hidden="true" />
-                        <span>Pengaturan Profil &amp; Target</span>
-                      </Link>
-                    </div>
+                    <Link to="/app/profil" role="menuitem" onClick={() => setProfileMenuOpen(false)}
+                      className="mt-1 flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-800">
+                      <UserCircle2 className="h-4 w-4" aria-hidden="true" /> Pengaturan Profil &amp; Target
+                    </Link>
                   )}
-
-                  <div className="border-t border-slate-100 pt-1">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4" aria-hidden="true" />
-                      <span>Keluar dari Akun</span>
-                    </button>
-                  </div>
+                  <button type="button" role="menuitem" onClick={handleLogout}
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 cursor-pointer">
+                    <LogOut className="h-4 w-4" aria-hidden="true" /> Keluar dari Akun
+                  </button>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2.5">
-              <Link
-                to="/daftar"
-                className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-full min-h-[40px] transition-all border ${
-                  isLanding
-                    ? 'text-white bg-white/10 hover:bg-white/20 border-white/25'
-                    : 'text-slate-700 hover:text-blue-800 hover:bg-slate-100 border-slate-200'
-                }`}
-              >
-                <UserPlus className={`w-3.5 h-3.5 ${isLanding ? 'text-sky-300' : 'text-blue-700'}`} aria-hidden="true" />
-                Daftar
-              </Link>
-
-              <Link
-                to="/masuk"
-                className={`text-xs font-bold px-5 py-2 rounded-full min-h-[40px] inline-flex items-center gap-2 transition-all shadow-md active:scale-95 ${
-                  isLanding
-                    ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white shadow-blue-950/60 hover:shadow-blue-800/80 border border-blue-400/30 hover:scale-[1.02]'
-                    : 'bg-blue-700 text-white hover:bg-blue-800 shadow-blue-600/20'
-                }`}
-              >
-                <span>Masuk</span>
-                <ArrowRight className="w-3.5 h-3.5 text-sky-200" aria-hidden="true" />
-              </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/daftar" className="hidden min-h-[44px] items-center rounded-lg px-4 text-sm font-bold text-blue-800 hover:bg-blue-50 sm:inline-flex">Daftar</Link>
+              <Link to="/masuk" className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-blue-700 px-6 text-sm font-bold text-white transition-colors hover:bg-blue-800">Masuk</Link>
             </div>
           )}
-
-          {/* Mobile hamburger button */}
-          <button
-            className={`lg:hidden p-2 rounded-xl border min-h-[40px] min-w-[40px] flex items-center justify-center transition-colors cursor-pointer ${
-              isLanding
-                ? 'border-white/20 text-white hover:bg-white/10'
-                : 'border-slate-300 text-slate-700 hover:bg-slate-100'
-            }`}
-            aria-expanded={mobileOpen}
-            aria-label={mobileOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          <button ref={mobileToggleRef} type="button" onClick={() => setMobileOpen((v) => !v)}
+            aria-expanded={mobileOpen} aria-controls="usc-mobile-navigation" aria-label={mobileOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 xl:hidden cursor-pointer">
+            {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
-        <nav
-          aria-label="Navigasi seluler"
-          className={`lg:hidden border-t px-4 py-3 space-y-1.5 shadow-xl animate-in fade-in duration-150 ${
-            isLanding
-              ? 'bg-[#080d19] border-white/10 text-white'
-              : 'bg-white border-slate-100 text-slate-800'
-          }`}
-        >
+        <nav id="usc-mobile-navigation" aria-label="Navigasi seluler" className="max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-slate-100 bg-white px-4 py-4 shadow-xl xl:hidden">
           {currentUser && (
-            <div
-              className={`p-3 mb-2 rounded-xl border flex items-center gap-3 ${
-                isLanding
-                  ? 'bg-white/5 border-white/10'
-                  : 'bg-slate-50 border-slate-200'
-              }`}
-            >
-              <UserAvatar
-                name={currentUser.nama}
-                src={currentUser.avatar}
-                size="md"
-                className="border-2 border-blue-500/50 shadow-xs"
-              />
-              <div className="min-w-0 flex-1">
-                <span
-                  className={`text-xs font-bold block truncate ${
-                    isLanding ? 'text-white' : 'text-slate-900'
-                  }`}
-                >
-                  {currentUser.nama}
-                </span>
-                <span
-                  className={`text-[11px] font-semibold block leading-tight mt-0.5 ${
-                    isLanding ? 'text-sky-300' : 'text-blue-700'
-                  }`}
-                >
-                  {formatRole(currentRole || 'mahasiswa')}
-                </span>
-                <span
-                  className={`text-[10px] block truncate mt-0.5 ${
-                    isLanding ? 'text-slate-400' : 'text-slate-500'
-                  }`}
-                >
-                  {currentUser.email}
-                </span>
+            <div className="mb-3 flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+              <UserAvatar name={currentUser.nama} src={currentUser.avatar} size="md" />
+              <div className="min-w-0">
+                <span className="block truncate text-sm font-bold text-slate-900">{currentUser.nama}</span>
+                <span className="block text-xs font-semibold text-blue-700">{formatRole(currentRole || 'mahasiswa')}</span>
               </div>
             </div>
           )}
-
-          {navLinks.map((link) => {
-            const active = isActive(link.to);
-            return (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                aria-current={active ? 'page' : undefined}
-                className={`block px-3 py-2 text-sm font-semibold transition-colors ${
-                  isLanding
-                    ? active
-                      ? 'text-sky-300 font-bold border-l-2 border-sky-400 pl-4'
-                      : 'text-slate-300 hover:text-white'
-                    : active
-                      ? 'text-blue-700 font-bold border-l-2 border-blue-700 pl-4'
-                      : 'text-slate-700 hover:text-blue-900'
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-
-          <div
-            className={`pt-2 border-t mt-2 space-y-1 ${
-              isLanding ? 'border-white/10' : 'border-slate-100'
-            }`}
-          >
+          <div className="space-y-1">
+            {navLinks.map((link) => {
+              const active = isActive(link.to);
+              const Icon = link.icon;
+              return (
+                <Link key={link.to} to={link.to} onClick={() => setMobileOpen(false)} aria-current={active ? 'page' : undefined}
+                  className={`flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-sm font-semibold ${
+                    active ? 'bg-blue-50 text-blue-800' : 'text-slate-700 hover:bg-slate-50'
+                  }`}>
+                  <Icon className="h-4 w-4" aria-hidden={true} /> {link.label}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mt-3 space-y-1 border-t border-slate-100 pt-3">
             {currentUser ? (
               <>
-                {currentRole === 'mahasiswa' && (
-                  <Link
-                    to="/app/profil"
-                    onClick={() => setMobileOpen(false)}
-                    className={`w-full flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl min-h-[44px] transition-colors ${
-                      isLanding
-                        ? 'text-sky-300 hover:bg-white/10'
-                        : 'text-blue-700 hover:bg-blue-50'
-                    }`}
-                  >
-                    <UserCircle2 className="w-4 h-4" aria-hidden="true" />
-                    Pengaturan Profil &amp; Target
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className={`w-full flex items-center justify-center gap-2 text-sm font-bold px-3 py-2.5 rounded-xl border min-h-[44px] transition-colors cursor-pointer ${
-                    isLanding
-                      ? 'text-rose-300 border-rose-400/40 bg-rose-500/10 hover:bg-rose-500/20'
-                      : 'text-rose-700 border-rose-300 bg-rose-50/80 hover:bg-rose-100'
-                  }`}
-                >
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
-                  Keluar dari Akun
-                </button>
+                {currentRole === 'mahasiswa' && <Link to="/app/profil" onClick={() => setMobileOpen(false)} className="flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-sm font-semibold text-blue-800 hover:bg-blue-50"><UserCircle2 className="h-4 w-4" aria-hidden="true" /> Pengaturan Profil &amp; Target</Link>}
+                <button type="button" onClick={handleLogout} className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 cursor-pointer"><LogOut className="h-4 w-4" aria-hidden="true" /> Keluar dari Akun</button>
               </>
             ) : (
-              <div className="space-y-2">
-                <Link
-                  to="/masuk"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-center text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] shadow-sm bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white"
-                >
-                  Masuk
-                </Link>
-                <Link
-                  to="/daftar"
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center justify-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl text-center min-h-[44px] border transition-colors ${
-                    isLanding
-                      ? 'border-white/25 text-white bg-white/10 hover:bg-white/20'
-                      : 'border-slate-300 text-slate-800 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <UserPlus className="w-4 h-4" aria-hidden="true" />
-                  Daftar Akun Mahasiswa
-                </Link>
-              </div>
+              <Link to="/daftar" onClick={() => setMobileOpen(false)} className="flex min-h-[44px] items-center gap-3 rounded-xl px-4 text-sm font-semibold text-blue-800 hover:bg-blue-50"><UserPlus className="h-4 w-4" aria-hidden="true" /> Daftar Akun Mahasiswa</Link>
             )}
           </div>
         </nav>

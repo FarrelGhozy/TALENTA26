@@ -66,7 +66,7 @@ const EmblemPicture: React.FC<{
   if (tone === 'light') {
     return (
       <span
-        className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-white/95 p-1 shadow-xs ring-1 ring-[#EACA97]/45 ${sizeClass}`}
+        className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-white/95 p-1 shadow-xs ring-1 ring-blue-200/70 ${sizeClass}`}
       >
         {img}
       </span>
@@ -153,7 +153,7 @@ export const UscBrand: React.FC<UscBrandProps> = ({
           <span className="flex items-center gap-1.5">
             <span
               className={`font-black tracking-tight text-sm sm:text-base leading-none ${
-                tone === 'light' ? 'text-white' : 'text-[#142432]'
+                tone === 'light' ? 'text-white' : 'text-blue-950'
               }`}
             >
               USC
@@ -184,7 +184,7 @@ export const UscBrand: React.FC<UscBrandProps> = ({
         <span className="sm:hidden min-w-0">
           <span
             className={`font-black tracking-tight block text-base leading-none ${
-              tone === 'light' ? 'text-white' : 'text-[#142432]'
+              tone === 'light' ? 'text-white' : 'text-blue-950'
             }`}
           >
             USC

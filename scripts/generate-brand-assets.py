@@ -2,7 +2,7 @@
 """Generator aset merek deterministik untuk UNIDA Student Championship (USC).
 
 Membaca dua sumber master asli di `docs/design/logo-usc-2026-11/sources/`:
-1. `usc-emblem-source.png` (Emblem 3D Navy & Gold transparan)
+1. `usc-emblem-blue-master.png` (emblem biru transparan dari pengguna)
 2. `usc-wordmark-source.png` (Wordmark UNIDA STUDENT CHAMPIONSHIP berlatar #F7F7F7)
 
 Menghasilkan seluruh turunan produksi yang optimal (WebP, PNG, multi-size ICO,
@@ -24,11 +24,11 @@ QA_OUT = ROOT / "docs" / "design" / "logo-usc-2026-11" / "usc-brand-qa.png"
 PUBLIC_DIR = ROOT / "frontend" / "public"
 IMAGES_DIR = PUBLIC_DIR / "images"
 
-NAVY_INK = (20, 36, 50)        # #142432
-NAVY_DEEP = (11, 21, 32)       # #0B1520
-NAVY_MID = (31, 52, 66)        # #1F3442
-GOLD_PRIMARY = (184, 150, 105) # #B89669
-GOLD_LIGHT = (234, 202, 151)   # #EACA97
+NAVY_INK = (8, 42, 70)         # #082A46
+NAVY_DEEP = (5, 33, 63)        # #05213F
+NAVY_MID = (0, 96, 160)       # #0060A0
+ACCENT_PRIMARY = (0, 143, 192) # #008FC0
+ACCENT_LIGHT = (119, 220, 238) # #77DCEE
 SURFACE_LIGHT = (248, 250, 252) # #F8FAFC
 WHITE = (255, 255, 255)
 
@@ -162,7 +162,7 @@ def write_png_in_ico(images: list[Image.Image], output_path: Path) -> None:
 
 
 def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> Image.Image:
-    """Bangun kartu Open Graph 1200x630 bergradien Deep Navy & aksen Burnished Gold."""
+    """Bangun kartu Open Graph 1200x630 bergradien biru tua dengan aksen cyan."""
     width, height = 1200, 630
 
     # Gradien vertikal halus Deep Navy
@@ -177,19 +177,19 @@ def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> 
     canvas = Image.fromarray(bg_arr, mode="RGBA")
 
     draw = ImageDraw.Draw(canvas)
-    # Garis aksen emas tipis di sisi atas & bawah
-    draw.rectangle((0, 0, width, 6), fill=(*GOLD_PRIMARY, 255))
-    draw.rectangle((0, height - 6, width, height), fill=(*GOLD_PRIMARY, 255))
+    # Garis aksen cyan tipis di sisi atas & bawah
+    draw.rectangle((0, 0, width, 6), fill=(*ACCENT_PRIMARY, 255))
+    draw.rectangle((0, height - 6, width, height), fill=(*ACCENT_PRIMARY, 255))
 
     # Garis tepi frame internal halus
     draw.rounded_rectangle(
         (36, 36, width - 36, height - 36),
         radius=28,
-        outline=(*GOLD_PRIMARY, 75),
+        outline=(*ACCENT_PRIMARY, 75),
         width=2,
     )
 
-    # Medalion terang elegan untuk emblem 3D agar navy + gold kontras 100%
+    # Medalion terang elegan untuk emblem 3D agar biru tetap kontras 100%
     medallion_size = 212
     mx = (width - medallion_size) // 2
     my = 76
@@ -199,7 +199,7 @@ def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> 
     gdraw = ImageDraw.Draw(glow)
     gdraw.ellipse(
         (mx - 40, my - 40, mx + medallion_size + 40, my + medallion_size + 40),
-        fill=(*GOLD_LIGHT, 48),
+        fill=(*ACCENT_LIGHT, 48),
     )
     glow = glow.filter(ImageFilter.GaussianBlur(radius=34))
     canvas.alpha_composite(glow)
@@ -216,7 +216,7 @@ def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> 
     draw.rounded_rectangle(
         (mx, my, mx + medallion_size - 1, my + medallion_size - 1),
         radius=round(medallion_size * 0.22),
-        outline=(*GOLD_LIGHT, 170),
+        outline=(*ACCENT_LIGHT, 170),
         width=3,
     )
 
@@ -234,13 +234,13 @@ def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> 
     wy = my + medallion_size + 40
     canvas.alpha_composite(wm_resized, (wx, wy))
 
-    # Garis pemisah emas pendek
+    # Garis pemisah cyan pendek
     div_y = wy + wm_resized.height + 32
     draw = ImageDraw.Draw(canvas)
     draw.rounded_rectangle(
         (width // 2 - 72, div_y, width // 2 + 72, div_y + 4),
         radius=2,
-        fill=(*GOLD_PRIMARY, 230),
+        fill=(*ACCENT_PRIMARY, 230),
     )
 
     # Subjudul institusional
@@ -263,7 +263,7 @@ def build_og_image(emblem_trimmed: Image.Image, wordmark_light: Image.Image) -> 
     draw.text(
         ((width - cp_w) // 2, div_y + 58),
         campus,
-        fill=(*GOLD_LIGHT, 245),
+        fill=(*ACCENT_LIGHT, 245),
         font=campus_font,
     )
 
@@ -340,7 +340,7 @@ def build_qa_sheet(
     pad_circle = round(136 * 0.10)
     draw.ellipse(
         (928 + pad_circle, 162 + pad_circle, 1064 - pad_circle, 298 - pad_circle),
-        outline=(*GOLD_PRIMARY, 220),
+        outline=(*ACCENT_PRIMARY, 220),
         width=2,
     )
     draw.text((926, 306), "Maskable (80% circle)", fill=(71, 85, 105, 255), font=small_font)
@@ -375,13 +375,13 @@ def build_qa_sheet(
 
 
 def main() -> None:
-    emblem_src = SOURCES_DIR / "usc-emblem-source.png"
+    emblem_src = SOURCES_DIR / "usc-emblem-blue-master.png"
     wordmark_src = SOURCES_DIR / "usc-wordmark-source.png"
 
     if not emblem_src.exists() or not wordmark_src.exists():
         raise FileNotFoundError(
             f"Sumber master logo tidak ditemukan di {SOURCES_DIR}. "
-            "Pastikan usc-emblem-source.png dan usc-wordmark-source.png tersedia."
+            "Pastikan usc-emblem-blue-master.png dan usc-wordmark-source.png tersedia."
         )
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)

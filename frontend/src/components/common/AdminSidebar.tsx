@@ -359,7 +359,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       >
         {/* Menu Utama */}
         <div className="space-y-1">
-          <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div className="px-3 pb-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
             Menu Utama
           </div>
 
@@ -367,7 +367,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             to="/admin"
             onClick={() => onNavigate?.()}
             aria-current={isDashboardActive ? 'page' : undefined}
-            className={`flex items-center gap-3 px-3 py-2.5 min-h-[42px] rounded-xl text-xs font-bold transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-colors ${
               isDashboardActive
                 ? 'bg-blue-50 text-blue-800 border border-blue-200/80 shadow-2xs'
                 : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 border border-transparent'
@@ -383,7 +383,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         {/* Grup Modul Pengelolaan */}
         <div className="space-y-1.5">
-          <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div className="px-3 pb-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
             Modul Pengelolaan
           </div>
 
@@ -392,7 +392,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             to="/admin/konten"
             onClick={() => onNavigate?.()}
             aria-current={isCompetitionsActive ? 'page' : undefined}
-            className={`flex items-center justify-between gap-2 px-3 py-2.5 min-h-[42px] rounded-xl text-xs font-bold transition-colors ${
+            className={`flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-colors ${
               isCompetitionsActive
                 ? 'bg-blue-50 text-blue-800 border border-blue-200/80 shadow-2xs'
                 : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 border border-transparent'
@@ -407,7 +407,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </span>
             {counts.competitions !== null && (
               <span
-                className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border leading-none shrink-0 ${
+                className={`px-2 py-0.5 text-xs font-extrabold rounded-full border leading-none shrink-0 ${
                   isCompetitionsActive
                     ? 'bg-blue-100 text-blue-900 border-blue-200'
                     : BADGE_TONE_CLASSES.slate
@@ -431,7 +431,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   onClick={() => toggleGroup(group.id)}
                   aria-expanded={isExpanded}
                   aria-controls={panelId}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[42px] rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-bold transition-colors cursor-pointer ${
                     groupActive
                       ? 'bg-slate-100/90 text-slate-950 border border-slate-200/80'
                       : 'text-slate-700 hover:bg-slate-100/70 hover:text-slate-950 border border-transparent'
@@ -448,7 +448,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                   <span className="flex items-center gap-1.5 shrink-0">
                     {group.headBadge !== undefined && group.headBadge !== null && (
                       <span
-                        className={`px-1.5 py-0.5 text-[10px] font-extrabold rounded-full border leading-none ${
+                        className={`px-1.5 py-0.5 text-xs font-extrabold rounded-full border leading-none ${
                           BADGE_TONE_CLASSES[group.headBadgeTone || 'amber']
                         }`}
                       >
@@ -480,7 +480,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                           to={sub.to}
                           onClick={() => onNavigate?.()}
                           aria-current={active ? 'page' : undefined}
-                          className={`flex items-center justify-between gap-2 px-2.5 py-2 min-h-[38px] rounded-lg text-xs transition-colors ${
+                          className={`flex items-center justify-between gap-2 px-2.5 py-2 min-h-[44px] rounded-lg text-sm transition-colors ${
                             active
                               ? 'bg-blue-50 text-blue-800 font-bold'
                               : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 font-medium'
@@ -495,7 +495,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                           </span>
                           {sub.badge !== undefined && sub.badge !== null && (
                             <span
-                              className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border leading-none shrink-0 ${
+                              className={`px-2 py-0.5 text-xs font-extrabold rounded-full border leading-none shrink-0 ${
                                 active
                                   ? 'bg-blue-100 text-blue-900 border-blue-200'
                                   : BADGE_TONE_CLASSES[sub.badgeTone || 'slate']
@@ -516,13 +516,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         {/* Tautan Cepat Halaman Publik */}
         <div className="space-y-1 pt-2 border-t border-slate-100">
-          <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+          <div className="px-3 pb-1 text-xs font-extrabold uppercase tracking-wider text-slate-500">
             Tampilan Publik
           </div>
           <Link
             to="/kompetisi"
             onClick={() => onNavigate?.()}
-            className="flex items-center gap-3 px-3 py-2 min-h-[38px] rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 transition-colors"
           >
             <Globe className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
             <span className="truncate">Katalog Lomba</span>
@@ -530,7 +530,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <Link
             to="/ranking"
             onClick={() => onNavigate?.()}
-            className="flex items-center gap-3 px-3 py-2 min-h-[38px] rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 min-h-[44px] rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100/80 hover:text-slate-950 transition-colors"
           >
             <Medal className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
             <span className="truncate">Papan Ranking</span>
@@ -550,10 +550,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               tone="blue"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-extrabold text-slate-900 truncate leading-tight">
+              <p className="text-sm font-extrabold text-slate-900 truncate leading-tight">
                 {currentUser.nama}
               </p>
-              <p className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+              <p className="text-xs text-slate-500 truncate leading-tight mt-0.5">
                 {currentUser.email || 'Admin Pengelola'}
               </p>
             </div>
@@ -562,7 +562,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[38px] rounded-xl text-xs font-bold text-rose-700 bg-rose-50/60 hover:bg-rose-100 border border-rose-200 hover:border-rose-300 shadow-2xs transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[44px] rounded-xl text-sm font-bold text-rose-700 bg-rose-50/60 hover:bg-rose-100 border border-rose-200 hover:border-rose-300 shadow-2xs transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Keluar dari Portal</span>

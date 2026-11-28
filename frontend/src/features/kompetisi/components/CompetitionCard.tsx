@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Users, Calendar, ShieldCheck, Trophy } from 'lucide-react';
 import { Competition } from '../../../types';
 import { formatDate, parseFlexibleDate } from '../../../lib/format';
 import { Card, CardContent } from '../../../components/ui/Card';
@@ -19,118 +19,50 @@ export const CompetitionCard: React.FC<{ competition: Competition }> = ({ compet
         return d ? d.getTime() >= Date.now() - 86400000 : true;
       }) || competition.jadwal[0];
 
-  const isIndividual =
-    competition.format === 'individu' ||
+  const isIndividual = competition.format === 'individu' ||
     (competition.komposisi.min === 1 && competition.komposisi.max === 1);
   const isClosed = competition.registrationStatus === 'tutup';
 
-  const getCategoryTheme = (cat: string) => {
-    switch (cat.toUpperCase()) {
-      case 'PKM':
-        return {
-          banner: 'from-blue-700 via-blue-800 to-indigo-900',
-          badgeColor: 'blue' as const,
-        };
-      case 'GEMASTIK':
-        return {
-          banner: 'from-indigo-700 via-purple-800 to-slate-900',
-          badgeColor: 'blue' as const,
-        };
-      case 'ON-MIPA':
-        return {
-          banner: 'from-emerald-700 via-teal-800 to-slate-900',
-          badgeColor: 'emerald' as const,
-        };
-      case 'KMI':
-        return {
-          banner: 'from-amber-600 via-orange-700 to-slate-900',
-          badgeColor: 'amber' as const,
-        };
-      default:
-        return {
-          banner: 'from-slate-700 via-blue-800 to-slate-900',
-          badgeColor: 'blue' as const,
-        };
-    }
-  };
-
-  const theme = getCategoryTheme(competition.kategori);
-
   return (
-    <Card className="hover:border-blue-400 hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-full bg-white group border-slate-200/90 shadow-2xs overflow-hidden">
-      {/* Top Category Visual Header Bar */}
-      <div className={`h-2.5 w-full bg-gradient-to-r ${theme.banner}`} />
-
-      <CardContent className="space-y-4 p-5 sm:p-6 flex-1 flex flex-col justify-between">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge color={theme.badgeColor} dot>
-                {competition.kategori}
-              </Badge>
-              {isClosed && (
-                <Badge color="rose" size="sm">
-                  Rekrutmen Tutup
-                </Badge>
-              )}
-            </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Tingkat {competition.tingkat}
-            </span>
-          </div>
-
-          <div>
-            <h3
-              className="font-black text-base text-slate-900 line-clamp-2 min-h-[2.5rem] group-hover:text-blue-700 transition-colors leading-snug"
-              title={competition.namaResmi}
-            >
-              {competition.namaResmi}
-            </h3>
-            <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 leading-relaxed" title={competition.deskripsi}>
-              {competition.deskripsi}
-            </p>
-          </div>
+    <Card className="group flex h-full flex-col border-slate-200 bg-white transition-all duration-200 hover:border-blue-300 hover:shadow-lg">
+      <div className="relative flex min-h-36 items-end justify-between overflow-hidden bg-[#e3f4fa] px-5 py-5 sm:px-6">
+        <div aria-hidden="true" className="absolute -right-5 -top-12 h-44 w-44 rounded-full border-[24px] border-white/45" />
+        <div className="relative">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-800">Kompetisi</p>
+          <p className="mt-2 text-2xl font-extrabold uppercase tracking-tight text-blue-950">{competition.kategori}</p>
         </div>
-
-        <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 text-xs space-y-2.5 mt-3">
-          <div className="flex items-center justify-between gap-2 text-slate-600">
-            <span className="inline-flex items-center gap-1.5 text-slate-500 font-medium">
-              <Users className="w-3.5 h-3.5 text-blue-700" />
-              Komposisi Tim:
-            </span>
-            <span className="font-extrabold text-slate-800 text-right">
-              {isIndividual
-                ? 'Individu (1 Peserta)'
-                : `Beregu · ${competition.komposisi.min}–${competition.komposisi.max} Anggota`}
-            </span>
+        <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-blue-700 shadow-sm">
+          <Trophy className="h-6 w-6" aria-hidden="true" />
+        </span>
+      </div>
+      <CardContent className="flex flex-1 flex-col gap-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge color="blue" className="capitalize">{competition.tingkat}</Badge>
+          <Badge color={isClosed ? 'rose' : 'emerald'} size="sm">
+            {isClosed ? 'Rekrutmen Tutup' : 'Pendaftaran Dibuka'}
+          </Badge>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-extrabold leading-snug tracking-tight text-blue-950 group-hover:text-blue-800" title={competition.namaResmi}>
+            {competition.namaResmi}
+          </h3>
+          <p className="line-clamp-3 text-sm leading-6 text-slate-600" title={competition.deskripsi}>{competition.deskripsi}</p>
+        </div>
+        <div className="mt-auto space-y-3 border-t border-slate-100 pt-4 text-sm">
+          <div className="flex items-start gap-2 text-slate-600">
+            <Users className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
+            <span>{isIndividual ? 'Individu (1 Peserta)' : `Beregu · ${competition.komposisi.min}–${competition.komposisi.max} Anggota`}</span>
           </div>
-
-          {nextSchedule && (
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1.5 text-slate-500 shrink-0 font-medium">
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                Agenda Terdekat:
-              </span>
-              <span className="font-bold text-slate-800 text-right truncate text-[11px]">
-                {nextSchedule.label} • <time dateTime={nextSchedule.tanggal}>{formatDate(nextSchedule.tanggal)}</time>
-              </span>
-            </div>
-          )}
+          {nextSchedule && <div className="flex items-start gap-2 text-slate-600">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" aria-hidden="true" />
+            <span>{nextSchedule.label} · <time dateTime={nextSchedule.tanggal}>{formatDate(nextSchedule.tanggal)}</time></span>
+          </div>}
         </div>
       </CardContent>
-
-      <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
-          Informasi kompetisi
-        </span>
-        <Link
-          to={`/kompetisi/${competition.slug}`}
-          aria-label={`Lihat detail ${competition.namaResmi}`}
-          className="font-extrabold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 group-hover:translate-x-1.5 transition-transform"
-        >
-          Detail & Syarat <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-5 py-2 sm:px-6">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500"><ShieldCheck className="h-4 w-4 text-blue-700" aria-hidden="true" /> Informasi kompetisi</span>
+        <Link to={`/kompetisi/${competition.slug}`} aria-label={`Lihat detail ${competition.namaResmi}`}
+          className="inline-flex min-h-[44px] items-center text-sm font-bold text-blue-700 hover:text-blue-900 hover:underline">Detail &amp; Syarat</Link>
       </div>
     </Card>
   );

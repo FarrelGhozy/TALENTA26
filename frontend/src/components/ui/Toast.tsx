@@ -38,7 +38,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           <div
             key={t.id}
             role={t.kind === 'error' ? 'alert' : 'status'}
-            className={`pointer-events-auto p-4 rounded-2xl border text-xs font-semibold shadow-xl flex items-start gap-3 transition-all animate-in slide-in-from-bottom-3 duration-200 ${
+            className={`pointer-events-auto p-4 rounded-2xl border text-sm font-semibold shadow-xl flex items-start gap-3 transition-all animate-in slide-in-from-bottom-3 duration-200 ${
               t.kind === 'success'
                 ? 'border-emerald-200 bg-white/95 text-emerald-950 backdrop-blur-md'
                 : t.kind === 'error'
@@ -54,7 +54,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <div className="flex-1 leading-relaxed">{t.message}</div>
             <button
               onClick={() => dismiss(t.id)}
-              className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer shrink-0"
+              className="text-slate-500 hover:text-slate-800 -m-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg cursor-pointer shrink-0"
               aria-label="Tutup notifikasi"
             >
               <X className="w-3.5 h-3.5" />

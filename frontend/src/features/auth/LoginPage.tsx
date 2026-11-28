@@ -109,7 +109,7 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-10 space-y-7">
       {/* Institution Banner / Brand Header */}
-      <div className="text-center space-y-3">
+      <div className="space-y-4 rounded-[1.5rem] border border-blue-100 bg-[#eaf7fc] px-5 py-8 text-center sm:px-8 sm:py-10">
         <div className="flex justify-center">
           <UscBrand variant="stacked" size="md" priority />
         </div>
@@ -118,7 +118,7 @@ export const LoginPage: React.FC = () => {
             <GraduationCap className="w-3.5 h-3.5 text-blue-700" aria-hidden="true" />
             Universitas Darussalam Gontor
           </div>
-          <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">
+          <h1 className="text-2xl font-extrabold tracking-tight text-blue-950 sm:text-3xl">
             Portal Pembinaan Lomba dan Prestasi Mahasiswa
           </h1>
         </div>

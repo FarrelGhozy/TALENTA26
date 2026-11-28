@@ -13,7 +13,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ eyebrow, title, descript
       {eyebrow ? (
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-blue-700">{eyebrow}</p>
       ) : null}
-      <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{title}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-blue-950 sm:text-4xl">{title}</h1>
       <p className="text-sm sm:text-base leading-6 sm:leading-7 text-slate-600">{description}</p>
     </div>
     {actions ? <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div> : null}

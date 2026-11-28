@@ -86,9 +86,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
             <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-6 text-xs text-slate-600 space-y-4 overflow-y-auto flex-1">{children}</div>
+        <div className="p-5 sm:p-6 text-sm leading-relaxed text-slate-700 space-y-4 overflow-y-auto flex-1">{children}</div>
         {footer ? (
-          <div className="px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
+          <div className="px-5 sm:px-6 py-4 bg-slate-50/80 border-t border-slate-100 flex flex-wrap justify-end gap-2.5 shrink-0">
             {footer}
           </div>
         ) : (

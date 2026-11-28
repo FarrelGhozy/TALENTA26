@@ -100,11 +100,11 @@ export const RoleCardLogin: React.FC<RoleCardLoginProps> = ({ onSelectRole, isLo
                   <Icon className={`w-6 h-6 ${acc.iconColor}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-slate-900 truncate">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-slate-900">
                       {acc.title}
                     </span>
-                    <Badge color="blue" size="sm">
+                    <Badge color="blue" size="sm" className="shrink-0 whitespace-nowrap">
                       {acc.badge}
                     </Badge>
                   </div>

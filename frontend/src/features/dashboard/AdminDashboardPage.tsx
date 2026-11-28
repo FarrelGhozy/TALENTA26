@@ -115,7 +115,7 @@ export const AdminDashboardPage: React.FC = () => {
   if (error || !stats) {
     return (
       <div className="p-12 text-center space-y-4">
-        <p role="alert" className="text-rose-500 text-xs font-semibold">
+        <p role="alert" className="text-rose-500 text-sm font-semibold">
           {error || 'Gagal memuat statistik.'}
         </p>
         <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
@@ -168,20 +168,20 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+      <div className="flex flex-col justify-between gap-6 rounded-[1.5rem] border border-blue-100 bg-[#eaf7fc] p-5 sm:p-7 2xl:flex-row 2xl:items-end">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+            <span className="text-sm font-bold text-blue-700 uppercase tracking-wider">
               Portal Admin Terpadu
             </span>
-            <span className="text-[10px] bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
+            <span className="text-xs bg-blue-50 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200/60">
               Operasional
             </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-blue-950 sm:text-4xl">
             Dashboard Pengelola Program
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-700 sm:text-base">
             Satu pusat kendali untuk analitik pembinaan, pengelolaan kompetisi, validasi prestasi, dan ekspor data institusi.
           </p>
         </div>
@@ -191,7 +191,7 @@ export const AdminDashboardPage: React.FC = () => {
             aria-label="Filter status ekspor CSV"
             value={exportStatus}
             onChange={(e) => setExportStatus(e.target.value)}
-            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 min-h-[38px]"
+            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 min-h-[44px]"
           >
             <option value="">Semua Status CSV</option>
             <option value="disetujui">Disetujui</option>
@@ -203,7 +203,7 @@ export const AdminDashboardPage: React.FC = () => {
             aria-label="Filter kategori ekspor CSV"
             value={exportCategory}
             onChange={(e) => setExportCategory(e.target.value)}
-            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 min-h-[38px]"
+            className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 min-h-[44px]"
           >
             <option value="">Semua Kategori CSV</option>
             <option value="kompetisi">Kompetisi</option>
@@ -241,7 +241,7 @@ export const AdminDashboardPage: React.FC = () => {
           {isSuperAdmin && (
             <Link
               to="/admin/sistem"
-              className="text-xs font-bold text-blue-700 hover:underline inline-flex items-center gap-1"
+              className="text-sm font-bold text-blue-700 hover:underline inline-flex items-center gap-1"
             >
               Pengaturan Sistem &amp; Akun <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </Link>
@@ -264,7 +264,7 @@ export const AdminDashboardPage: React.FC = () => {
               <span>Distribusi Peserta per Kompetisi</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-3 text-xs">
+          <CardContent className="p-4 space-y-3 text-sm">
             {competitions.map((comp) => {
               const count = stats.pesertaPerKompetisi[comp.slug] || 0;
               const percent = Math.round((count / maxCount) * 100);
@@ -279,7 +279,7 @@ export const AdminDashboardPage: React.FC = () => {
                       {comp.namaResmi}
                     </span>
                     <span
-                      className="font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/60 text-xs shrink-0"
+                      className="font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/60 text-sm shrink-0"
                       aria-label={`${count} mahasiswa di ${comp.namaResmi}`}
                     >
                       {count} Mahasiswa
@@ -305,7 +305,7 @@ export const AdminDashboardPage: React.FC = () => {
               <span>Ringkasan Verifikasi Prestasi</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-2.5 text-xs">
+          <CardContent className="p-4 space-y-2.5 text-sm">
             <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-50/90 text-emerald-950 border border-emerald-200/80">
               <span className="font-bold">Prestasi Disetujui</span>
               <strong className="text-emerald-700 text-sm font-black">{stats.pengajuanPrestasi.disetujui}</strong>
@@ -326,7 +326,7 @@ export const AdminDashboardPage: React.FC = () => {
               <strong className="text-rose-700 text-sm font-black">{stats.pengajuanPrestasi.ditolak}</strong>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 mt-2 leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 mt-2 leading-relaxed">
               <strong>Prinsip Integritas Data:</strong> Hanya pengajuan berstatus <em>Disetujui</em> oleh admin yang dihitung dalam rekapitulasi resmi dan papan ranking kemahasiswaan internal kampus.
             </div>
           </CardContent>

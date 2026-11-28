@@ -128,7 +128,7 @@ export const PreparationPage: React.FC = () => {
               Persiapan
             </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-snug">
+          <h1 className="text-2xl font-extrabold text-blue-950 tracking-tight leading-snug sm:text-3xl">
             {competition.namaResmi}
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed max-w-xl">

@@ -1,13 +1,28 @@
 @import "tailwindcss";
 
+/* Palet biru–cyan diturunkan dari emblem yang diberikan pengguna. */
+@theme {
+  --color-blue-50: #edf8fc;
+  --color-blue-100: #d8f1f9;
+  --color-blue-200: #b3e2f1;
+  --color-blue-300: #7bcde6;
+  --color-blue-400: #38b4d8;
+  --color-blue-500: #008fc0;
+  --color-blue-600: #0078b7;
+  --color-blue-700: #00639c;
+  --color-blue-800: #07527f;
+  --color-blue-900: #0a4268;
+  --color-blue-950: #082a46;
+}
+
 @layer base {
   :root {
-    --talenta-primary: #1d4ed8;
-    --talenta-primary-strong: #1e3a8a;
+    --talenta-primary: #00639c;
+    --talenta-primary-strong: #082a46;
     --talenta-accent: #059669;
     --talenta-surface: #ffffff;
-    --talenta-canvas: #f8fafc;
-    --talenta-text: #0f172a;
+    --talenta-canvas: #f7fafc;
+    --talenta-text: #102b40;
     --talenta-muted: #475569;
     --talenta-border: #e2e8f0;
     --talenta-radius: 1rem;
@@ -30,14 +45,14 @@
   }
 
   :focus-visible {
-    outline: 2px solid #1d4ed8;
+    outline: 2px solid #00639c;
     outline-offset: 2px;
     border-radius: 8px;
   }
 
   ::selection {
-    background: #dbeafe;
-    color: #1e3a8a;
+    background: #d8f1f9;
+    color: #082a46;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -64,14 +79,21 @@
   }
 
   .unida-gradient {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%);
+    background: linear-gradient(135deg, #082a46 0%, #00639c 54%, #00a7cc 100%);
   }
 
   .unida-gradient-accent {
-    background: linear-gradient(135deg, #1e3a8a 0%, #059669 100%);
+    background: linear-gradient(135deg, #07527f 0%, #00a7cc 100%);
   }
 
   .font-editorial {
     font-family: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
   }
+}
+
+/* A subtle texture keeps the hero open and text-led across screen sizes. */
+.usc-hero-pattern {
+  background-image: linear-gradient(rgba(0, 99, 156, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 99, 156, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, transparent 10%, black 100%);
 }

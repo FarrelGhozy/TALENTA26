@@ -44,10 +44,10 @@ const AdminShell: React.FC<{
   }, [mobileDrawerOpen, setMobileDrawerOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#f7fafc]">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[70] focus:bg-white focus:px-3 focus:py-2 focus:rounded-lg focus:border focus:text-xs focus:font-bold"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[70] focus:bg-white focus:px-3 focus:py-2 focus:rounded-lg focus:border focus:text-sm focus:font-bold"
       >
         Lewati ke konten utama
       </a>
@@ -86,7 +86,7 @@ const AdminShell: React.FC<{
         {/* Kolom Utama Kanan */}
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Top Utility Bar Ringkas (Desktop & Mobile) */}
-          <header className="sticky top-0 z-30 h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between gap-3">
+          <header className="sticky top-0 z-30 h-14 bg-white/95 backdrop-blur-md border-b border-blue-100 px-4 sm:px-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Tombol Hamburger Mobile/Tablet */}
               <button
@@ -94,7 +94,7 @@ const AdminShell: React.FC<{
                 onClick={() => setMobileDrawerOpen(true)}
                 aria-label="Buka navigasi admin"
                 aria-expanded={mobileDrawerOpen}
-                className="lg:hidden min-w-[42px] min-h-[42px] -ml-1.5 rounded-xl text-slate-700 hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                className="lg:hidden min-w-[44px] min-h-[44px] -ml-1.5 rounded-xl text-slate-700 hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer transition-colors shrink-0"
               >
                 <Menu className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -106,7 +106,7 @@ const AdminShell: React.FC<{
                 aria-label={desktopSidebarOpen ? 'Sembunyikan sidebar navigasi' : 'Tampilkan sidebar navigasi'}
                 aria-expanded={desktopSidebarOpen}
                 title={desktopSidebarOpen ? 'Sembunyikan sidebar' : 'Tampilkan sidebar'}
-                className="hidden lg:inline-flex min-w-[36px] min-h-[36px] rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 items-center justify-center cursor-pointer transition-colors shrink-0"
+                className="hidden lg:inline-flex min-w-[44px] min-h-[44px] rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 items-center justify-center cursor-pointer transition-colors shrink-0"
               >
                 {desktopSidebarOpen ? (
                   <PanelLeftClose className="w-4 h-4" aria-hidden="true" />
@@ -116,7 +116,7 @@ const AdminShell: React.FC<{
               </button>
 
               {/* Breadcrumb Lokasi Aktif */}
-              <nav aria-label="Breadcrumb lokasi" className="flex items-center gap-1.5 text-xs min-w-0">
+              <nav aria-label="Breadcrumb lokasi" className="flex items-center gap-1.5 text-sm min-w-0">
                 <Link
                   to="/admin"
                   className="hidden sm:inline font-semibold text-slate-500 hover:text-blue-700 truncate"
@@ -158,7 +158,7 @@ const AdminShell: React.FC<{
               {counts.achievements.menunggu > 0 && (
                 <Link
                   to="/admin/prestasi?status=menunggu"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-[11px] font-bold transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 text-xs font-bold transition-colors"
                 >
                   <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
                   <span className="hidden sm:inline">Menunggu:</span>

@@ -16,7 +16,7 @@ UNIDA Student Championship (USC) rilis pertama ditujukan untuk satu kampus, UNID
 5. Setiap periode akademik baru dapat dibuat tanpa menghapus riwayat periode sebelumnya.
 
 ## 2. Prinsip produk
-- Identitas aplikasi memakai **UNIDA Student Championship (USC)** (`K-26`) dengan Emblem 3D Navy (`#142432`/`#1F3442`) & Gold (`#B89669`/`#EACA97`) serta Wordmark grafis transparan gelap/putih yang dikelola terpusat pada komponen `UscBrand`. Ini identitas aplikasi, bukan klaim lambang resmi kampus.
+- Identitas aplikasi memakai **UNIDA Student Championship (USC)** (`K-26`), dengan pembaruan visual `K-27`: emblem biru–cyan dari pengguna serta wordmark grafis transparan gelap/putih yang dikelola terpusat pada komponen `UscBrand`. Ini identitas aplikasi, bukan klaim lambang resmi kampus.
 - Data riil dibedakan jelas dari demo/mock. Tidak ada klaim AI, beasiswa, SKPI, atau verifikasi BAAK dalam rilis awal.
 - Identitas mahasiswa rilis awal bersumber dari isian sendiri, belum diverifikasi kampus. NIM unik mencegah duplikat teknis tetapi tidak membuktikan identitas.
 - Hanya keputusan validator yang membuat prestasi menjadi terverifikasi dan layak dihitung.
