@@ -1,9 +1,18 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { DemoBanner } from '../../components/common/DemoBanner';
 import { Navbar } from '../../components/common/Navbar';
+import { useDocumentMeta } from '../../lib/seo';
 
 export const AppLayout: React.FC = () => {
+  const location = useLocation();
+  useDocumentMeta({
+    title: 'Portal Mahasiswa — UNIDA Student Championship (USC)',
+    description: 'Portal pembinaan lomba, tim, roadmap, dan pengajuan prestasi mahasiswa USC.',
+    path: location.pathname,
+    noindex: true,
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc]">
       <a

@@ -15,6 +15,7 @@ COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY infra/nginx/40-usc-runtime.sh /docker-entrypoint.d/40-usc-runtime.sh
 RUN chmod +x /docker-entrypoint.d/40-usc-runtime.sh
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+RUN mkdir -p /etc/nginx/usc-templates && cp /usr/share/nginx/html/index.html /etc/nginx/usc-templates/index.html.base
 
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

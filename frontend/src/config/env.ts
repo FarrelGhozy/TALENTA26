@@ -3,6 +3,7 @@ export type AppEnv = 'DEPLOYMENT' | 'PRODUCTION';
 declare global {
   interface Window {
     __USC_RUNTIME_CONFIG__?: {
+      publicOrigin?: string;
       apiOrigin?: string;
     };
   }
@@ -21,6 +22,15 @@ export const APP_ENV: AppEnv =
 export const USE_MOCK: boolean =
   import.meta.env.MODE !== 'production' &&
   (import.meta.env.MODE === 'demo' || import.meta.env.VITE_USE_MOCK === 'true');
+
+export function resolveRuntimePublicOrigin(
+  runtimeConfig: Window['__USC_RUNTIME_CONFIG__'] | undefined =
+    typeof window !== 'undefined' ? window.__USC_RUNTIME_CONFIG__ : undefined
+): string {
+  const raw = runtimeConfig?.publicOrigin;
+  if (typeof raw !== 'string') return '';
+  return raw.trim().replace(/\/+$/, '');
+}
 
 export function resolveRuntimeApiOrigin(
   runtimeConfig: Window['__USC_RUNTIME_CONFIG__'] | undefined =
@@ -41,6 +51,8 @@ export function resolveApiBaseUrl(
   }
   return base;
 }
+
+export const RUNTIME_PUBLIC_ORIGIN: string = resolveRuntimePublicOrigin();
 
 export const RUNTIME_API_ORIGIN: string = resolveRuntimeApiOrigin();
 

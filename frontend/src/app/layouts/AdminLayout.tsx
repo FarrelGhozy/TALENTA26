@@ -10,6 +10,7 @@ import {
 import { DemoBanner } from '../../components/common/DemoBanner';
 import { AdminSidebar, getAdminBreadcrumb } from '../../components/common/AdminSidebar';
 import { AdminNavProvider, useAdminNav } from '../../features/admin/AdminNavContext';
+import { useDocumentMeta } from '../../lib/seo';
 
 const AdminShell: React.FC<{
   mobileDrawerOpen: boolean;
@@ -182,7 +183,15 @@ const AdminShell: React.FC<{
 };
 
 export const AdminLayout: React.FC = () => {
+  const location = useLocation();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  useDocumentMeta({
+    title: 'Portal Pengelola — UNIDA Student Championship (USC)',
+    description: 'Portal pengelolaan kompetisi, seleksi, verifikasi prestasi, dan administrasi USC.',
+    path: location.pathname,
+    noindex: true,
+  });
 
   return (
     <AdminNavProvider onOpenMobileDrawer={() => setMobileDrawerOpen(true)}>

@@ -29,6 +29,11 @@ import { Badge } from '../../components/ui/Badge';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { UserAvatar } from '../../components/ui/UserAvatar';
 import { UscBrand } from '../../components/common/UscBrand';
+import {
+  DEFAULT_SEO_DESCRIPTION,
+  DEFAULT_SEO_TITLE,
+  useDocumentMeta,
+} from '../../lib/seo';
 
 const heroSlides = [
   {
@@ -89,6 +94,12 @@ function getPodiumTheme(rank: number) {
 }
 
 export const LandingPage: React.FC = () => {
+  useDocumentMeta({
+    title: DEFAULT_SEO_TITLE,
+    description: DEFAULT_SEO_DESCRIPTION,
+    path: '/',
+  });
+
   const { currentUser, currentRole } = useAuth();
   const currentUserId = currentUser?.id ?? null;
 

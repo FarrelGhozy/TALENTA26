@@ -260,6 +260,15 @@ Status diperbarui 28 November 2026 (selaras keputusan produk `K-01`–`K-27` di 
 
 ---
 
+## Tugas mandiri — SEO, Open Graph, Sitemap & Pratinjau Link Berbasis `.env` (`PUBLIC_ORIGIN`, 28 November 2026)
+- [x] Perbarui `frontend/index.html` dan tambahkan fallback `frontend/public/robots.txt` menggunakan URL absolut default `https://talenta.utc.web.id` (lengkap dengan `canonical`, `robots`, `og:url`, `og:locale`, `og:image`, `og:image:secure_url`, `og:image:type`, `og:image:alt`, dan `twitter:image:alt`), serta tambahkan `RUNTIME_PUBLIC_ORIGIN` di `frontend/src/config/env.ts` dan hook `useDocumentMeta` di `frontend/src/lib/seo.ts` untuk seluruh rute publik (`LandingPage`, `CompetitionListPage`, `CompetitionDetailPage`, `RankingPage`) maupun `noindex` rute privat/auth (`AppLayout`, `AdminLayout`, halaman auth, & `ErrorPages`).
+- [x] Tambahkan `backend/src/modules/seo/index.ts` (terdaftar di `backend/src/app/server.ts`) dengan `GET /sitemap.xml` (dinamis mencakup kompetisi berstatus `published` tanpa PII) dan `GET /api/v1/public/meta` (HTML escaping ketat & `noindex` pada rute privat/auth) yang selalu mengambil link FE dari `PUBLIC_ORIGIN` di `.env`.
+- [x] Perbarui `infra/docker-compose.yaml`, `frontend/Dockerfile` (`index.html.base`), `infra/nginx/40-usc-runtime.sh` (penggantian `PUBLIC_ORIGIN` atomik & idempoten pada `index.html`, `runtime-config.js`, `robots.txt`, dan `sitemap-static.xml`), serta `infra/nginx/default.conf` (`@social_meta` khusus bot media sosial/chat WhatsApp/Telegram/Discord/X + proxy `/sitemap.xml` dengan `@sitemap_fallback` + `/robots.txt` + blok statis ikon/manifest).
+- [x] Tambahkan `backend/tests/unit/seo.test.ts` (5 kasus) dan selaraskan `.env.example`, `README.md`, `infra/README.md`, `docs/15-env-mock-strategy.md`, serta `docs/17-runbook-operasi.md`.
+- Verifikasi: `bun run typecheck`, `bun run lint` (0 warning, 0 error pada 159 file), `bun run build` & `build:demo` (`frontend/dist` bersih), `bun test backend/tests/unit` (**47/47 lulus**, 197 assertions lintas 11 file), `bun run test:coverage` (**177/177 lulus**, 824 assertions lintas 22 file; coverage `80.77%` fungsi / `80.31%` baris), `sh -n infra/nginx/40-usc-runtime.sh`, `docker compose config -q`, `nginx -t`, uji simulasi HTTP container `nginx:1.27-alpine` (browser UA, WhatsApp UA, TelegramBot UA, `/robots.txt`, `/sitemap.xml`), dan uji idempoten ganti domain `40-usc-runtime.sh`.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).

@@ -7,8 +7,16 @@ import { CompetitionFilter } from './components/CompetitionFilter';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { Button } from '../../components/ui/Button';
+import { useDocumentMeta } from '../../lib/seo';
 
 export const CompetitionListPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Katalog Lomba Resmi — UNIDA Student Championship (USC)',
+    description:
+      'Jelajahi daftar kompetisi mahasiswa resmi, syarat tim, jadwal pembinaan, dan aturan poin prestasi di UNIDA Gontor.',
+    path: '/kompetisi',
+  });
+
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('semua');

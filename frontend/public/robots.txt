@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Allow: /kompetisi
+Allow: /ranking
+Disallow: /app/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /masuk
+Disallow: /daftar
+Disallow: /lupa-password
+Disallow: /reset-password
+Disallow: /403
+Disallow: /404
+
+Sitemap: https://talenta.utc.web.id/sitemap.xml

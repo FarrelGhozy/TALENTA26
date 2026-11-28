@@ -20,6 +20,7 @@ import { PageLoading } from '../../components/ui/Skeleton';
 import { ScheduleTimeline } from './components/ScheduleTimeline';
 import { TeamRuleBox } from './components/TeamRuleBox';
 import { formatAchievementType } from '../../lib/format';
+import { useDocumentMeta } from '../../lib/seo';
 
 const VALID_TABS = ['ringkasan', 'syarat', 'jadwal', 'poin'] as const;
 
@@ -30,6 +31,16 @@ export const CompetitionDetailPage: React.FC = () => {
   const { currentUser, refreshUser } = useAuth();
   const { notify } = useToast();
   const [competition, setCompetition] = useState<Competition | null>(null);
+
+  useDocumentMeta({
+    title: competition
+      ? `${competition.namaResmi} — UNIDA Student Championship (USC)`
+      : 'Detail Kompetisi — UNIDA Student Championship (USC)',
+    description: competition
+      ? competition.deskripsi.slice(0, 160)
+      : 'Informasi resmi syarat peserta, jadwal pembinaan, konsultan, dan aturan poin kompetisi di UNIDA Student Championship (USC).',
+    path: slug ? `/kompetisi/${slug}` : '/kompetisi',
+  });
   const [pointConfig, setPointConfig] = useState<Awaited<ReturnType<NonNullable<typeof achievementService.getCompetitionPointConfig>>> | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTeam, setActiveTeam] = useState<Team | null>(null);

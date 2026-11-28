@@ -5,8 +5,16 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UscBrand } from '../../components/common/UscBrand';
 import { userService } from '@talenta/services';
+import { useDocumentMeta } from '../../lib/seo';
 
 export const ResetPasswordPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Atur Ulang Kata Sandi — UNIDA Student Championship (USC)',
+    description: 'Pembaruan kata sandi akun UNIDA Student Championship (USC).',
+    path: '/reset-password',
+    noindex: true,
+  });
+
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 

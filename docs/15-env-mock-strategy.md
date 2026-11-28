@@ -18,8 +18,8 @@ Mock hanya untuk demo/tes, tidak ada toggle mock pada image produksi. Vite mengg
 Kontrak variabel runtime yang dibaca oleh `infra/docker-compose.yaml` (`env_file: .env`):
 - `GHCR_OWNER` dan `IMAGE_TAG`: pemilik repo GHCR (`farrelghozy`) serta tag image (`latest` secara default, atau tag rilis `vX.Y.Z`/`sha-...` bila ingin disematkan).
 - `WEB_BIND_HOST` & `WEB_PORT` (`127.0.0.1:3350` untuk FE Nginx) serta `API_BIND_HOST` & `API_PORT` (`127.0.0.1:3360` menuju internal `3001` BE Elysia).
-- `PUBLIC_ORIGIN`: URL HTTPS domain Frontend aktif (wajib non-localhost di produksi).
-- `API_PUBLIC_ORIGIN`: URL HTTPS subdomain Backend terpisah opsional jika Cloudflare Tunnel membelokkan subdomain API tersendiri ke `localhost:3360` (kosongkan bila FE & BE berada pada satu origin lewat `localhost:3350`).
+- `PUBLIC_ORIGIN`: URL HTTPS domain Frontend aktif (mis. `https://talenta.utc.web.id`; wajib non-localhost di produksi). Sekaligus mengatur seluruh URL SEO (`canonical`, `og:url`, `og:image`, `robots.txt`, dan `/sitemap.xml`) secara otomatis di container `web` & `api` tanpa rebuild image.
+- `API_PUBLIC_ORIGIN`: URL HTTPS subdomain Backend terpisah opsional (mis. `https://api.talenta.utc.web.id`) jika Cloudflare Tunnel membelokkan subdomain API tersendiri ke `localhost:3360` (kosongkan bila FE & BE berada pada satu origin lewat `localhost:3350`).
 - `TRUST_PROXY`: `true` bila di belakang Cloudflare Tunnel / reverse proxy.
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (atau fallback `DATABASE_URL`): kredensial MySQL aplikasi khusus (`prisma.config.ts` fail-fast di produksi jika kosong).
 - `SESSION_SECRET` dan `COOKIE_SECRET`: rahasia acak kuat (>= 32 karakter, bukan placeholder).

@@ -17,6 +17,7 @@ import { dashboardRoutes } from '../modules/dashboard';
 import { assertSameOrigin } from './middleware/csrf';
 import { selectionRoutes } from '../modules/selections';
 import { pointRoutes } from '../modules/points';
+import { seoRoutes } from '../modules/seo';
 import { resolveClientIp } from './middleware/client-ip';
 import {
   applyRateLimitHeaders,
@@ -111,7 +112,8 @@ export function createServer() {
     .use(systemRoutes)
     .use(dashboardRoutes)
     .use(selectionRoutes)
-    .use(pointRoutes);
+    .use(pointRoutes)
+    .use(seoRoutes);
 
   return app;
 }

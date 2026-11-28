@@ -24,6 +24,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { PageLoading } from '../../components/ui/Skeleton';
 import { Tabs } from '../../components/ui/Tabs';
 import { UserAvatar } from '../../components/ui/UserAvatar';
+import { useDocumentMeta } from '../../lib/seo';
 
 function getRankStyle(rank: number) {
   if (rank === 1) {
@@ -57,6 +58,13 @@ function getRankStyle(rank: number) {
 }
 
 export const RankingPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Papan Peringkat Prestasi Mahasiswa — UNIDA Student Championship (USC)',
+    description:
+      'Klasemen resmi poin prestasi mahasiswa Universitas Darussalam Gontor periode berjalan dan sepanjang masa berdasarkan verifikasi validator.',
+    path: '/ranking',
+  });
+
   const { currentUser, currentRole, isLoading: authLoading } = useAuth();
   const isAuthenticated = Boolean(currentUser);
   const currentUserId = currentUser?.id ?? null;

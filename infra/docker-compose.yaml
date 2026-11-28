@@ -80,6 +80,7 @@ services:
   web:
     image: ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-frontend:${IMAGE_TAG:-latest}
     environment:
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
       API_PUBLIC_ORIGIN: "${API_PUBLIC_ORIGIN:-}"
     depends_on:
       api:

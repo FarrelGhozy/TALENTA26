@@ -6,8 +6,16 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { UscBrand } from '../../components/common/UscBrand';
 import { useAuth } from './AuthContext';
+import { useDocumentMeta } from '../../lib/seo';
 
 export const RegisterPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Daftar Akun Mahasiswa — UNIDA Student Championship (USC)',
+    description: 'Registrasi akun mahasiswa UNIDA Student Championship (USC).',
+    path: '/daftar',
+    noindex: true,
+  });
+
   const { currentUser, currentRole, registerMahasiswa, isLoading } = useAuth();
   const navigate = useNavigate();
 

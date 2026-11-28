@@ -2,8 +2,15 @@ import React from 'react';
 import { Link, useRouteError } from 'react-router-dom';
 import { Compass, ShieldAlert, AlertTriangle, ArrowRight, Home } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { useDocumentMeta } from '../lib/seo';
 
 export const NotFoundPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Halaman Tidak Ditemukan (404) — UNIDA Student Championship (USC)',
+    path: '/404',
+    noindex: true,
+  });
+
   return (
     <div className="max-w-md mx-auto py-16 text-center space-y-5 bg-white p-8 rounded-3xl border border-slate-200/90 shadow-xs my-8">
       <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-blue-700 flex items-center justify-center mx-auto shadow-inner">
@@ -32,6 +39,12 @@ export const NotFoundPage: React.FC = () => {
 };
 
 export const ForbiddenPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Akses Terbatas (403) — UNIDA Student Championship (USC)',
+    path: '/403',
+    noindex: true,
+  });
+
   return (
     <div className="max-w-md mx-auto py-16 text-center space-y-5 bg-white p-8 rounded-3xl border border-slate-200/90 shadow-xs my-8">
       <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
@@ -60,6 +73,12 @@ export const ForbiddenPage: React.FC = () => {
 };
 
 export const RouteErrorPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Kendala Memuat Halaman — UNIDA Student Championship (USC)',
+    path: '/404',
+    noindex: true,
+  });
+
   const error = useRouteError() as Error | null;
   return (
     <div className="max-w-md mx-auto py-16 text-center space-y-5 bg-white p-8 rounded-3xl border border-slate-200/90 shadow-xs my-8">

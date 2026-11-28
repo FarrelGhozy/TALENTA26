@@ -6,6 +6,7 @@ import { FormLogin } from './components/FormLogin';
 import { UscBrand } from '../../components/common/UscBrand';
 import { USE_MOCK, APP_ENV } from '../../config/env';
 import { Role } from '../../types';
+import { useDocumentMeta } from '../../lib/seo';
 
 // Lazy-load kartu login demo agar di build produksi (MODE === 'production') tidak ikut masuk bundle utama
 const LazyRoleCardLogin =
@@ -14,6 +15,13 @@ const LazyRoleCardLogin =
     : null;
 
 export const LoginPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Masuk Akun — UNIDA Student Championship (USC)',
+    description: 'Masuk ke portal pembinaan lomba dan prestasi mahasiswa UNIDA Student Championship (USC).',
+    path: '/masuk',
+    noindex: true,
+  });
+
   const { currentUser, currentRole, loginAsRole, loginWithCredentials, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

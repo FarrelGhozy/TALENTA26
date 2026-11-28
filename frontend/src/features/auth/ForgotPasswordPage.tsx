@@ -5,8 +5,16 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { UscBrand } from '../../components/common/UscBrand';
 import { userService } from '@talenta/services';
+import { useDocumentMeta } from '../../lib/seo';
 
 export const ForgotPasswordPage: React.FC = () => {
+  useDocumentMeta({
+    title: 'Lupa Kata Sandi — UNIDA Student Championship (USC)',
+    description: 'Pemulihan akses akun UNIDA Student Championship (USC).',
+    path: '/lupa-password',
+    noindex: true,
+  });
+
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
