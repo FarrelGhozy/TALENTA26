@@ -151,10 +151,10 @@ Pada mode `VITE_APP_ENV=DEPLOYMENT`, halaman `/masuk` menyediakan kartu login ce
 
 Arsitektur 3 container production (menarik image resmi dari GHCR yang dibangun otomatis oleh `.github/workflows/ci-publish.yml`):
 1. **`migrate`** (`ghcr.io/farrelghozy/talenta-backend`): job satu kali dengan `NODE_ENV=production` yang **otomatis menjalankan `bunx prisma migrate deploy`** sebelum API menyala (`restart: "no"`).
-2. **`api`** (`ghcr.io/farrelghozy/talenta-backend`): server backend Bun/Elysia dengan `NODE_ENV=production` dan `PORT=3001` terkunci di jaringan internal Docker (tidak diekspos ke publik; fail-fast bila secret/RustFS belum siap).
-3. **`web`** (`ghcr.io/farrelghozy/talenta-frontend`): Nginx 1.27-alpine serving static build production React (bebas mock & kartu login demo) pada `WEB_PORT` (default `8080`) serta reverse proxy same-origin `/api/` dan `/health` menuju `api:3001`.
+2. **`api`** (`ghcr.io/farrelghozy/talenta-backend`): server backend Bun/Elysia dengan `NODE_ENV=production` dan port internal `3001`, terekspos di loopback host via `API_PORT` (default `127.0.0.1:3360`) serta terhubung ke network internal + network eksternal `homelab-net` untuk menjangkau container MySQL/RustFS existing (fail-fast bila secret/RustFS belum siap).
+3. **`web`** (`ghcr.io/farrelghozy/talenta-frontend`): Nginx 1.27-alpine serving static build production React (bebas mock & kartu login demo) di `WEB_PORT` (default `127.0.0.1:3350`), mendukung satu domain (reverse proxy `/api/` & `/health` ke `api:3001`) maupun dua subdomain terpisah melalui injeksi runtime `API_PUBLIC_ORIGIN`.
 
-> MySQL dan object storage RustFS tetap berjalan sebagai layanan eksternal (existing di server) yang dihubungkan lewat `infra/.env`.
+> MySQL di container pada external network `homelab-net` (atau host server) dan object storage RustFS tetap berjalan sebagai layanan eksternal existing yang dihubungkan lewat `infra/.env`.
 
 ### Langkah 1 — Clone Repositori & Siapkan `infra/.env`
 ```bash
@@ -167,9 +167,12 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
 - **Image & Origin**:
   - `GHCR_OWNER=farrelghozy` (huruf kecil)
   - `IMAGE_TAG=latest` *(atau sematkan tag rilis spesifik seperti `v1.0.0` / `sha-<commit>`)*
-  - `WEB_BIND_HOST=127.0.0.1` *(default loopback aman di belakang Cloudflare Tunnel; ubah ke `0.0.0.0` hanya jika sengaja mengekspos LAN)*
-  - `WEB_PORT=8080`
-  - `PUBLIC_ORIGIN=https://domain-anda.example.com`
+  - `WEB_BIND_HOST=127.0.0.1` *(default loopback aman untuk Cloudflare Tunnel; ubah ke `0.0.0.0` hanya jika sengaja mengekspos LAN)*
+  - `WEB_PORT=3350` *(port Frontend / Nginx di host -> `http://localhost:3350`)*
+  - `API_BIND_HOST=127.0.0.1`
+  - `API_PORT=3360` *(port Backend / Elysia di host -> `http://localhost:3360`)*
+  - `PUBLIC_ORIGIN=https://app.domain-anda.example.com`
+  - `API_PUBLIC_ORIGIN=https://api.domain-anda.example.com` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan jika FE & BE satu domain lewat `localhost:3350`)*
   - `TRUST_PROXY=true` *(set `true` jika berada di balik Cloudflare Tunnel / reverse proxy HTTPS)*
   - *(Opsional sesuai `O-03`/`O-06`)*: `DB_POOL_LIMIT`, `USER_STORAGE_QUOTA_MB`, `MAX_REVISIONS_PER_ACHIEVEMENT`, `MAX_ACHIEVEMENTS_PER_PERIOD`, `MAX_SESSIONS_PER_USER`, `AUDIT_RETENTION_DAYS`, `STORAGE_RETENTION_INACTIVE_DAYS`, `MAINTENANCE_INTERVAL_MINUTES`, `BACKUP_RETENTION_DAYS`
 - **Keamanan Sesi (Wajib acak minimal 32 karakter — jalankan `openssl rand -base64 32`)**:
@@ -177,7 +180,7 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
   - `COOKIE_SECRET=...`
 - **Database MySQL Existing**:
   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-  - *(Jika MySQL berjalan di host server Docker yang sama, gunakan `DB_HOST=host.docker.internal` — `extra_hosts` sudah tersedia di `infra/docker-compose.yaml`).*
+  - *(Jika MySQL berjalan sebagai container di network `homelab-net`, gunakan nama container/service MySQL tersebut sebagai `DB_HOST`; jika berjalan langsung di host server Docker yang sama, gunakan `DB_HOST=host.docker.internal`).*
 - **Object Storage S3 Existing (RustFS / MinIO)**:
   - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`
 - **SMTP (Pemulihan Kata Sandi)**:
@@ -194,7 +197,7 @@ docker compose up -d
 Urutan eksekusi otomatis Docker Compose:
 1. Container `migrate` berjalan terlebih dahulu mengeksekusi `bunx prisma migrate deploy`.
 2. Setelah migrasi selesai sukses (`service_completed_successfully`), container `api` menyala dan melewati health check `/health/ready`.
-3. Setelah `api` berstatus `healthy`, container `web` (Nginx) menyala dan melayani aplikasi pada `http://127.0.0.1:${WEB_PORT:-8080}` (siap diteruskan oleh Cloudflare Tunnel / reverse proxy HTTPS).
+3. Setelah `api` berstatus `healthy`, container `web` (Nginx) menyala sehingga Frontend tersedia pada `http://127.0.0.1:${WEB_PORT:-3350}` dan Backend API tersedia pada `http://127.0.0.1:${API_PORT:-3360}` (siap dibelokkan ke luar lewat Cloudflare Tunnel).
 
 Jika ingin menjalankan ulang migrasi secara eksplisit:
 ```bash
@@ -210,7 +213,8 @@ docker compose run --rm api bun backend/prisma/seed.ts
 ### Langkah 4 — Verifikasi Status Container & Health Check
 ```bash
 docker compose ps
-curl http://127.0.0.1:${WEB_PORT:-8080}/health/ready
+curl http://127.0.0.1:${API_PORT:-3360}/health/ready
+curl http://127.0.0.1:${WEB_PORT:-3350}/health/ready
 docker compose logs -f api web
 ```
 

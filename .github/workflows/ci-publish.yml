@@ -170,6 +170,7 @@ jobs:
             exit 1
           fi
           bash -n infra/scripts/backup-db.sh
+          sh -n infra/nginx/40-usc-runtime.sh
           bash -n run-e2e.sh
           bun infra/scripts/backup-storage.ts --help >/dev/null
           docker run --rm \

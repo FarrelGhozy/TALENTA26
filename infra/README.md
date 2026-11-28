@@ -3,8 +3,8 @@
 Konsep kontainerisasi UNIDA Student Championship (USC) **khusus untuk lingkungan production** (pengembangan lokal tetap berjalan langsung memakai `bun run dev` dan `bun run dev:backend` tanpa Docker).
 
 ## Berkas di Direktori Ini
-- `infra/docker-compose.yaml`: Orkestrasi container **production** (`migrate` job satu kali, `api` Bun/Elysia non-root, dan `web` Nginx same-origin proxy). Seluruh image ditarik langsung dari GHCR (`ghcr.io/<owner>/talenta-frontend` dan `talenta-backend`) dengan rotasi log (`json-file` 10 MB × 5), batas `mem_limit`/`cpus`/`pids_limit`, `init: true`, `no-new-privileges:true`, dan bind loopback default (`WEB_BIND_HOST:-127.0.0.1`). Database MySQL dan object storage RustFS tetap memakai layanan existing yang dikonfigurasi lewat `infra/.env`.
-- `infra/nginx/default.conf`, `infra/nginx/security-headers.conf`, & `infra/nginx/proxy-api.conf`: Reverse proxy satu origin (`/` menuju static build React, `/api/` & `/health` menuju `api:3001`) dengan proteksi edge DDoS (`set_real_ip_from` + `CF-Connecting-IP`, `limit_conn` 50/IP, `limit_req` berjenjang auth/upload tulis-saja/API/health-ready dengan respons 429 JSON, `client_max_body_size` per rute `256k`/`1m`/`3m`/`26m`, timeout anti-Slowloris, `gzip`, CSP & security headers anti-duplikasi, serta `/nginx-health` khusus loopback/RFC1918).
+- `infra/docker-compose.yaml`: Orkestrasi container **production** (`migrate` job satu kali, `api` Bun/Elysia non-root, dan `web` Nginx reverse proxy + injeksi `API_PUBLIC_ORIGIN` runtime). Seluruh image ditarik langsung dari GHCR (`ghcr.io/<owner>/talenta-frontend` dan `talenta-backend`) dengan rotasi log (`json-file` 10 MB × 5), batas `mem_limit`/`cpus`/`pids_limit`, `init: true`, `no-new-privileges:true`, bind loopback default (`WEB_BIND_HOST:-127.0.0.1` port `3350` untuk FE dan `API_BIND_HOST:-127.0.0.1` port `3360` untuk BE), serta terhubung ke network eksternal `homelab-net` untuk menjangkau container MySQL existing.
+- `infra/nginx/default.conf`, `infra/nginx/security-headers.conf`, `infra/nginx/proxy-api.conf`, & `infra/nginx/40-usc-runtime.sh`: Reverse proxy (`/` menuju static build React, `/api/` & `/health` menuju `api:3001`, serta `/runtime-config.js` tanpa cache untuk mendukung subdomain API terpisah via `API_PUBLIC_ORIGIN`) dengan proteksi edge DDoS (`set_real_ip_from` + `CF-Connecting-IP`, `limit_conn` 50/IP, `limit_req` berjenjang auth/upload tulis-saja/API/health-ready dengan respons 429 JSON, `client_max_body_size` per rute `256k`/`1m`/`3m`/`26m`, timeout anti-Slowloris, `gzip`, CSP & security headers anti-duplikasi, serta `/nginx-health` khusus loopback/RFC1918).
 - `infra/scripts/backup-db.sh`: Backup MySQL atomik (`--defaults-extra-file` 0600, `gzip -t`, `--hex-blob`, SHA-256), uji restore database terisolasi (bersih & otomatis dihapus pasca-verifikasi), serta rotasi retensi `--keep-days`.
 - `infra/scripts/backup-storage.ts`: Backup & restore streaming objek RustFS S3-compatible terverifikasi SHA-256 dengan staging atomik 0700/0600, toleran `NoSuchKey`, serta rotasi retensi `--keep-days`.
 
@@ -28,12 +28,14 @@ Konsep kontainerisasi UNIDA Student Championship (USC) **khusus untuk lingkungan
    cp ../.env.example .env
    chmod 600 .env
    ```
-   Pastikan variabel wajib production terisi benar di `infra/.env`:
+   Pastikan variabel wajib production terisi benar di `infra/.env` (dan pastikan external network `homelab-net` sudah tersedia di Docker server sebelum `docker compose up -d`):
    - `GHCR_OWNER=farrelghozy` (huruf kecil), `IMAGE_TAG=latest` *(atau tag rilis `vX.Y.Z` / `sha-...`)*
-   - `WEB_BIND_HOST=127.0.0.1` *(aman untuk Cloudflare Tunnel)* & `WEB_PORT=8080`
-   - `PUBLIC_ORIGIN=https://domain-anda.example.com` *(wajib non-localhost)* & `TRUST_PROXY=true`
+   - `WEB_BIND_HOST=127.0.0.1` & `WEB_PORT=3350` *(target Cloudflare Tunnel Frontend: `http://localhost:3350`)*
+   - `API_BIND_HOST=127.0.0.1` & `API_PORT=3360` *(target Cloudflare Tunnel Backend: `http://localhost:3360`)*
+   - `PUBLIC_ORIGIN=https://app.domain-anda.example.com` *(wajib HTTPS non-localhost)* & `TRUST_PROXY=true`
+   - `API_PUBLIC_ORIGIN=https://api.domain-anda.example.com` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan bila menggunakan satu domain yang sama via `localhost:3350`)*
    - `SESSION_SECRET` & `COOKIE_SECRET` (string acak kuat >= 32 karakter)
-   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` *(gunakan `host.docker.internal` bila MySQL di host server Docker yang sama)*
+   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` *(gunakan nama container/service MySQL di network `homelab-net`, atau `host.docker.internal` bila MySQL di host server)*
    - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`
    - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
    - *(Opsional sesuai kebijakan kapasitas/retensi `O-03`/`O-06`)*: `DB_POOL_LIMIT`, `USER_STORAGE_QUOTA_MB`, `MAX_REVISIONS_PER_ACHIEVEMENT`, `MAX_ACHIEVEMENTS_PER_PERIOD`, `MAX_SESSIONS_PER_USER`, `AUDIT_RETENTION_DAYS`, `STORAGE_RETENTION_INACTIVE_DAYS`, `MAINTENANCE_INTERVAL_MINUTES`, `BACKUP_RETENTION_DAYS`

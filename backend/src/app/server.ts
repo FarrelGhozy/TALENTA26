@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { assertProductionConfig, loadConfig } from '../lib/config';
+import { assertProductionConfig, loadConfig, safeOrigin } from '../lib/config';
 import { authPlugin } from './middleware/auth';
 import { formatErrorResponse } from './middleware/error';
 import { healthRoutes } from '../modules/health';
@@ -31,10 +31,11 @@ export function createServer() {
   const currentConfig = loadConfig();
   assertProductionConfig(currentConfig);
 
+  const primaryOrigin = safeOrigin(currentConfig.publicOrigin) || currentConfig.publicOrigin;
   const allowedOrigins =
     currentConfig.nodeEnv === 'production'
-      ? [currentConfig.publicOrigin]
-      : [currentConfig.publicOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+      ? [primaryOrigin]
+      : [primaryOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'];
 
   const app = new Elysia()
     .use(
@@ -43,6 +44,7 @@ export function createServer() {
         credentials: true,
         methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'],
+        exposeHeaders: ['Retry-After', 'X-Request-Id', 'Content-Disposition'],
       })
     )
     .derive({ as: 'global' }, ({ request, set }) => {

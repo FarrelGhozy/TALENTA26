@@ -7,7 +7,7 @@ import {
   authRateLimiter,
   authRegisterIpLimiter,
 } from '../../app/middleware/rate-limit';
-import { loadConfig } from '../../lib/config';
+import { getSessionCookieOptions, loadConfig } from '../../lib/config';
 import { resolveClientIp } from '../../app/middleware/client-ip';
 
 export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
@@ -28,10 +28,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       if (cookie.talenta_session) {
         cookie.talenta_session.set({
           value: result.token,
-          httpOnly: true,
-          secure: currentConfig.nodeEnv === 'production',
-          sameSite: 'lax',
-          path: '/',
+          ...getSessionCookieOptions(currentConfig),
           maxAge: 7 * 24 * 60 * 60,
         });
       }
@@ -74,10 +71,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
       if (cookie.talenta_session) {
         cookie.talenta_session.set({
           value: result.token,
-          httpOnly: true,
-          secure: currentConfig.nodeEnv === 'production',
-          sameSite: 'lax',
-          path: '/',
+          ...getSessionCookieOptions(currentConfig),
           maxAge: 7 * 24 * 60 * 60,
         });
       }
@@ -115,10 +109,7 @@ export const authRoutes = new Elysia({ prefix: '/api/v1/auth' })
     if (cookie.talenta_session) {
       cookie.talenta_session.set({
         value: '',
-        httpOnly: true,
-        secure: currentConfig.nodeEnv === 'production',
-        sameSite: 'lax',
-        path: '/',
+        ...getSessionCookieOptions(currentConfig),
         maxAge: 0,
       });
       cookie.talenta_session.remove();

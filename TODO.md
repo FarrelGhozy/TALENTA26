@@ -244,6 +244,14 @@ Status diperbarui 28 November 2026 (selaras keputusan produk `K-01`–`K-27` di 
 
 ---
 
+## Tugas mandiri — Penyesuaian infra production (port `3350`/`3360`, `homelab-net`, & Cloudflare Tunnel lintas subdomain, 28 November 2026)
+- [x] Perbarui `infra/docker-compose.yaml` agar `web` (FE Nginx) bind loopback pada `127.0.0.1:${WEB_PORT:-3350}:80`, `api` (BE Elysia internal port `3001`) bind loopback pada `127.0.0.1:${API_PORT:-3360}:3001`, dan menambahkan network eksternal `homelab-net` (`external: true`) untuk `migrate` & `api` agar dapat menjangkau container MySQL existing sambil menjaga `web` tetap pada network internal `default` (mencegah bentrok DNS `api` di `homelab-net`).
+- [x] Tambahkan dukungan penuh dua subdomain Cloudflare Tunnel (`app.domain.com -> localhost:3350` & `api.domain.com -> localhost:3360`) sekaligus kompatibel dengan satu domain: tambahkan `API_BIND_HOST`, `API_PORT`, dan `API_PUBLIC_ORIGIN` di `.env.example`, injeksi runtime `/runtime-config.js` & pembaruan CSP (`connect-src` & `img-src`) via `infra/nginx/40-usc-runtime.sh` + `infra/nginx/default.conf` + `frontend/Dockerfile` + `frontend/src/config/env.ts` + `frontend/src/lib/asset.ts`, serta validasi `assertProductionConfig`, `getSessionCookieOptions` (`SameSite=None; Secure` untuk lintas subdomain HTTPS), normalisasi origin & `exposeHeaders` CORS (`Retry-After`, `X-Request-Id`, `Content-Disposition`) di `backend/src/lib/config.ts`, `backend/src/app/server.ts`, dan `backend/src/modules/auth/index.ts`.
+- [x] Perjelas pesan bantu `infra/scripts/backup-db.sh` bila `DB_HOST` memakai nama container `homelab-net`, tambahkan `sh -n infra/nginx/40-usc-runtime.sh` di `.github/workflows/ci-publish.yml`, selaraskan dokumentasi (`infra/README.md`, `README.md`, `docs/15-env-mock-strategy.md`, `docs/17-runbook-operasi.md`), dan tambahkan unit test `backend/tests/unit/cross-origin-config.test.ts` (3 kasus).
+- Verifikasi: `bun run typecheck`, `bun run lint` (0 warning, 0 error pada 157 file), `bun run build` & `build:demo` (pemindaian `frontend/dist` bersih, `runtime-config.js` tersemat), `bun test backend/tests/unit` (**40/40 lulus**, 153 assertions lintas 10 file), `bun run test:coverage` (**170/170 lulus**, 786 assertions lintas 21 file, coverage `80.42%` fungsi / `80.27%` baris), `docker compose config -q` (termasuk simulasi `.env.example` + `API_PUBLIC_ORIGIN`), `docker run --rm ... nginx:1.27-alpine nginx -t` beserta uji container `40-usc-runtime.sh` (empty/set/reset/reject invalid), `bash -n infra/scripts/backup-db.sh`, `sh -n infra/nginx/40-usc-runtime.sh`, dan `bun infra/scripts/backup-storage.ts --help`.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).

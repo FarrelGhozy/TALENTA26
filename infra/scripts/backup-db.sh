@@ -185,6 +185,14 @@ if [[ "${DB_HOST}" == "host.docker.internal" && ! -f "/.dockerenv" ]]; then
   fi
 fi
 
+# Beri pesan jelas bila DB_HOST memakai nama container Docker (mis. homelab-net) dan skrip dijalankan dari host
+if [[ "${DB_HOST}" != "127.0.0.1" && "${DB_HOST}" != "localhost" && ! -f "/.dockerenv" ]]; then
+  if ! getent hosts "${DB_HOST}" >/dev/null 2>&1; then
+    echo "[ERROR] Host DB '${DB_HOST}' tidak teresolusi dari host Linux. Jika MySQL berada di container (homelab-net), jalankan dari host dengan override DB_HOST=127.0.0.1 (mis. DB_HOST=127.0.0.1 $(basename "$0") --env-file infra/.env)." >&2
+    exit 1
+  fi
+fi
+
 # Periksa perkakas yang dibutuhkan
 DUMP_BIN=""
 if command -v mariadb-dump >/dev/null 2>&1; then

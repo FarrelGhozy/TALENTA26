@@ -12,6 +12,8 @@ FROM nginx:1.27-alpine AS runtime
 COPY infra/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY infra/nginx/proxy-api.conf /etc/nginx/snippets/proxy-api.conf
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx/40-usc-runtime.sh /docker-entrypoint.d/40-usc-runtime.sh
+RUN chmod +x /docker-entrypoint.d/40-usc-runtime.sh
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
 EXPOSE 80

@@ -17,8 +17,9 @@ Mock hanya untuk demo/tes, tidak ada toggle mock pada image produksi. Vite mengg
 ## `infra/.env` server produksi
 Kontrak variabel runtime yang dibaca oleh `infra/docker-compose.yaml` (`env_file: .env`):
 - `GHCR_OWNER` dan `IMAGE_TAG`: pemilik repo GHCR (`farrelghozy`) serta tag image (`latest` secara default, atau tag rilis `vX.Y.Z`/`sha-...` bila ingin disematkan).
-- `WEB_BIND_HOST` (default `127.0.0.1` aman di belakang Cloudflare Tunnel) dan `WEB_PORT` (`8080`).
-- `PUBLIC_ORIGIN`: URL HTTPS domain aktif (wajib non-localhost di produksi).
+- `WEB_BIND_HOST` & `WEB_PORT` (`127.0.0.1:3350` untuk FE Nginx) serta `API_BIND_HOST` & `API_PORT` (`127.0.0.1:3360` menuju internal `3001` BE Elysia).
+- `PUBLIC_ORIGIN`: URL HTTPS domain Frontend aktif (wajib non-localhost di produksi).
+- `API_PUBLIC_ORIGIN`: URL HTTPS subdomain Backend terpisah opsional jika Cloudflare Tunnel membelokkan subdomain API tersendiri ke `localhost:3360` (kosongkan bila FE & BE berada pada satu origin lewat `localhost:3350`).
 - `TRUST_PROXY`: `true` bila di belakang Cloudflare Tunnel / reverse proxy.
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (atau fallback `DATABASE_URL`): kredensial MySQL aplikasi khusus (`prisma.config.ts` fail-fast di produksi jika kosong).
 - `SESSION_SECRET` dan `COOKIE_SECRET`: rahasia acak kuat (>= 32 karakter, bukan placeholder).
@@ -31,7 +32,7 @@ Kontrak variabel runtime yang dibaca oleh `infra/docker-compose.yaml` (`env_file
 `.env.example` di root hanya berisi placeholder dengan default `NODE_ENV=development` untuk kenyamanan lokal (`infra/docker-compose.yaml` memaksa `NODE_ENV=production` di kontainer). `.env` produksi **wajib diset** di `infra/.env` (permission `0600`), tidak pernah di-commit, dan tidak masuk image Docker.
 
 ## Bentuk Compose (khusus Production)
-Docker tidak digunakan untuk development lokal. Satu-satunya file Compose berada di `infra/docker-compose.yaml`, berisi `migrate` (job satu kali), `api` (non-root `USER bun`, healthcheck `/health/ready`), dan `web` (Nginx edge proxy dengan `security-headers.conf` & `proxy-api.conf`), menggunakan `ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-frontend:${IMAGE_TAG:-latest}` dan `talenta-backend:${IMAGE_TAG:-latest}` (tanpa bagian `build:` lokal). Setiap layanan menerapkan rotasi log `json-file` (`10m × 5`), limit `mem_limit`/`cpus`/`pids_limit`, `init: true`, dan `no-new-privileges:true`. MySQL/RustFS existing tidak dibuat ulang oleh Compose produksi. Web/proxy bind ke `127.0.0.1:${WEB_PORT:-8080}` menuju Cloudflare Tunnel; api, DB, storage tidak membuka port publik. Tidak ada data persisten pada filesystem image.
+Docker tidak digunakan untuk development lokal. Satu-satunya file Compose berada di `infra/docker-compose.yaml`, berisi `migrate` (job satu kali), `api` (non-root `USER bun`, healthcheck `/health/ready`, terhubung ke network `default` + eksternal `homelab-net`), dan `web` (Nginx proxy dengan `security-headers.conf`, `proxy-api.conf`, & skrip runtime `40-usc-runtime.sh`), menggunakan `ghcr.io/${GHCR_OWNER:-farrelghozy}/talenta-frontend:${IMAGE_TAG:-latest}` dan `talenta-backend:${IMAGE_TAG:-latest}` (tanpa bagian `build:` lokal). Setiap layanan menerapkan rotasi log `json-file` (`10m × 5`), limit `mem_limit`/`cpus`/`pids_limit`, `init: true`, dan `no-new-privileges:true`. MySQL/RustFS existing tidak dibuat ulang oleh Compose produksi (`migrate` dan `api` terhubung ke container MySQL melalui network eksternal `homelab-net` maupun `host.docker.internal`). Frontend bind ke `127.0.0.1:${WEB_PORT:-3350}` dan Backend API bind ke `127.0.0.1:${API_PORT:-3360}` untuk target Cloudflare Tunnel; DB dan storage tidak membuka port publik. Tidak ada data persisten pada filesystem image.
 
 Operator menjalankan dari direktori `infra/` setelah menyetel `infra/.env`:
 ~~~bash

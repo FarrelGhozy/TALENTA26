@@ -25,6 +25,7 @@ export interface AppConfig {
   sessionSecret: string;
   cookieSecret: string;
   publicOrigin: string;
+  apiPublicOrigin?: string;
   trustProxy: boolean;
   superAdminBootstrapEmail?: string;
   superAdminBootstrapPassword?: string;
@@ -136,7 +137,9 @@ export function loadConfig(): AppConfig {
   const cookieSecret =
     process.env.COOKIE_SECRET || 'dev-cookie-secret-min-32-chars-long-12345';
   const publicOrigin =
-    process.env.PUBLIC_ORIGIN || 'http://localhost:5173';
+    (process.env.PUBLIC_ORIGIN || 'http://localhost:5173').trim().replace(/\/+$/, '');
+  const rawApiPublicOrigin = process.env.API_PUBLIC_ORIGIN?.trim();
+  const apiPublicOrigin = rawApiPublicOrigin ? rawApiPublicOrigin.replace(/\/+$/, '') : undefined;
   const trustProxy = process.env.TRUST_PROXY === 'true';
 
   const superAdminBootstrapEmail =
@@ -183,11 +186,73 @@ export function loadConfig(): AppConfig {
     sessionSecret,
     cookieSecret,
     publicOrigin,
+    apiPublicOrigin,
     trustProxy,
     superAdminBootstrapEmail,
     superAdminBootstrapPassword,
     smtp,
     s3,
+  };
+}
+
+export function safeOrigin(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+function assertNonLoopbackOrigin(envName: string, rawUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error(`${envName} produksi wajib berupa URL origin yang valid.`);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error(`${envName} produksi wajib berupa URL HTTP/HTTPS yang valid.`);
+  }
+  if (
+    parsed.hostname === 'localhost' ||
+    parsed.hostname === '127.0.0.1' ||
+    parsed.hostname === '::1'
+  ) {
+    throw new Error(`${envName} produksi tidak boleh menggunakan alamat localhost/loopback.`);
+  }
+}
+
+/**
+ * Menentukan opsi cookie sesi sesuai topologi same-origin atau lintas subdomain HTTPS.
+ */
+export function getSessionCookieOptions(
+  conf: Pick<AppConfig, 'nodeEnv' | 'publicOrigin' | 'apiPublicOrigin'>
+): {
+  httpOnly: true;
+  secure: boolean;
+  sameSite: 'lax' | 'none';
+  path: '/';
+} {
+  const isProd = conf.nodeEnv === 'production';
+  let sameSite: 'lax' | 'none' = 'lax';
+
+  if (isProd && conf.apiPublicOrigin) {
+    const feOrigin = safeOrigin(conf.publicOrigin);
+    const beOrigin = safeOrigin(conf.apiPublicOrigin);
+    if (feOrigin && beOrigin && beOrigin !== feOrigin && beOrigin.startsWith('https://')) {
+      sameSite = 'none';
+    }
+  }
+
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite,
+    path: '/',
   };
 }
 
@@ -207,18 +272,9 @@ export function assertProductionConfig(conf: AppConfig): void {
     throw new Error('COOKIE_SECRET produksi wajib diset minimal 32 karakter acak yang aman.');
   }
 
-  try {
-    const parsedOrigin = new URL(conf.publicOrigin);
-    if (
-      parsedOrigin.hostname === 'localhost' ||
-      parsedOrigin.hostname === '127.0.0.1' ||
-      parsedOrigin.hostname === '::1'
-    ) {
-      throw new Error('PUBLIC_ORIGIN produksi tidak boleh menggunakan alamat localhost/loopback.');
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('PUBLIC_ORIGIN')) throw err;
-    throw new Error('PUBLIC_ORIGIN produksi wajib berupa URL origin yang valid.');
+  assertNonLoopbackOrigin('PUBLIC_ORIGIN', conf.publicOrigin);
+  if (conf.apiPublicOrigin) {
+    assertNonLoopbackOrigin('API_PUBLIC_ORIGIN', conf.apiPublicOrigin);
   }
 
   if (
