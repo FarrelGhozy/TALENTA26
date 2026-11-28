@@ -172,7 +172,7 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
   - `API_BIND_HOST=127.0.0.1`
   - `API_PORT=3360` *(port Backend / Elysia di host -> `http://localhost:3360`)*
   - `PUBLIC_ORIGIN=https://talenta.utc.web.id` *(sekaligus otomatis mengisi link FE pada seluruh meta tag SEO, Open Graph, Canonical, `robots.txt`, dan `/sitemap.xml` di container `web`/`api` tanpa rebuild image)*
-  - `API_PUBLIC_ORIGIN=https://api.talenta.utc.web.id` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan jika FE & BE satu domain lewat `localhost:3350`)*
+  - `API_PUBLIC_ORIGIN=https://api-talenta.utc.web.id` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan jika FE & BE satu domain lewat `localhost:3350`)*
   - `TRUST_PROXY=true` *(set `true` jika berada di balik Cloudflare Tunnel / reverse proxy HTTPS)*
   - *(Opsional sesuai `O-03`/`O-06`)*: `DB_POOL_LIMIT`, `USER_STORAGE_QUOTA_MB`, `MAX_REVISIONS_PER_ACHIEVEMENT`, `MAX_ACHIEVEMENTS_PER_PERIOD`, `MAX_SESSIONS_PER_USER`, `AUDIT_RETENTION_DAYS`, `STORAGE_RETENTION_INACTIVE_DAYS`, `MAINTENANCE_INTERVAL_MINUTES`, `BACKUP_RETENTION_DAYS`
 - **Keamanan Sesi (Wajib acak minimal 32 karakter — jalankan `openssl rand -base64 32`)**:

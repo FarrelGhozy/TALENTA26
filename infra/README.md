@@ -33,7 +33,7 @@ Konsep kontainerisasi UNIDA Student Championship (USC) **khusus untuk lingkungan
    - `WEB_BIND_HOST=127.0.0.1` & `WEB_PORT=3350` *(target Cloudflare Tunnel Frontend: `http://localhost:3350`)*
    - `API_BIND_HOST=127.0.0.1` & `API_PORT=3360` *(target Cloudflare Tunnel Backend: `http://localhost:3360`)*
    - `PUBLIC_ORIGIN=https://talenta.utc.web.id` *(wajib HTTPS non-localhost; sekaligus otomatis mengisi domain FE pada tag SEO/Open Graph/Canonical/`robots.txt`/`sitemap.xml` saat container menyala — bila ganti domain kampus nantinya cukup ubah variabel ini lalu `docker compose up -d`)* & `TRUST_PROXY=true`
-   - `API_PUBLIC_ORIGIN=https://api.talenta.utc.web.id` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan bila menggunakan satu domain yang sama via `localhost:3350`)*
+   - `API_PUBLIC_ORIGIN=https://api-talenta.utc.web.id` *(isi jika FE & BE memakai dua subdomain terpisah di Cloudflare Tunnel; kosongkan bila menggunakan satu domain yang sama via `localhost:3350`)*
    - `SESSION_SECRET` & `COOKIE_SECRET` (string acak kuat >= 32 karakter)
    - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` *(gunakan nama container/service MySQL di network `homelab-net`, atau `host.docker.internal` bila MySQL di host server)*
    - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`

@@ -25,7 +25,7 @@ fi
 
 if [ -n "$RAW_API_ORIGIN" ]; then
   if ! printf '%s' "$RAW_API_ORIGIN" | grep -Eq '^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'; then
-    echo "[USC_RUNTIME_ERROR] API_PUBLIC_ORIGIN tidak valid: $RAW_API_ORIGIN (contoh valid: https://api.talenta.utc.web.id)" >&2
+    echo "[USC_RUNTIME_ERROR] API_PUBLIC_ORIGIN tidak valid: $RAW_API_ORIGIN (contoh valid: https://api-talenta.utc.web.id)" >&2
     exit 1
   fi
   printf 'window.__USC_RUNTIME_CONFIG__ = { publicOrigin: "%s", apiOrigin: "%s" };\n' \

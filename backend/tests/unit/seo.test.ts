@@ -86,14 +86,14 @@ describe('SEO & Open Graph Dinamis Berbasis PUBLIC_ORIGIN (.env)', () => {
 
     const app = createServer();
 
-    const sitemapRes = await app.handle(new Request('https://api.talenta.utc.web.id/sitemap.xml'));
+    const sitemapRes = await app.handle(new Request('https://api-talenta.utc.web.id/sitemap.xml'));
     expect(sitemapRes.status).toBe(200);
     expect(sitemapRes.headers.get('content-type')).toContain('application/xml');
     const xml = await sitemapRes.text();
     expect(xml).toContain('https://talenta.utc.web.id/');
 
     const metaRes = await app.handle(
-      new Request('https://api.talenta.utc.web.id/api/v1/public/meta?path=%2Franking')
+      new Request('https://api-talenta.utc.web.id/api/v1/public/meta?path=%2Franking')
     );
     expect(metaRes.status).toBe(200);
     expect(metaRes.headers.get('content-type')).toContain('text/html');
