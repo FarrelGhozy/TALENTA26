@@ -1,4 +1,5 @@
-import { loadConfig } from './config';
+import { isSmtpConfigured, loadConfig } from './config';
+import { logger } from './logger';
 import nodemailer from 'nodemailer';
 
 export class MailerUnavailableError extends Error {
@@ -42,9 +43,15 @@ export async function sendPasswordResetEmail(
   const currentConfig = loadConfig();
   const resetUrl = `${currentConfig.publicOrigin}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
-  if (!currentConfig.smtp) {
+  if (!isSmtpConfigured(currentConfig)) {
     if (currentConfig.nodeEnv === 'production') {
-      throw new MailerUnavailableError('Layanan email pemulihan akun belum dikonfigurasi');
+      logger.error(
+        'mailer',
+        'Pengiriman email pemulihan kata sandi gagal: SMTP produksi belum dikonfigurasi atau masih placeholder (K-13).'
+      );
+      throw new MailerUnavailableError(
+        'Layanan email pemulihan akun belum dikonfigurasi atau masih menggunakan placeholder.'
+      );
     }
     return {
       success: true,
@@ -52,27 +59,38 @@ export async function sendPasswordResetEmail(
     };
   }
 
+  const smtp = currentConfig.smtp!;
   const transport = createTransport({
-    host: currentConfig.smtp.host,
-    port: currentConfig.smtp.port,
-    secure: currentConfig.smtp.secure,
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
     auth: {
-      user: currentConfig.smtp.user,
-      pass: currentConfig.smtp.pass,
+      user: smtp.user,
+      pass: smtp.pass,
     },
   });
 
   try {
     const result = await transport.sendMail({
-      from: currentConfig.smtp.from,
+      from: smtp.from,
       to: toEmail,
       subject: 'Pemulihan kata sandi UNIDA Student Championship (USC)',
       text: `Gunakan tautan berikut untuk membuat kata sandi baru akun UNIDA Student Championship (USC) Anda. Tautan berlaku selama 1 jam:\n\n${resetUrl}\n\nJika Anda tidak meminta perubahan ini, abaikan pesan ini.`,
     });
     return { success: true, messageId: result.messageId };
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger.error('mailer', 'Gagal mengirim email pemulihan kata sandi melalui SMTP.', {
+      host: smtp.host,
+      port: smtp.port,
+      error: errMsg,
+    });
+    throw new MailerUnavailableError(
+      'Layanan email pemulihan akun gagal terhubung ke server SMTP.'
+    );
   } finally {
     transport.close?.();
   }

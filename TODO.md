@@ -252,6 +252,14 @@ Status diperbarui 28 November 2026 (selaras keputusan produk `K-01`–`K-27` di 
 
 ---
 
+## Tugas mandiri — SMTP opsional saat startup & fail-closed terlog saat runtime (`K-13`, 28 November 2026)
+- [x] Jadikan konfigurasi SMTP opsional saat startup container produksi di `backend/src/lib/config.ts` (`isSmtpConfigured` + `assertProductionConfig`): apabila `SMTP_*` kosong atau masih placeholder (`smtp.example.com` / `change-with-*`), server tetap menyala dengan log peringatan JSON terstruktur tanpa memblokir container `api`.
+- [x] Perketat pengiriman & pelaporan kegagalan di `backend/src/lib/mailer.ts` (`sendPasswordResetEmail`) serta `backend/src/modules/auth/service.ts` (`requestPasswordReset`): saat `/api/v1/auth/forgot-password` dipanggil di `production` dengan SMTP belum valid/placeholder atau transport gagal (`ECONNREFUSED`/otentikasi gagal), backend mencatat `logger.error` (tanpa password/reset token) dan melempar `MailerUnavailableError` → `503 MAILER_UNAVAILABLE`, sedangkan non-produksi tetap mengembalikan `previewToken` secara aman meski `.env` memakai placeholder.
+- [x] Perbarui `backend/tests/unit/rate-limit-and-ip.test.ts` & `backend/tests/unit/security.test.ts`, serta selaraskan dokumentasi `.env.example`, `README.md`, `docs/12-nfr-keamanan.md`, `docs/14-keputusan-terbuka.md` (`K-13`), `docs/15-env-mock-strategy.md`, dan `docs/17-runbook-operasi.md`.
+- Verifikasi: `bun run typecheck`, `bun run lint` (0 warning, 0 error pada 157 file), `bun test backend/tests/unit` (**42/42 lulus**, 160 assertions lintas 10 file), dan `bun run test:coverage` (**172/172 lulus**, 787 assertions lintas 21 file; coverage `80.50%` fungsi / `80.27%` baris, `mailer.ts` `100%`).
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).

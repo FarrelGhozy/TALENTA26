@@ -25,7 +25,7 @@ Kontrak variabel runtime yang dibaca oleh `infra/docker-compose.yaml` (`env_file
 - `SESSION_SECRET` dan `COOKIE_SECRET`: rahasia acak kuat (>= 32 karakter, bukan placeholder).
 - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`: service account RustFS dan bucket privat (wajib di produksi, tanpa fallback disk lokal).
 - `SUPER_ADMIN_BOOTSTRAP_EMAIL` dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD`: email pengenal login dan kata sandi (8–128 karakter) untuk membuat akun Super Admin awal saat menjalankan `bun backend/prisma/seed.ts` (tidak menimpa jika `super_admin` sudah ada; hapus/putar rahasia setelah login pertama).
-- `SMTP_*`: wajib terkonfigurasi valid untuk pemulihan kata sandi di produksi (`K-13`, fail-closed).
+- `SMTP_*`: opsional saat startup produksi (server tetap berjalan dengan warning log jika kosong/placeholder); bila belum valid atau gagal saat dipakai pemulihan kata sandi, request mencatat error log dan gagal tertutup `503` (`K-13`).
 - `LOG_LEVEL`, `UPLOAD_MAX_BYTES`, `TIMEZONE_DISPLAY=Asia/Jakarta`.
 - Parameter DDoS, kuota, & anti-bloat (`K-25`): `DB_POOL_LIMIT` (`15`), `USER_STORAGE_QUOTA_MB` (`100`), `MAX_REVISIONS_PER_ACHIEVEMENT` (`5`), `MAX_ACHIEVEMENTS_PER_PERIOD` (`30`), `MAX_SESSIONS_PER_USER` (`10`), `AUDIT_RETENTION_DAYS` (`365`; `0`=selamanya), `STORAGE_RETENTION_INACTIVE_DAYS` (`90`; `0`=nonaktif), `MAINTENANCE_INTERVAL_MINUTES` (`360`), `BACKUP_RETENTION_DAYS` (`14`).
 

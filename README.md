@@ -58,7 +58,7 @@ DB_USER=root
 DB_PASSWORD=
 DB_NAME=talenta_dev
 ```
-> **Catatan S3 & SMTP di mode lokal**: Jika RustFS/MinIO lokal berjalan di `http://127.0.0.1:9000`, isi `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, dan `S3_SECRET_KEY`. Jika tidak tersedia di lokal (`NODE_ENV=development`), unggahan berkas otomatis memakai penyimpanan lokal `.storage/`. Di mode `NODE_ENV=production`, RustFS/S3 dan SMTP wajib terkonfigurasi.
+> **Catatan S3 & SMTP di mode lokal**: Jika RustFS/MinIO lokal berjalan di `http://127.0.0.1:9000`, isi `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, dan `S3_SECRET_KEY`. Jika tidak tersedia di lokal (`NODE_ENV=development`), unggahan berkas otomatis memakai penyimpanan lokal `.storage/`. Di mode `NODE_ENV=production`, RustFS/S3 wajib terkonfigurasi, sedangkan SMTP opsional saat startup (bila belum valid/tak tersedia, fitur pemulihan kata sandi mencatat error log dan gagal tertutup `503` saat dipakai).
 
 ### Langkah 3 — Buat Database MySQL
 Buat database `talenta_dev` (dan `talenta_test` bila ingin menjalankan integration test backend):
@@ -183,8 +183,8 @@ Edit `infra/.env` dan pastikan seluruh variabel wajib production terisi benar:
   - *(Jika MySQL berjalan sebagai container di network `homelab-net`, gunakan nama container/service MySQL tersebut sebagai `DB_HOST`; jika berjalan langsung di host server Docker yang sama, gunakan `DB_HOST=host.docker.internal`).*
 - **Object Storage S3 Existing (RustFS / MinIO)**:
   - `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`
-- **SMTP (Pemulihan Kata Sandi)**:
-  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- **SMTP (Opsional saat startup — Pemulihan Kata Sandi)**:
+  - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` *(tidak memblokir startup server bila belum diset/placeholder; bila belum valid saat endpoint `/auth/forgot-password` dipanggil di produksi, server mencatat error log dan mengembalikan `503`)*
 - **Bootstrap Super Admin Pertama Kali**:
   - `SUPER_ADMIN_BOOTSTRAP_EMAIL` (email pengenal login pada `/masuk`) dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD` (kata sandi 8–128 karakter, wajib kuat & bukan `change-with-*`/`dev-*`; putar/hapus setelah bootstrap awal & login pertama selesai). Non-destruktif: tidak menimpa akun `super_admin` yang sudah ada.
 

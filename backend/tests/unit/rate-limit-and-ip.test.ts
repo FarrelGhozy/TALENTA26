@@ -3,7 +3,7 @@ import { normalizeIp, resolveClientIp } from '../../src/app/middleware/client-ip
 import { InMemoryRateLimiter } from '../../src/app/middleware/rate-limit';
 import { RateLimitError, ValidationError, formatErrorResponse } from '../../src/app/middleware/error';
 import { hashPassword, verifyPassword, getArgon2ConcurrencyStats } from '../../src/lib/password';
-import { assertProductionConfig, loadConfig } from '../../src/lib/config';
+import { assertProductionConfig, isSmtpConfigured, loadConfig } from '../../src/lib/config';
 
 const prevEnv = { ...process.env };
 
@@ -79,7 +79,7 @@ describe('Wave 2 — Resolusi IP Anti-Spoofing, Bounded Rate Limiter, Argon2id &
     expect(getArgon2ConcurrencyStats().maxConcurrent).toBe(4);
   });
 
-  it('assertProductionConfig gagal tertutup bila PUBLIC_ORIGIN localhost atau SMTP placeholder', () => {
+  it('assertProductionConfig gagal tertutup bila PUBLIC_ORIGIN localhost, namun tidak memblokir startup jika SMTP belum diset/placeholder', () => {
     process.env.NODE_ENV = 'production';
     process.env.SESSION_SECRET = 'a'.repeat(40);
     process.env.COOKIE_SECRET = 'b'.repeat(40);
@@ -96,9 +96,19 @@ describe('Wave 2 — Resolusi IP Anti-Spoofing, Bounded Rate Limiter, Argon2id &
 
     process.env.PUBLIC_ORIGIN = 'https://talenta.unida.gontor.ac.id';
     process.env.SMTP_HOST = 'smtp.example.com';
-    expect(() => assertProductionConfig(loadConfig())).toThrow('SMTP');
+    expect(isSmtpConfigured(loadConfig())).toBe(false);
+    expect(() => assertProductionConfig(loadConfig())).not.toThrow();
+
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+    expect(isSmtpConfigured(loadConfig())).toBe(false);
+    expect(() => assertProductionConfig(loadConfig())).not.toThrow();
 
     process.env.SMTP_HOST = 'smtp.mailgun.org';
+    process.env.SMTP_USER = 'postmaster@talenta.unida.gontor.ac.id';
+    process.env.SMTP_PASS = 'real-smtp-password';
+    expect(isSmtpConfigured(loadConfig())).toBe(true);
     expect(() => assertProductionConfig(loadConfig())).not.toThrow();
   });
 });

@@ -38,19 +38,53 @@ describe('Keamanan autentikasi', () => {
     expect(() => assertSameOrigin(request)).toThrow('Origin sesi');
   });
 
-  it('tidak menyediakan preview token di production tanpa SMTP', async () => {
+  it('tidak menyediakan preview token di production tanpa SMTP dan menolak placeholder dengan MailerUnavailableError', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.SMTP_HOST;
     delete process.env.SMTP_USER;
     await expect(sendPasswordResetEmail('user@example.com', 'secret-token')).rejects.toThrow(
       'belum dikonfigurasi'
     );
+
+    process.env.SMTP_HOST = 'smtp.example.com';
+    process.env.SMTP_USER = 'no-reply@unida.gontor.ac.id';
+    process.env.SMTP_PASS = 'change-with-smtp-password';
+    await expect(sendPasswordResetEmail('user@example.com', 'secret-token')).rejects.toThrow(
+      'belum dikonfigurasi'
+    );
+  });
+
+  it('mengembalikan preview token di non-production jika SMTP masih placeholder', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.PUBLIC_ORIGIN = 'http://localhost:5173';
+    process.env.SMTP_HOST = 'smtp.example.com';
+    process.env.SMTP_USER = 'no-reply@unida.gontor.ac.id';
+    process.env.SMTP_PASS = 'change-with-smtp-password';
+
+    const result = await sendPasswordResetEmail('user@example.com', 'dev-reset-token');
+    expect(result).toEqual({ success: true, previewToken: 'dev-reset-token' });
+  });
+
+  it('melempar MailerUnavailableError dan mencatat log aman saat transport SMTP gagal mengirim', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.PUBLIC_ORIGIN = 'https://talenta.example.com';
+    process.env.SMTP_HOST = 'smtp.mailtrap.io';
+    process.env.SMTP_USER = 'mailer';
+    process.env.SMTP_PASS = 'password-uji';
+
+    await expect(
+      sendPasswordResetEmail('user@example.com', 'token-uji', () => ({
+        async sendMail() {
+          throw new Error('connect ECONNREFUSED 127.0.0.1:587');
+        },
+      }))
+    ).rejects.toThrow('gagal terhubung ke server SMTP');
   });
 
   it('mengirim tautan reset melalui transport SMTP yang dikonfigurasi', async () => {
     process.env.NODE_ENV = 'production';
     process.env.PUBLIC_ORIGIN = 'https://talenta.example.com';
-    process.env.SMTP_HOST = 'smtp.example.com';
+    process.env.SMTP_HOST = 'smtp.mailtrap.io';
     process.env.SMTP_USER = 'mailer';
     process.env.SMTP_PASS = 'password-uji';
     process.env.SMTP_FROM = 'noreply@example.com';

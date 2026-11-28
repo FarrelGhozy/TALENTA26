@@ -365,7 +365,7 @@ export async function requestPasswordReset(
     mailResult = await sendPasswordResetEmail(user.email, plainToken);
   } catch (err: any) {
     await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } }).catch(() => undefined);
-    console.error('[MAILER] Pengiriman email pemulihan akun gagal');
+    console.error('[MAILER] Pengiriman email pemulihan akun gagal:', err?.message || 'Unknown error');
     if (
       process.env.NODE_ENV === 'production' &&
       (err instanceof MailerUnavailableError || err?.message?.includes('SMTP'))

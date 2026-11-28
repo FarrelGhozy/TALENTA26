@@ -256,6 +256,20 @@ export function getSessionCookieOptions(
   };
 }
 
+export function isSmtpConfigured(conf: Pick<AppConfig, 'smtp'>): boolean {
+  const smtp = conf.smtp;
+  return Boolean(
+    smtp &&
+      smtp.host.trim() &&
+      smtp.host.trim() !== 'smtp.example.com' &&
+      !smtp.host.trim().startsWith('change-with-') &&
+      smtp.user.trim() &&
+      !smtp.user.trim().startsWith('change-with-') &&
+      smtp.pass &&
+      !smtp.pass.startsWith('change-with-')
+  );
+}
+
 export function assertProductionConfig(conf: AppConfig): void {
   if (conf.nodeEnv !== 'production') return;
 
@@ -288,15 +302,16 @@ export function assertProductionConfig(conf: AppConfig): void {
     throw new Error('Konfigurasi S3/RustFS produksi wajib lengkap (S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY).');
   }
 
-  if (
-    !conf.smtp ||
-    !conf.smtp.host ||
-    conf.smtp.host === 'smtp.example.com' ||
-    !conf.smtp.user ||
-    !conf.smtp.pass ||
-    conf.smtp.pass.startsWith('change-with-')
-  ) {
-    throw new Error('Konfigurasi SMTP produksi wajib lengkap dan bukan placeholder (K-13).');
+  if (!isSmtpConfigured(conf)) {
+    console.warn(
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: 'warn',
+        scope: 'config',
+        message:
+          'SMTP produksi belum dikonfigurasi atau masih placeholder; server tetap berjalan namun fitur pemulihan kata sandi (forgot-password) akan mencatat error log dan gagal saat digunakan (K-13).',
+      })
+    );
   }
 }
 
