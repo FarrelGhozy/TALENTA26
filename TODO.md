@@ -236,6 +236,14 @@ Status diperbarui 28 November 2026 (selaras keputusan produk `K-01`–`K-27` di 
 
 ---
 
+## Tugas mandiri — Pengaturan kredensial bootstrap Super Admin lewat `.env` & `.env.example` (28 November 2026)
+- [x] Perbarui `backend/src/lib/config.ts` (trim `SUPER_ADMIN_BOOTSTRAP_EMAIL`) dan `backend/prisma/seed.ts` (`resolveSuperAdminBootstrapCredentials` & `runBaseSeed`): mempertahankan login berbasis email di `/masuk`, memvalidasi format email (`<= 254` karakter) dan panjang kata sandi (`8–128` karakter), menolak nilai kosong maupun placeholder `change-with-*` / `dev-*` pada `NODE_ENV=production`, memakai fallback lokal `admin@unida.gontor.ac.id` / `AdminGontor2026!` saat kosong atau `change-with-*` di non-produksi, mengecek `super_admin` yang sudah ada lebih dulu agar seed ulang produksi tetap idempotent setelah rahasia bootstrap dihapus/diputar, dan mencegah bentrok email dengan akun peran lain.
+- [x] Perjelas panduan Seksi 6 di `.env.example` beserta penyelarasan di `README.md`, `docs/15-env-mock-strategy.md`, dan `docs/17-runbook-operasi.md` mengenai pengisian `SUPER_ADMIN_BOOTSTRAP_EMAIL` dan `SUPER_ADMIN_BOOTSTRAP_PASSWORD`, perintah bootstrap manual (`bun run db:seed` / `docker compose run --rm api bun backend/prisma/seed.ts`), login awal lewat `/masuk`, serta rotasi/penghapusan rahasia setelah login pertama.
+- [x] Tambahkan `backend/tests/unit/bootstrap-admin.test.ts` (4 pengujian unit untuk fail-closed production, normalisasi email & validasi kredensial kustom production, fallback development untuk kosong/`change-with-*`, dan batas panjang kata sandi 8–128 karakter).
+- Verifikasi: `bun test backend/tests/unit/bootstrap-admin.test.ts` (4/4 lulus, 11 assertions), `bun test backend/tests/unit` (**37/37 lulus**, 136 assertions lintas 9 file), `bun run test:coverage` (**167/167 lulus**, 769 assertions lintas 20 file, coverage `80.42%` fungsi / `80.21%` baris), `bun run typecheck`, `bun run lint` (0 warning, 0 error pada 157 file), `docker compose -f infra/docker-compose.yaml --env-file .env.example config -q`, serta `bun --env-file=.env.example` dan uji idempotensi `bun backend/prisma/seed.ts`.
+
+---
+
 ## Setelah rilis awal
 - [ ] **Verifikasi kepemilikan email saat registrasi** (`pending_verification`, token verifikasi email via SMTP, kirim ulang tautan verifikasi — ditunda per `K-21`).
 - [ ] **Simpan draft pengajuan prestasi** (`PATCH /me/achievements/:id/draft` → `POST /me/achievements/:id/submit` — ditunda per `K-17`).

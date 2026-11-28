@@ -139,7 +139,8 @@ export function loadConfig(): AppConfig {
     process.env.PUBLIC_ORIGIN || 'http://localhost:5173';
   const trustProxy = process.env.TRUST_PROXY === 'true';
 
-  const superAdminBootstrapEmail = process.env.SUPER_ADMIN_BOOTSTRAP_EMAIL;
+  const superAdminBootstrapEmail =
+    process.env.SUPER_ADMIN_BOOTSTRAP_EMAIL?.trim() || undefined;
   const superAdminBootstrapPassword =
     process.env.SUPER_ADMIN_BOOTSTRAP_PASSWORD;
 

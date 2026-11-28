@@ -1,6 +1,71 @@
 import { prisma, closeDatabase } from '../src/lib/prisma';
 import { hashPassword } from '../src/lib/password';
-import { loadConfig } from '../src/lib/config';
+import { loadConfig, type AppConfig } from '../src/lib/config';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEV_DEFAULT_ADMIN_EMAIL = 'admin@unida.gontor.ac.id';
+const DEV_DEFAULT_ADMIN_PASSWORD = 'AdminGontor2026!';
+
+export interface SuperAdminBootstrapCredentials {
+  email: string;
+  password: string;
+  usedDefaultPasswordFallback: boolean;
+}
+
+/**
+ * Memvalidasi dan menormalisasi kredensial Super Admin awal dari konfigurasi environment.
+ */
+export function resolveSuperAdminBootstrapCredentials(
+  conf: Pick<
+    AppConfig,
+    'nodeEnv' | 'superAdminBootstrapEmail' | 'superAdminBootstrapPassword'
+  >
+): SuperAdminBootstrapCredentials {
+  const isProd = conf.nodeEnv === 'production';
+  const rawEmail = conf.superAdminBootstrapEmail?.trim();
+  const rawPassword = conf.superAdminBootstrapPassword;
+  const isPlaceholderPassword =
+    !rawPassword ||
+    rawPassword.trim() === '' ||
+    rawPassword.startsWith('change-with-') ||
+    rawPassword.startsWith('dev-');
+
+  if (isProd) {
+    if (!rawEmail || isPlaceholderPassword) {
+      throw new Error(
+        '[SEED_ERROR] Pada mode production, SUPER_ADMIN_BOOTSTRAP_EMAIL dan SUPER_ADMIN_BOOTSTRAP_PASSWORD wajib diset kuat (tidak boleh kosong atau berawalan change-with-/dev-).'
+      );
+    }
+  }
+
+  const email = (rawEmail || DEV_DEFAULT_ADMIN_EMAIL).toLowerCase();
+  if (email.length > 254 || !EMAIL_RE.test(email)) {
+    throw new Error(
+      `[SEED_ERROR] Format SUPER_ADMIN_BOOTSTRAP_EMAIL tidak valid: "${email}". Gunakan format email yang sah (maksimal 254 karakter).`
+    );
+  }
+
+  let password: string;
+  let usedDefaultPasswordFallback = false;
+  if (!isProd && isPlaceholderPassword) {
+    password = DEV_DEFAULT_ADMIN_PASSWORD;
+    usedDefaultPasswordFallback = true;
+  } else {
+    password = rawPassword as string;
+  }
+
+  if (password.length < 8 || password.length > 128) {
+    throw new Error(
+      '[SEED_ERROR] Panjang SUPER_ADMIN_BOOTSTRAP_PASSWORD wajib antara 8 hingga 128 karakter.'
+    );
+  }
+
+  return {
+    email,
+    password,
+    usedDefaultPasswordFallback,
+  };
+}
 
 export async function runBaseSeed() {
   const currentConfig = loadConfig();
@@ -19,31 +84,30 @@ export async function runBaseSeed() {
   });
   console.log(`[SEED] Institusi terverifikasi: ${institution.name} (${institution.code})`);
 
-  // 2. Super Admin Bootstrap
+  // 2. Super Admin Bootstrap (hanya dibuat saat belum ada super_admin; tidak menimpa akun existing)
   const isProd = currentConfig.nodeEnv === 'production';
-  if (isProd) {
-    if (
-      !currentConfig.superAdminBootstrapEmail ||
-      !currentConfig.superAdminBootstrapPassword ||
-      currentConfig.superAdminBootstrapPassword.startsWith('change-with-')
-    ) {
-      throw new Error(
-        '[SEED_ERROR] Pada mode production, SUPER_ADMIN_BOOTSTRAP_EMAIL dan SUPER_ADMIN_BOOTSTRAP_PASSWORD wajib diset di environment.'
-      );
-    }
-  }
-
-  const superAdminEmail = (
-    currentConfig.superAdminBootstrapEmail || 'admin@unida.gontor.ac.id'
-  ).toLowerCase();
-  const superAdminPassword =
-    currentConfig.superAdminBootstrapPassword || 'AdminGontor2026!';
-
   const existingSuperAdmin = await prisma.user.findFirst({
     where: { role: 'super_admin' },
+    select: { id: true, email: true },
   });
 
   if (!existingSuperAdmin) {
+    const {
+      email: superAdminEmail,
+      password: superAdminPassword,
+      usedDefaultPasswordFallback,
+    } = resolveSuperAdminBootstrapCredentials(currentConfig);
+
+    const conflictingUser = await prisma.user.findUnique({
+      where: { email: superAdminEmail },
+      select: { id: true, role: true },
+    });
+    if (conflictingUser) {
+      throw new Error(
+        `[SEED_ERROR] Email ${superAdminEmail} sudah digunakan oleh akun lain (peran: ${conflictingUser.role}). Gunakan SUPER_ADMIN_BOOTSTRAP_EMAIL yang berbeda.`
+      );
+    }
+
     const passwordHash = await hashPassword(superAdminPassword);
     const createdAdmin = await prisma.user.create({
       data: {
@@ -67,11 +131,24 @@ export async function runBaseSeed() {
       },
     });
 
-    console.log(`[SEED] Super admin berhasil dibuat: ${superAdminEmail}`);
+    console.log(
+      `[SEED] Super admin berhasil dibuat: ${superAdminEmail} (masuk melalui /masuk -> Login Manual).`
+    );
+    if (usedDefaultPasswordFallback) {
+      console.log(
+        '[SEED] Catatan dev: SUPER_ADMIN_BOOTSTRAP_PASSWORD kosong/placeholder, menggunakan kata sandi lokal bawaan (lihat README.md).'
+      );
+    }
   } else {
     console.log(
-      `[SEED] Super admin sudah terdaftar (${existingSuperAdmin.email}). Bootstrap dilewati.`
+      `[SEED] Super admin sudah terdaftar (${existingSuperAdmin.email}). Bootstrap dilewati agar tidak menimpa akun yang sudah ada.`
     );
+    const requestedEmail = currentConfig.superAdminBootstrapEmail?.trim().toLowerCase();
+    if (requestedEmail && requestedEmail !== existingSuperAdmin.email.toLowerCase()) {
+      console.log(
+        `[SEED:INFO] SUPER_ADMIN_BOOTSTRAP_EMAIL di .env (${requestedEmail}) berbeda dengan Super Admin terdaftar (${existingSuperAdmin.email}). Kelola akun admin lewat /admin/sistem.`
+      );
+    }
   }
 
   // 3. Validator Akun Uji Coba (khusus dev/test agar pengujian RBAC lokal dapat dilakukan)
